@@ -29,6 +29,8 @@ export interface Dictionary {
   soundOff: string;
   loading: string;
   layer: string;
+  mode: string;
+  modeLocked: string;
 }
 
 export const dictionaries: Record<Lang, Dictionary> = {
@@ -61,6 +63,8 @@ export const dictionaries: Record<Lang, Dictionary> = {
     soundOff: 'Звук выкл',
     loading: 'Разжигаем…',
     layer: 'Слой',
+    mode: 'Режим',
+    modeLocked: 'Открой высотой',
   },
   en: {
     brand: 'Stay Lit',
@@ -91,6 +95,8 @@ export const dictionaries: Record<Lang, Dictionary> = {
     soundOff: 'Sound off',
     loading: 'Kindling…',
     layer: 'Layer',
+    mode: 'Mode',
+    modeLocked: 'Unlock with height',
   },
 };
 

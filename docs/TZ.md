@@ -212,30 +212,46 @@ Phaser 3.87 + TypeScript 5.7 + Vite 6 + Yandex Games SDK (официальный
 ### 5.2 Структура
 ```
 src/
-  main.ts                 # boot Phaser
+  main.ts
   styles/main.css
-  sdk/yandex.ts           # init, ready, gameplay, ads, cloud, LB
-  i18n/index.ts           # ru/en словари + auto lang
-  data/balance.ts         # баланс, скины, сюжет
-  data/save.ts            # local + cloud merge
+  sdk/yandex.ts              # init, ready, gameplay, ads, cloud, LB
+  i18n/index.ts
+  content/                   # DATA-DRIVEN слой масштабирования
+    types.ts                 # Entity / Mode / Event / RemotePatch
+    entities.ts              # каталог сущностей (добавить kind = сюда)
+    events.ts                # рантайм-события (буря, дождь порталов…)
+    modes.ts                 # режимы Ночь / Буря + story beats
+    runtimeConfig.ts         # merge локального + remote A-B patch
+  data/
+    balance.ts               # палитра, скины, Hue
+    save.ts
   game/
     config.ts
     audio/sfx.ts
     assets/generate.ts
+    systems/
+      Spawner.ts             # таблица весов → SpawnRequest[]
+      EventDirector.ts       # timeline hooks + random beats
+      ScoreSystem.ts
+      StoryDirector.ts
     scenes/
       BootScene.ts
-      PreloadScene.ts     # SDK init → hydrate → textures → LoadingAPI.ready
-      MenuScene.ts
-      GameScene.ts
+      PreloadScene.ts
+      MenuScene.ts           # выбор режима + скины
+      GameScene.ts           # тонкий orchestration
       ResultScene.ts
-public/
-  sdk.js                  # stub для локалки; на YG перекроется платформой / реальным путём
-  favicon.svg
-index.html
-scripts/pack-yandex.mjs   # dist → release/stay-lit-yandex.zip
-docs/TZ.md                # этот документ
 ```
 
+### 5.2.1 Масштабируемость (как растить без ломки)
+| Хочешь добавить… | Куда править | GameScene? |
+|---|---|---|
+| Новый предмет (бомба, щит) | `content/entities.ts` + текстура в `generate.ts` + вес в `modes.ts` | нет |
+| Новый режим (Туман, Рассвет) | `content/modes.ts` | нет |
+| Liveops-ивент (x2 void) | `content/events.ts` + hook в mode | нет |
+| A-B баланс без релиза | `applyRemoteBalancePatch(JSON)` / localStorage | нет |
+| Новый язык | `i18n/index.ts` | нет |
+
+Remote patch schema (`RemoteBalancePatch`): частичные overrides на `modes`, `events`, `spawnTables`. Сейчас читается из `localStorage.staylit_remote_balance`; v1.1 — подгрузка с CDN/конфига студии.
 ### 5.3 Сцены и flow
 ```
 Boot → Preload → Menu ⇄ Game → Result → Game|Menu
@@ -341,11 +357,12 @@ npm run pack         # release/stay-lit-yandex.zip
 
 ## 9. Роадмап v1.1 (после зелёных метрик)
 1. ChipTone music loop + haptics  
-2. Daily challenge seed  
+2. Daily challenge seed через `content/modes.ts` (mode `daily`)  
 3. Payments: remove-ads / starter pack sparks  
-4. Больше скинов + trail FX  
+4. Больше сущностей/скинов через content catalog  
 5. Leaderboard UI сцена  
-6. Aseprite персонаж-анимация фитиля  
+6. CDN remote balance (`applyRemoteBalancePatch`)  
+7. Aseprite персонаж-анимация фитиля  
 
 ---
 

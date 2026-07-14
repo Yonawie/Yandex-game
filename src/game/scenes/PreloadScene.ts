@@ -56,6 +56,10 @@ export class PreloadScene extends Phaser.Scene {
     const save = await hydrateSave(remote);
     setMuted(!save.sound);
 
+    // Optional remote A-B / liveops balance (local cache for now)
+    const { loadRemoteBalancePatch } = await import('@/content/runtimeConfig');
+    loadRemoteBalancePatch();
+
     generateTextures(this);
 
     await new Promise<void>((resolve) => {

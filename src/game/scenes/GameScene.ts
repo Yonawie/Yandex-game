@@ -1,19 +1,17 @@
 import Phaser from 'phaser';
-import {
-  BALANCE,
-  COLORS,
-  HUE_HEX,
-  SKINS,
-  STORY_BEATS,
-  type HueId,
-} from '@/data/balance';
+import { COLORS, HUE_HEX, SKINS, type HueId } from '@/data/balance';
+import { getEntityDef, resolveTexture } from '@/content/entities';
+import { resolveMode, getActiveModeId, loadRemoteBalancePatch } from '@/content/runtimeConfig';
+import type { EntityKind, ModeDef, RunEventDef, SpawnRequest } from '@/content/types';
 import { drawLantern, laneX } from '@/game/assets/generate';
+import { Spawner } from '@/game/systems/Spawner';
+import { EventDirector } from '@/game/systems/EventDirector';
+import { ScoreSystem } from '@/game/systems/ScoreSystem';
+import { StoryDirector } from '@/game/systems/StoryDirector';
 import { getSave, patchSave } from '@/data/save';
 import { tf, getLang } from '@/i18n';
 import { playTone } from '@/game/audio/sfx';
 import { yandex } from '@/sdk/yandex';
-
-type EntityKind = 'firefly' | 'void' | 'portal' | 'shard';
 
 interface FallingEntity {
   kind: EntityKind;
@@ -23,16 +21,12 @@ interface FallingEntity {
 }
 
 export class GameScene extends Phaser.Scene {
+  private mode!: ModeDef;
   private playerLane = 1;
   private playerHue: HueId = 'amber';
   private lantern!: Phaser.GameObjects.Container;
-  private scroll: number = BALANCE.baseScroll;
+  private scroll = 0;
   private distance = 0;
-  private score = 0;
-  private combo = 0;
-  private lastCollectAt = 0;
-  private spawnAcc = 0;
-  private spawnEvery: number = BALANCE.spawnIntervalStart;
   private entities: FallingEntity[] = [];
   private threads: Phaser.GameObjects.TileSprite[] = [];
   private stars!: Phaser.GameObjects.TileSprite;
@@ -40,17 +34,24 @@ export class GameScene extends Phaser.Scene {
   private comboText!: Phaser.GameObjects.Text;
   private heightText!: Phaser.GameObjects.Text;
   private storyText!: Phaser.GameObjects.Text;
+  private eventText!: Phaser.GameObjects.Text;
   private alive = true;
   private continued = false;
-  private lastStoryAt = -999;
   private pointerDownHandler!: (pointer: Phaser.Input.Pointer) => void;
   private trailEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+
+  private spawner!: Spawner;
+  private eventsDir!: EventDirector;
+  private scores!: ScoreSystem;
+  private story!: StoryDirector;
 
   constructor() {
     super('Game');
   }
 
   create(): void {
+    loadRemoteBalancePatch();
+    this.mode = resolveMode(getActiveModeId());
     const { width, height } = this.scale;
     const save = getSave();
     const skin = SKINS.find((s) => s.id === save.skinId) ?? SKINS[0];
@@ -59,21 +60,23 @@ export class GameScene extends Phaser.Scene {
     this.continued = false;
     this.playerLane = 1;
     this.playerHue = 'amber';
-    this.scroll = BALANCE.baseScroll;
+    this.scroll = this.mode.baseScroll;
     this.distance = 0;
-    this.score = 0;
-    this.combo = 0;
-    this.spawnAcc = 0;
-    this.spawnEvery = BALANCE.spawnIntervalStart;
     this.entities = [];
-    this.lastStoryAt = -999;
+
+    this.spawner = new Spawner(this.mode);
+    this.eventsDir = new EventDirector();
+    this.eventsDir.reset(this.mode);
+    this.scores = new ScoreSystem();
+    this.scores.reset();
+    this.story = new StoryDirector();
+    this.story.reset();
 
     this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height).setDepth(0);
     this.stars = this.add
       .tileSprite(width / 2, height / 2, width, height, 'star')
       .setAlpha(0.35)
       .setDepth(1);
-    // denser starfield by repeating small tex via tinted copies
     for (let i = 0; i < 40; i++) {
       this.add
         .image(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), 'star')
@@ -84,8 +87,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.threads = [];
-    for (let lane = 0; lane < BALANCE.lanes; lane++) {
-      const x = laneX(width, lane, BALANCE.lanes, BALANCE.lanePadding);
+    for (let lane = 0; lane < this.mode.lanes; lane++) {
+      const x = laneX(width, lane, this.mode.lanes, this.mode.lanePadding);
       const thread = this.add
         .tileSprite(x, height / 2, 10, height + 40, 'thread')
         .setAlpha(0.55)
@@ -93,7 +96,7 @@ export class GameScene extends Phaser.Scene {
       this.threads.push(thread);
     }
 
-    const py = height * BALANCE.playerYRatio;
+    const py = height * this.mode.playerYRatio;
     this.lantern = drawLantern(this, laneX(width, this.playerLane), py, skin, this.playerHue, 1.1);
 
     this.trailEmitter = this.add.particles(0, 0, 'px', {
@@ -145,7 +148,18 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0)
       .setDepth(45);
 
-    this.whisper(0);
+    this.eventText = this.add
+      .text(width / 2, height * 0.12, '', {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '20px',
+        color: '#8ECAE6',
+      })
+      .setOrigin(0.5)
+      .setAlpha(0)
+      .setDepth(45);
+
+    const firstBeat = this.story.tick(0);
+    if (firstBeat) this.showStory(firstBeat.ru, firstBeat.en);
 
     this.pointerDownHandler = (pointer) => {
       if (!this.alive) return;
@@ -153,7 +167,6 @@ export class GameScene extends Phaser.Scene {
       else this.moveLane(1);
     };
     this.input.on('pointerdown', this.pointerDownHandler);
-
     this.input.keyboard?.on('keydown-LEFT', () => this.moveLane(-1));
     this.input.keyboard?.on('keydown-RIGHT', () => this.moveLane(1));
     this.input.keyboard?.on('keydown-A', () => this.moveLane(-1));
@@ -161,7 +174,6 @@ export class GameScene extends Phaser.Scene {
 
     void patchSave({ runs: save.runs + 1 });
     yandex.startGameplay();
-
     this.cameras.main.fadeIn(350, 7, 16, 24);
   }
 
@@ -170,15 +182,21 @@ export class GameScene extends Phaser.Scene {
     const dt = delta / 1000;
     const { width, height } = this.scale;
 
-    this.scroll = Math.min(BALANCE.maxScroll, this.scroll + BALANCE.scrollAccelPerSec * dt);
-    this.distance += this.scroll * dt * 0.08;
-    this.spawnEvery = Phaser.Math.Linear(
-      BALANCE.spawnIntervalStart,
-      BALANCE.spawnIntervalMin,
-      Phaser.Math.Clamp((this.scroll - BALANCE.baseScroll) / (BALANCE.maxScroll - BALANCE.baseScroll), 0, 1),
-    );
+    const active = this.eventsDir.getActive();
+    const scrollMul = active?.def.scrollMul ?? 1;
+    const spawnMul = active?.def.spawnIntervalMul ?? 1;
 
-    this.stars.tilePositionY -= this.scroll * dt * 0.15;
+    this.scroll = Math.min(
+      this.mode.maxScroll,
+      this.scroll + this.mode.scrollAccelPerSec * dt,
+    );
+    this.distance += this.scroll * scrollMul * dt * 0.08;
+
+    this.spawner.updateScrollProgress(this.scroll);
+    const started = this.eventsDir.update(this.distance, this.mode);
+    if (started) this.announceEvent(started);
+
+    this.stars.tilePositionY -= this.scroll * scrollMul * dt * 0.15;
     this.children.list.forEach((child) => {
       if (child.getData('drift')) {
         const img = child as Phaser.GameObjects.Image;
@@ -189,59 +207,67 @@ export class GameScene extends Phaser.Scene {
         }
       }
     });
-
     this.threads.forEach((t) => {
-      t.tilePositionY -= this.scroll * dt * 0.9;
+      t.tilePositionY -= this.scroll * scrollMul * dt * 0.9;
     });
 
-    this.spawnAcc += dt;
-    while (this.spawnAcc >= this.spawnEvery) {
-      this.spawnAcc -= this.spawnEvery;
-      this.spawnEntity();
-    }
+    const table = active?.def.spawnTable;
+    const requests = this.spawner.tick(dt, this.mode.lanes, table, spawnMul);
+    for (const req of requests) this.materialize(req);
 
-    const playerY = height * BALANCE.playerYRatio;
+    const playerY = height * this.mode.playerYRatio;
     for (let i = this.entities.length - 1; i >= 0; i--) {
       const e = this.entities[i];
-      e.go.y += this.scroll * dt;
-      if (e.kind === 'portal') e.go.rotation += dt * 1.4;
+      const def = getEntityDef(e.kind);
+      e.go.y += this.scroll * scrollMul * dt;
+      if (def.rotates) e.go.rotation += dt * 1.4;
 
       const near =
-        e.lane === this.playerLane && Math.abs(e.go.y - playerY) < 42 && e.go.y > playerY - 70;
+        e.lane === this.playerLane &&
+        Math.abs(e.go.y - playerY) < def.hitRadius &&
+        e.go.y > playerY - 70;
       if (near) {
         this.handleHit(e);
         e.go.destroy();
         this.entities.splice(i, 1);
         continue;
       }
-
       if (e.go.y > height + 60) {
         e.go.destroy();
         this.entities.splice(i, 1);
       }
     }
 
-    this.scoreText.setText(`${tf('score')}: ${Math.floor(this.score)}`);
+    this.scoreText.setText(`${tf('score')}: ${Math.floor(this.scores.score)}`);
     this.heightText.setText(`${tf('height')}: ${Math.floor(this.distance)}`);
-    this.comboText.setText(this.combo > 1 ? `${tf('combo')} ×${this.combo}` : '');
+    this.comboText.setText(this.scores.combo > 1 ? `${tf('combo')} ×${this.scores.combo}` : '');
 
-    const reached = STORY_BEATS.filter((b) => b.meters <= this.distance);
-    const storyMeters = reached.length ? reached[reached.length - 1].meters : 0;
-    if (storyMeters !== this.lastStoryAt && storyMeters > 0) {
-      this.whisper(storyMeters);
-    }
+    const beat = this.story.tick(this.distance);
+    if (beat && beat.meters > 0) this.showStory(beat.ru, beat.en);
 
-    // subtle breathing sway
     this.lantern.x = Phaser.Math.Linear(
       this.lantern.x,
-      laneX(width, this.playerLane),
+      laneX(width, this.playerLane, this.mode.lanes, this.mode.lanePadding),
       1 - Math.pow(0.001, dt),
     );
   }
 
+  private materialize(req: SpawnRequest): void {
+    const def = getEntityDef(req.kind);
+    const { width } = this.scale;
+    const x = laneX(width, req.lane, this.mode.lanes, this.mode.lanePadding);
+    const key = resolveTexture(def, req.hue);
+    const go = this.add.image(x, -40, key).setDepth(12).setScale(def.scale);
+    if (req.kind === 'portal') go.setAlpha(0.95);
+    if (def.rotates && req.kind === 'shard') {
+      this.tweens.add({ targets: go, angle: 360, duration: 1800, repeat: -1 });
+    }
+    this.entities.push({ kind: req.kind, lane: req.lane, hue: req.hue, go });
+  }
+
   private moveLane(dir: number): void {
     if (!this.alive) return;
-    this.playerLane = Phaser.Math.Clamp(this.playerLane + dir, 0, BALANCE.lanes - 1);
+    this.playerLane = Phaser.Math.Clamp(this.playerLane + dir, 0, this.mode.lanes - 1);
     playTone('ui');
     this.tweens.add({
       targets: this.lantern,
@@ -252,43 +278,13 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private spawnEntity(): void {
-    const { width } = this.scale;
-    const lane = Phaser.Math.Between(0, BALANCE.lanes - 1);
-    const roll = Math.random();
-    let kind: EntityKind;
-    if (roll < BALANCE.fireflyChance) kind = 'firefly';
-    else if (roll < BALANCE.fireflyChance + BALANCE.obstacleChance) kind = 'void';
-    else if (roll < BALANCE.fireflyChance + BALANCE.obstacleChance + BALANCE.portalChance)
-      kind = 'portal';
-    else kind = 'shard';
-
-    const hues: HueId[] = ['amber', 'teal', 'coral'];
-    const hue = hues[Phaser.Math.Between(0, hues.length - 1)];
-    const x = laneX(width, lane);
-    let key = 'void';
-    if (kind === 'firefly') key = `orb-${hue}`;
-    if (kind === 'portal') key = `portal-${hue}`;
-    if (kind === 'shard') key = 'shard';
-
-    const go = this.add.image(x, -40, key).setDepth(12);
-    if (kind === 'firefly') go.setScale(0.9);
-    if (kind === 'void') go.setScale(0.95);
-    if (kind === 'portal') go.setScale(0.85).setAlpha(0.95);
-    if (kind === 'shard') {
-      go.setScale(1.1);
-      this.tweens.add({ targets: go, angle: 360, duration: 1800, repeat: -1 });
-    }
-
-    this.entities.push({ kind, lane, hue, go });
-  }
-
   private handleHit(e: FallingEntity): void {
-    if (e.kind === 'void') {
+    const def = getEntityDef(e.kind);
+    if (def.lethal) {
       this.die();
       return;
     }
-    if (e.kind === 'portal' && e.hue) {
+    if (def.recolors && e.hue) {
       this.playerHue = e.hue;
       this.recolorLantern();
       playTone('portal');
@@ -296,39 +292,24 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.flash(120, 40, 60, 70);
       return;
     }
-    if (e.kind === 'shard') {
-      this.registerCollect(BALANCE.shardScore, true);
-      playTone('combo', this.combo);
-      this.burst(e.go.x, e.go.y, COLORS.mint);
+    if (def.score != null && def.colored) {
+      if (e.hue === this.playerHue) {
+        this.scores.collect(def.score, this.time.now, this.mode, Boolean(def.forceCombo));
+        playTone('collect', this.scores.combo);
+        this.burst(e.go.x, e.go.y, HUE_HEX[e.hue ?? 'amber']);
+        if (this.scores.combo === 5 || this.scores.combo === 10) playTone('combo', this.scores.combo);
+      } else {
+        this.scores.penalize(def.wrongPenalty ?? 5);
+        playTone('hit');
+        this.cameras.main.shake(100, this.mode.softShake);
+      }
       return;
     }
-    if (e.kind === 'firefly') {
-      if (e.hue === this.playerHue) {
-        this.registerCollect(BALANCE.fireflyScore, false);
-        playTone('collect', this.combo);
-        this.burst(e.go.x, e.go.y, HUE_HEX[e.hue]);
-      } else {
-        // wrong color — soft punish: break combo + small score loss feel
-        this.combo = 0;
-        playTone('hit');
-        this.cameras.main.shake(100, BALANCE.softShake);
-        this.score = Math.max(0, this.score - 5);
-      }
+    if (def.score != null) {
+      this.scores.collect(def.score, this.time.now, this.mode, Boolean(def.forceCombo));
+      playTone('combo', this.scores.combo);
+      this.burst(e.go.x, e.go.y, COLORS.mint);
     }
-  }
-
-  private registerCollect(base: number, forceCombo: boolean): void {
-    const now = this.time.now;
-    if (forceCombo || now - this.lastCollectAt <= BALANCE.comboWindowMs) {
-      this.combo += 1;
-    } else {
-      this.combo = 1;
-    }
-    this.lastCollectAt = now;
-    const mult = 1 + Math.min(8, this.combo - 1) * 0.25;
-    const gained = Math.round(base * mult + (this.combo >= 5 ? BALANCE.perfectBonus : 0));
-    this.score += gained;
-    if (this.combo === 5 || this.combo === 10) playTone('combo', this.combo);
   }
 
   private recolorLantern(): void {
@@ -353,19 +334,32 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(500, () => emitter.destroy());
   }
 
-  private whisper(meters: number): void {
-    this.lastStoryAt = meters;
-    const beat = STORY_BEATS.find((b) => b.meters === meters) ?? STORY_BEATS[0];
-    const line = getLang() === 'ru' ? beat.ru : beat.en;
-    this.storyText.setText(line);
+  private showStory(ru: string, en: string): void {
+    this.storyText.setText(getLang() === 'ru' ? ru : en);
+    this.tweens.killTweensOf(this.storyText);
+    this.storyText.setAlpha(0);
     this.tweens.add({
       targets: this.storyText,
       alpha: 1,
       duration: 400,
       yoyo: true,
       hold: 1800,
-      onYoyo: () => undefined,
     });
+  }
+
+  private announceEvent(ev: RunEventDef): void {
+    if (!ev.announce) return;
+    this.eventText.setText(getLang() === 'ru' ? ev.nameRu : ev.nameEn);
+    this.tweens.killTweensOf(this.eventText);
+    this.eventText.setAlpha(0);
+    this.tweens.add({
+      targets: this.eventText,
+      alpha: 1,
+      duration: 250,
+      yoyo: true,
+      hold: 1200,
+    });
+    playTone('portal');
   }
 
   private die(): void {
@@ -381,7 +375,6 @@ export class GameScene extends Phaser.Scene {
       scale: 0.6,
       duration: 280,
     });
-
     void this.afterDeath();
   }
 
@@ -390,17 +383,16 @@ export class GameScene extends Phaser.Scene {
     const deaths = save.deathsSinceFullscreen + 1;
     await patchSave({ deathsSinceFullscreen: deaths });
 
-    if (!this.continued && BALANCE.continueOncePerRun) {
+    if (!this.continued && this.mode.continueOncePerRun) {
       this.showContinue();
       return;
     }
 
-    if (deaths >= BALANCE.fullscreenEveryDeaths) {
+    if (deaths >= this.mode.fullscreenEveryDeaths) {
       await yandex.showFullscreen();
       await patchSave({ deathsSinceFullscreen: 0 });
     }
-
-    this.goResult(false);
+    this.goResult();
   }
 
   private showContinue(): void {
@@ -458,11 +450,11 @@ export class GameScene extends Phaser.Scene {
     skip.on('pointerup', async () => {
       cleanup();
       const save = getSave();
-      if (save.deathsSinceFullscreen >= BALANCE.fullscreenEveryDeaths) {
+      if (save.deathsSinceFullscreen >= this.mode.fullscreenEveryDeaths) {
         await yandex.showFullscreen();
         await patchSave({ deathsSinceFullscreen: 0 });
       }
-      this.goResult(false);
+      this.goResult();
     });
   }
 
@@ -470,7 +462,6 @@ export class GameScene extends Phaser.Scene {
     this.continued = true;
     this.alive = true;
     this.lantern.setAlpha(1).setScale(1.1);
-    // clear nearby voids
     for (let i = this.entities.length - 1; i >= 0; i--) {
       const e = this.entities[i];
       if (e.kind === 'void' && Math.abs(e.go.y - this.lantern.y) < 220) {
@@ -484,13 +475,13 @@ export class GameScene extends Phaser.Scene {
     yandex.startGameplay();
   }
 
-  private goResult(fromContinue: boolean): void {
-    void fromContinue;
+  private goResult(): void {
     this.input.off('pointerdown', this.pointerDownHandler);
     this.scene.start('Result', {
-      score: Math.floor(this.score),
+      score: Math.floor(this.scores.score),
       height: Math.floor(this.distance),
-      combo: this.combo,
+      combo: this.scores.combo,
+      modeId: this.mode.id,
     });
   }
 }
