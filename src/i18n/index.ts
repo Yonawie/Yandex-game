@@ -34,6 +34,29 @@ export interface Dictionary {
   yourLight: string;
   collectHint: string;
   avoidHint: string;
+  // retention
+  retention: string;
+  morningTitle: string;
+  morningClaim: string;
+  morningDone: string;
+  streak: string;
+  challengeTitle: string;
+  challengeClaim: string;
+  challengeDone: string;
+  shards: string;
+  idleTitle: string;
+  idleClaim: string;
+  idleEmpty: string;
+  lettersTitle: string;
+  letterNew: string;
+  letterRead: string;
+  echoTitle: string;
+  echoBeat: string;
+  echoTarget: string;
+  boostActive: string;
+  close: string;
+  claimed: string;
+  weeklyReward: string;
 }
 
 export const dictionaries: Record<Lang, Dictionary> = {
@@ -71,6 +94,28 @@ export const dictionaries: Record<Lang, Dictionary> = {
     yourLight: 'Твой свет',
     collectHint: 'бери свой цвет',
     avoidHint: 'обходи пустоты',
+    retention: 'Вернуться',
+    morningTitle: 'Утренний фитиль',
+    morningClaim: 'Зажечь на сегодня',
+    morningDone: 'Уже зажжён',
+    streak: 'Серия',
+    challengeTitle: 'Ночной маяк',
+    challengeClaim: 'Забрать награду',
+    challengeDone: 'Маяк выполнен',
+    shards: 'Осколки недели',
+    idleTitle: 'Досыпающий огонёк',
+    idleClaim: 'Собрать свет',
+    idleEmpty: 'Пока пусто — зайди позже',
+    lettersTitle: 'Письма с высоты',
+    letterNew: 'Новое',
+    letterRead: 'Прочитано',
+    echoTitle: 'Эхо рекорда',
+    echoBeat: 'Эхо побито!',
+    echoTarget: 'Вчерашний лучший',
+    boostActive: 'Утренний жар: +15 искр',
+    close: 'Закрыть',
+    claimed: 'Получено',
+    weeklyReward: 'Неделя собрана!',
   },
   en: {
     brand: 'Stay Lit',
@@ -106,6 +151,28 @@ export const dictionaries: Record<Lang, Dictionary> = {
     yourLight: 'Your light',
     collectHint: 'take your color',
     avoidHint: 'avoid voids',
+    retention: 'Come back',
+    morningTitle: 'Morning Flame',
+    morningClaim: 'Light for today',
+    morningDone: 'Already lit',
+    streak: 'Streak',
+    challengeTitle: 'Night Beacon',
+    challengeClaim: 'Claim reward',
+    challengeDone: 'Beacon complete',
+    shards: 'Week shards',
+    idleTitle: 'Sleeping Ember',
+    idleClaim: 'Gather light',
+    idleEmpty: 'Empty — come back later',
+    lettersTitle: 'Letters from Height',
+    letterNew: 'New',
+    letterRead: 'Read',
+    echoTitle: 'Record Echo',
+    echoBeat: 'Echo beaten!',
+    echoTarget: 'Yesterday best',
+    boostActive: 'Morning heat: +15 sparks',
+    close: 'Close',
+    claimed: 'Claimed',
+    weeklyReward: 'Week complete!',
   },
 };
 

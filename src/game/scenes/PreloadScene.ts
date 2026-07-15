@@ -6,6 +6,7 @@ import { hydrateSave, setRemoteWriter } from '@/data/save';
 import { setMuted } from '@/game/audio/sfx';
 import { COLORS } from '@/data/balance';
 import { loadRemoteBalancePatch } from '@/content/runtimeConfig';
+import { syncRetentionClock } from '@/retention/service';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -58,6 +59,7 @@ export class PreloadScene extends Phaser.Scene {
     setMuted(!save.sound);
 
     loadRemoteBalancePatch();
+    await syncRetentionClock();
     generateTextures(this);
 
     await new Promise<void>((resolve) => {

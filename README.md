@@ -6,6 +6,7 @@ Endless vertical arcade for **Яндекс Игры**.
 
 - ТЗ: [`docs/TZ.md`](docs/TZ.md)
 - Как тестировать: [`docs/PLAY.md`](docs/PLAY.md)
+- Retention (крючки возврата): [`docs/RETENTION.md`](docs/RETENTION.md)
 
 ## Проверка игры (самый простой способ)
 

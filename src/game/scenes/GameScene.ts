@@ -12,6 +12,7 @@ import { getSave, patchSave } from '@/data/save';
 import { tf, getLang } from '@/i18n';
 import { playTone } from '@/game/audio/sfx';
 import { yandex } from '@/sdk/yandex';
+import type { RunStats } from '@/retention/service';
 
 interface FallingEntity {
   kind: EntityKind;
@@ -46,6 +47,9 @@ export class GameScene extends Phaser.Scene {
   private eventsDir!: EventDirector;
   private scores!: ScoreSystem;
   private story!: StoryDirector;
+  private matchedCollects = 0;
+  private voidsPassed = 0;
+  private maxCombo = 0;
 
   constructor() {
     super('Game');
@@ -73,6 +77,9 @@ export class GameScene extends Phaser.Scene {
     this.scores.reset();
     this.story = new StoryDirector();
     this.story.reset();
+    this.matchedCollects = 0;
+    this.voidsPassed = 0;
+    this.maxCombo = 0;
 
     this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height).setDepth(0);
 
@@ -308,12 +315,18 @@ export class GameScene extends Phaser.Scene {
         this.entities.splice(i, 1);
         continue;
       }
+      if (e.go.y > playerY + 8 && e.kind === 'void' && !(e.go.getData('passed') as boolean)) {
+        e.go.setData('passed', true);
+        this.voidsPassed += 1;
+      }
+
       if (e.go.y > height + 60) {
         e.go.destroy();
         this.entities.splice(i, 1);
       }
     }
 
+    this.maxCombo = Math.max(this.maxCombo, this.scores.combo);
     this.scoreText.setText(`${tf('score')}: ${Math.floor(this.scores.score)}`);
     this.heightText.setText(`${tf('height')}: ${Math.floor(this.distance)}`);
     this.comboText.setText(this.scores.combo > 1 ? `${tf('combo')} ×${this.scores.combo}` : '');
@@ -392,6 +405,8 @@ export class GameScene extends Phaser.Scene {
     if (def.score != null && def.colored) {
       if (e.hue === this.playerHue) {
         this.scores.collect(def.score, this.time.now, this.mode, Boolean(def.forceCombo));
+        this.matchedCollects += 1;
+        this.maxCombo = Math.max(this.maxCombo, this.scores.combo);
         playTone('collect', this.scores.combo);
         this.burst(e.go.x, e.go.y, HUE_HEX[e.hue ?? 'amber']);
         if (this.scores.combo === 5 || this.scores.combo === 10) playTone('combo', this.scores.combo);
@@ -581,11 +596,19 @@ export class GameScene extends Phaser.Scene {
 
   private goResult(): void {
     this.input.off('pointerdown', this.pointerDownHandler);
-    this.scene.start('Result', {
+    const stats: RunStats = {
       score: Math.floor(this.scores.score),
       height: Math.floor(this.distance),
+      maxCombo: this.maxCombo,
+      matchedCollects: this.matchedCollects,
+      voidsPassed: this.voidsPassed,
+    };
+    this.scene.start('Result', {
+      score: stats.score,
+      height: stats.height,
       combo: this.scores.combo,
       modeId: this.mode.id,
+      stats,
     });
   }
 }

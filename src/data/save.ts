@@ -9,10 +9,38 @@ export interface SaveData {
   deathsSinceFullscreen: number;
   seenTip: boolean;
   version: number;
+
+  // —— Retention (steps 1–6) ——
+  /** YYYY-MM-DD last active calendar day */
+  lastLoginDay: string;
+  /** consecutive daily login streak */
+  streak: number;
+  /** true = grace already spent for current streak recovery */
+  streakGraceUsed: boolean;
+  /** day when morning flame was claimed */
+  morningClaimedDay: string;
+  /** unique calendar days with a login */
+  returnDays: number;
+  unlockedLetters: string[];
+  readLetters: string[];
+  /** last timestamp when idle bank was drained/synced */
+  idleSyncedAt: number;
+  challengeDay: string;
+  challengeId: string;
+  challengeProgress: number;
+  challengeDone: boolean;
+  challengeClaimed: boolean;
+  weekKey: string;
+  weekShards: number;
+  yesterdayBestScore: number;
+  todayBestScore: number;
+  todayBestDay: string;
+  /** first run(s) after morning claim get soft bonus */
+  boostRunsLeft: number;
 }
 
 const SAVE_KEY = 'staylit_v1';
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 
 const defaultSave = (): SaveData => ({
   bestScore: 0,
@@ -25,6 +53,25 @@ const defaultSave = (): SaveData => ({
   deathsSinceFullscreen: 0,
   seenTip: false,
   version: SAVE_VERSION,
+  lastLoginDay: '',
+  streak: 0,
+  streakGraceUsed: false,
+  morningClaimedDay: '',
+  returnDays: 0,
+  unlockedLetters: [],
+  readLetters: [],
+  idleSyncedAt: Date.now(),
+  challengeDay: '',
+  challengeId: '',
+  challengeProgress: 0,
+  challengeDone: false,
+  challengeClaimed: false,
+  weekKey: '',
+  weekShards: 0,
+  yesterdayBestScore: 0,
+  todayBestScore: 0,
+  todayBestDay: '',
+  boostRunsLeft: 0,
 });
 
 let cache: SaveData = defaultSave();
@@ -72,6 +119,22 @@ export async function hydrateSave(remote: Partial<SaveData> | null): Promise<Sav
       sound: remote.sound ?? cache.sound,
       runs: Math.max(cache.runs, remote.runs ?? 0),
       seenTip: cache.seenTip || Boolean(remote.seenTip),
+      streak: Math.max(cache.streak, remote.streak ?? 0),
+      returnDays: Math.max(cache.returnDays, remote.returnDays ?? 0),
+      unlockedLetters: Array.from(
+        new Set([...(cache.unlockedLetters || []), ...((remote.unlockedLetters as string[]) || [])]),
+      ),
+      readLetters: Array.from(
+        new Set([...(cache.readLetters || []), ...((remote.readLetters as string[]) || [])]),
+      ),
+      weekShards: Math.max(cache.weekShards, remote.weekShards ?? 0),
+      yesterdayBestScore: Math.max(cache.yesterdayBestScore, remote.yesterdayBestScore ?? 0),
+      todayBestScore: Math.max(cache.todayBestScore, remote.todayBestScore ?? 0),
+      lastLoginDay: remote.lastLoginDay || cache.lastLoginDay,
+      morningClaimedDay: remote.morningClaimedDay || cache.morningClaimedDay,
+      challengeDay: remote.challengeDay || cache.challengeDay,
+      challengeId: remote.challengeId || cache.challengeId,
+      idleSyncedAt: Math.max(cache.idleSyncedAt || 0, remote.idleSyncedAt ?? 0) || Date.now(),
       version: SAVE_VERSION,
     };
   }

@@ -7,6 +7,9 @@ import { playTone, setMuted, isMuted } from '@/game/audio/sfx';
 import { yandex } from '@/sdk/yandex';
 import { listModes, isModeUnlocked } from '@/content/modes';
 import { getActiveModeId, setActiveMode } from '@/content/runtimeConfig';
+import { RetentionOverlay } from '@/game/ui/RetentionOverlay';
+import { syncRetentionClock, getSnapshot, markIdleLeave } from '@/retention/service';
+import { WEEKLY_SHARDS_NEEDED } from '@/content/retention';
 
 export class MenuScene extends Phaser.Scene {
   private stars!: Phaser.GameObjects.Group;
@@ -17,6 +20,8 @@ export class MenuScene extends Phaser.Scene {
   private skinName!: Phaser.GameObjects.Text;
   private skinHint!: Phaser.GameObjects.Text;
   private modeText!: Phaser.GameObjects.Text;
+  private retentionHint!: Phaser.GameObjects.Text;
+  private retentionOverlay!: RetentionOverlay;
 
   constructor() {
     super('Menu');
@@ -24,6 +29,7 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     yandex.stopGameplay();
+    void syncRetentionClock().then(() => this.refreshRetentionHint());
     const { width, height } = this.scale;
     const save = getSave();
     const modes = listModes();
@@ -76,7 +82,7 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.lantern = drawLantern(this, width / 2, height * 0.38, SKINS[this.skinIndex], 'amber', 1.85);
+    this.lantern = drawLantern(this, width / 2, height * 0.34, SKINS[this.skinIndex], 'amber', 1.7);
     this.tweens.add({
       targets: this.lantern,
       y: this.lantern.y - 14,
@@ -87,33 +93,47 @@ export class MenuScene extends Phaser.Scene {
     });
 
     this.add
-      .text(width / 2, height * 0.52, `${tf('best')}: ${save.bestScore}`, {
+      .text(width / 2, height * 0.48, `${tf('best')}: ${save.bestScore}`, {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '22px',
+        fontSize: '20px',
         color: '#F4A261',
       })
       .setOrigin(0.5);
 
     this.coinsText = this.add
-      .text(width / 2, height * 0.555, `${tf('coins')}: ${save.coins}`, {
+      .text(width / 2, height * 0.51, `${tf('coins')}: ${save.coins}`, {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '18px',
+        fontSize: '17px',
         color: '#8ECAE6',
       })
       .setOrigin(0.5);
 
-    this.modeText = this.add
-      .text(width / 2, height * 0.6, '', {
+    this.retentionHint = this.add
+      .text(width / 2, height * 0.545, '', {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '18px',
+        fontSize: '15px',
+        color: '#F7F3E8',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    this.retentionHint.on('pointerup', () => {
+      playTone('ui');
+      this.retentionOverlay.show();
+    });
+    this.refreshRetentionHint();
+
+    this.modeText = this.add
+      .text(width / 2, height * 0.59, '', {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '17px',
         color: '#F7F3E8',
       })
       .setOrigin(0.5);
-    this.makeChip(width * 0.28, height * 0.6, '‹', () => this.cycleMode(-1));
-    this.makeChip(width * 0.72, height * 0.6, '›', () => this.cycleMode(1));
+    this.makeChip(width * 0.28, height * 0.59, '‹', () => this.cycleMode(-1));
+    this.makeChip(width * 0.72, height * 0.59, '›', () => this.cycleMode(1));
     this.refreshModeLabel();
 
-    this.makeButton(width / 2, height * 0.7, tf('play'), () => {
+    this.makeButton(width / 2, height * 0.68, tf('play'), () => {
       const mode = modes[this.modeIndex];
       if (!isModeUnlocked(mode.id, save.bestHeight)) {
         playTone('hit');
@@ -121,33 +141,47 @@ export class MenuScene extends Phaser.Scene {
       }
       setActiveMode(mode.id);
       playTone('start');
+      void markIdleLeave();
       this.scene.start('Game');
     });
 
     this.skinName = this.add
-      .text(width / 2, height * 0.8, '', {
+      .text(width / 2, height * 0.78, '', {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '20px',
+        fontSize: '18px',
         color: '#F7F3E8',
       })
       .setOrigin(0.5);
     this.skinHint = this.add
-      .text(width / 2, height * 0.835, '', {
+      .text(width / 2, height * 0.81, '', {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '16px',
+        fontSize: '15px',
         color: '#9BB0C1',
       })
       .setOrigin(0.5);
 
-    this.makeChip(width * 0.28, height * 0.8, '‹', () => void this.cycleSkin(-1));
-    this.makeChip(width * 0.72, height * 0.8, '›', () => void this.cycleSkin(1));
+    this.makeChip(width * 0.28, height * 0.78, '‹', () => void this.cycleSkin(-1));
+    this.makeChip(width * 0.72, height * 0.78, '›', () => void this.cycleSkin(1));
     this.refreshSkinLabel();
+
+    const hub = this.add
+      .text(width / 2, height * 0.865, tf('retention'), {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '20px',
+        color: '#F4A261',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    hub.on('pointerup', () => {
+      playTone('ui');
+      this.retentionOverlay.show();
+    });
 
     const soundLabel = save.sound ? tf('soundOn') : tf('soundOff');
     const soundBtn = this.add
       .text(width / 2, height * 0.92, soundLabel, {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '18px',
+        fontSize: '16px',
         color: '#9BB0C1',
       })
       .setOrigin(0.5)
@@ -160,6 +194,12 @@ export class MenuScene extends Phaser.Scene {
       playTone('ui');
     });
 
+    this.retentionOverlay = new RetentionOverlay(this, () => {
+      this.coinsText.setText(`${tf('coins')}: ${getSave().coins}`);
+      this.refreshRetentionHint();
+      this.refreshSkinLabel();
+    });
+
     if (!save.seenTip) this.showTips();
 
     this.events.on(Phaser.Scenes.Events.UPDATE, () => {
@@ -169,6 +209,17 @@ export class MenuScene extends Phaser.Scene {
         if (s.y > height) s.y = -4;
       });
     });
+  }
+
+  private refreshRetentionHint(): void {
+    if (!this.retentionHint) return;
+    const snap = getSnapshot();
+    const bits: string[] = [`${tf('streak')} ${snap.streak}`];
+    if (snap.morningAvailable) bits.push(tf('morningClaim'));
+    if (snap.idleSparks > 0) bits.push(`+${snap.idleCoins}`);
+    if (snap.unreadLetters.length) bits.push(`${tf('letterNew')} ${snap.unreadLetters.length}`);
+    bits.push(`${tf('shards')} ${snap.weekShards}/${WEEKLY_SHARDS_NEEDED}`);
+    this.retentionHint.setText(bits.join(' · '));
   }
 
   private cycleMode(dir: number): void {
@@ -212,10 +263,10 @@ export class MenuScene extends Phaser.Scene {
       this.lantern = drawLantern(
         this,
         this.scale.width / 2,
-        this.scale.height * 0.38,
+        this.scale.height * 0.34,
         skin,
         'amber',
-        1.85,
+        1.7,
       );
       this.tweens.add({
         targets: this.lantern,
