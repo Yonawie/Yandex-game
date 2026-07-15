@@ -35,15 +35,13 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   });
 }
 
-/** Illustrated art packs from public/art — then procedural fallbacks fill the rest. */
+/**
+ * Illustrated art from public/art — only clean keyed sprites.
+ * Scenery extras (ridge/temple/lantern-string) stay procedural: bg-sky already paints them.
+ */
 const ART_IMAGES: [string, string][] = [
   ['bg-sky', 'bg-sky.png'],
-  ['moon', 'art-moon.png'],
-  ['ridge-far', 'art-ridge.png'],
-  ['ridge-near', 'art-ridge.png'],
   ['silk-banner', 'art-banner.png'],
-  ['lantern-string', 'art-lantern-string.png'],
-  ['temple', 'art-temple.png'],
   ['orb-amber', 'art-firefly-amber.png'],
   ['orb-teal', 'art-firefly-teal.png'],
   ['orb-coral', 'art-firefly-coral.png'],
@@ -78,10 +76,11 @@ export class PreloadScene extends Phaser.Scene {
     const title = this.add
       .text(width / 2, height * 0.42, tf('brand'), {
         fontFamily: 'Fraunces, Georgia, serif',
-        fontSize: '54px',
-        color: '#F7F3E8',
+        fontSize: '58px',
+        color: '#FFF8EC',
       })
       .setOrigin(0.5);
+    title.setShadow(0, 4, '#FFB347', 14, true, true);
     const barBg = this.add.rectangle(width / 2, height * 0.55, 280, 10, 0x1b2838).setOrigin(0.5);
     const bar = this.add.rectangle(barBg.x - 140, barBg.y, 4, 10, COLORS.amber).setOrigin(0, 0.5);
     this.add

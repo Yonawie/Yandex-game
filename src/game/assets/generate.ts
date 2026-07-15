@@ -517,12 +517,14 @@ function makeUiPanel(scene: Phaser.Scene): void {
 
 function makeButton(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0xff7a59, 1);
-  g.fillRoundedRect(0, 8, 64, 56, 18);
+  g.fillStyle(0xc45c3e, 1);
+  g.fillRoundedRect(0, 8, 64, 56, 16);
   g.fillStyle(COLORS.amber, 1);
-  g.fillRoundedRect(0, 0, 64, 56, 18);
-  g.fillStyle(0xffffff, 0.4);
-  g.fillRoundedRect(6, 6, 52, 16, 10);
+  g.fillRoundedRect(0, 0, 64, 56, 16);
+  g.fillStyle(0xffffff, 0.28);
+  g.fillRoundedRect(8, 6, 48, 14, 8);
+  g.lineStyle(2, 0xfff1c9, 0.35);
+  g.strokeRoundedRect(1, 1, 62, 54, 15);
   g.generateTexture('ui-btn', 64, 64);
   g.destroy();
 }

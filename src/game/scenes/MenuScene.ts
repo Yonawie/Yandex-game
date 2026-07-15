@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SKINS } from '@/data/balance';
 import { drawLantern } from '@/game/assets/generate';
-import { placeNightScenery, addBg } from '@/game/assets/scenery';
+import { placeMenuAtmosphere } from '@/game/assets/scenery';
 import { getSave, patchSave, addCoins, unlockSkin } from '@/data/save';
 import { tf, getLang } from '@/i18n';
 import { playTone, setMuted, isMuted, unlockAudio, startMusic } from '@/game/audio/sfx';
@@ -43,63 +43,68 @@ export class MenuScene extends Phaser.Scene {
     this.skinIndex = Math.max(0, SKINS.findIndex((s) => s.id === save.skinId));
     this.modeIndex = Math.max(0, modes.findIndex((m) => m.id === getActiveModeId()));
 
-    addBg(this);
-    placeNightScenery(this, { skipBg: true });
+    placeMenuAtmosphere(this);
 
+    // ——— Hero column ———
     const brand = this.add
-      .text(width / 2, height * 0.14, tf('brand'), {
+      .text(width / 2, height * 0.12, tf('brand'), {
         fontFamily: 'Fraunces, Georgia, serif',
-        fontSize: '72px',
+        fontSize: '70px',
         color: '#FFF8EC',
       })
       .setOrigin(0.5)
-      .setDepth(10);
-    brand.setShadow(0, 6, '#FFB347', 16, true, true);
+      .setDepth(20);
+    brand.setShadow(0, 4, '#FFB347', 14, true, true);
 
     this.add
-      .text(width / 2, height * 0.205, tf('tagline'), {
+      .text(width / 2, height * 0.175, tf('tagline'), {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '20px',
-        color: '#D6E8F2',
+        fontSize: '18px',
+        color: '#C9DDE8',
         align: 'center',
-        wordWrap: { width: width * 0.8 },
+        wordWrap: { width: width * 0.78 },
       })
       .setOrigin(0.5)
-      .setDepth(10);
+      .setDepth(20);
 
-    this.lantern = drawLantern(this, width / 2, height * 0.34, SKINS[this.skinIndex], 'amber', 1.85);
+    this.lantern = drawLantern(this, width / 2, height * 0.32, SKINS[this.skinIndex], 'amber', 2.05);
+    this.lantern.setDepth(20);
     this.tweens.add({
       targets: this.lantern,
-      y: this.lantern.y - 14,
-      duration: 1800,
+      y: this.lantern.y - 12,
+      duration: 2000,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
 
+    // compact stats under lantern
     this.add
-      .text(width / 2, height * 0.48, `${tf('best')}: ${save.bestScore}`, {
+      .text(width / 2, height * 0.46, `${tf('best')}  ${save.bestScore}`, {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '20px',
         color: '#FFB347',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(20);
 
     this.coinsText = this.add
-      .text(width / 2, height * 0.51, `${tf('coins')}: ${save.coins}`, {
+      .text(width / 2, height * 0.49, `${tf('coins')}  ${save.coins}`, {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '17px',
+        fontSize: '16px',
         color: '#A8E4F5',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(20);
 
     this.retentionHint = this.add
-      .text(width / 2, height * 0.545, '', {
+      .text(width / 2, height * 0.525, '', {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '15px',
-        color: '#FFF8EC',
+        fontSize: '14px',
+        color: '#E8F0F5',
       })
       .setOrigin(0.5)
+      .setDepth(20)
       .setInteractive({ useHandCursor: true });
     this.retentionHint.on('pointerup', () => {
       playTone('ui');
@@ -107,18 +112,20 @@ export class MenuScene extends Phaser.Scene {
     });
     this.refreshRetentionHint();
 
+    // mode
     this.modeText = this.add
-      .text(width / 2, height * 0.59, '', {
+      .text(width / 2, height * 0.575, '', {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '17px',
-        color: '#F7F3E8',
+        fontSize: '16px',
+        color: '#FFF8EC',
       })
-      .setOrigin(0.5);
-    this.makeChip(width * 0.28, height * 0.59, '‹', () => this.cycleMode(-1));
-    this.makeChip(width * 0.72, height * 0.59, '›', () => this.cycleMode(1));
+      .setOrigin(0.5)
+      .setDepth(20);
+    this.makeChip(width * 0.26, height * 0.575, '‹', () => this.cycleMode(-1));
+    this.makeChip(width * 0.74, height * 0.575, '›', () => this.cycleMode(1));
     this.refreshModeLabel();
 
-    this.makeButton(width / 2, height * 0.68, tf('play'), () => {
+    this.makePlayButton(width / 2, height * 0.67, tf('play'), () => {
       if (this.uiBlocked()) return;
       const mode = modes[this.modeIndex];
       if (!isModeUnlocked(mode.id, getSave().bestHeight)) {
@@ -131,54 +138,52 @@ export class MenuScene extends Phaser.Scene {
       this.scene.start('Game');
     });
 
+    // skin
     this.skinName = this.add
-      .text(width / 2, height * 0.78, '', {
+      .text(width / 2, height * 0.77, '', {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '17px',
+        color: '#FFF8EC',
+      })
+      .setOrigin(0.5)
+      .setDepth(20);
+    this.skinHint = this.add
+      .text(width / 2, height * 0.8, '', {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '14px',
+        color: '#9BB0C1',
+      })
+      .setOrigin(0.5)
+      .setDepth(20);
+    this.makeChip(width * 0.26, height * 0.77, '‹', () => void this.cycleSkin(-1));
+    this.makeChip(width * 0.74, height * 0.77, '›', () => void this.cycleSkin(1));
+    this.refreshSkinLabel();
+
+    // retention hub — ghost text, not a huge chip over the art
+    const hub = this.add
+      .text(width / 2, height * 0.875, tf('retention'), {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '18px',
-        color: '#F7F3E8',
+        color: '#FFB347',
       })
-      .setOrigin(0.5);
-    this.skinHint = this.add
-      .text(width / 2, height * 0.81, '', {
+      .setOrigin(0.5)
+      .setDepth(20)
+      .setInteractive({ useHandCursor: true });
+    hub.on('pointerup', () => {
+      unlockAudio();
+      playTone('ui');
+      this.retentionOverlay?.show();
+    });
+
+    const soundLabel = save.sound ? tf('soundOn') : tf('soundOff');
+    const soundBtn = this.add
+      .text(width / 2, height * 0.93, soundLabel, {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '15px',
         color: '#9BB0C1',
       })
-      .setOrigin(0.5);
-
-    this.makeChip(width * 0.28, height * 0.78, '‹', () => void this.cycleSkin(-1));
-    this.makeChip(width * 0.72, height * 0.78, '›', () => void this.cycleSkin(1));
-    this.refreshSkinLabel();
-
-    const hubBg = this.add
-      .image(width / 2, height * 0.865, 'ui-btn')
-      .setDisplaySize(240, 48)
-      .setTint(0x2a9d8f)
-      .setInteractive({ useHandCursor: true });
-    const hub = this.add
-      .text(width / 2, height * 0.865, tf('retention'), {
-        fontFamily: 'Outfit, sans-serif',
-        fontSize: '20px',
-        color: '#071018',
-      })
       .setOrigin(0.5)
-      .setDepth(3);
-    const openHub = () => {
-      unlockAudio();
-      playTone('ui');
-      this.retentionOverlay?.show();
-    };
-    hubBg.on('pointerup', openHub);
-    hub.setInteractive({ useHandCursor: true }).on('pointerup', openHub);
-
-    const soundLabel = save.sound ? tf('soundOn') : tf('soundOff');
-    const soundBtn = this.add
-      .text(width / 2, height * 0.92, soundLabel, {
-        fontFamily: 'Outfit, sans-serif',
-        fontSize: '16px',
-        color: '#9BB0C1',
-      })
-      .setOrigin(0.5)
+      .setDepth(20)
       .setInteractive({ useHandCursor: true });
     soundBtn.on('pointerup', async () => {
       const next = isMuted();
@@ -190,7 +195,7 @@ export class MenuScene extends Phaser.Scene {
 
     try {
       this.retentionOverlay = new RetentionOverlay(this, () => {
-        this.coinsText.setText(`${tf('coins')}: ${getSave().coins}`);
+        this.coinsText.setText(`${tf('coins')}  ${getSave().coins}`);
         this.refreshRetentionHint();
         this.refreshSkinLabel();
       });
@@ -201,7 +206,6 @@ export class MenuScene extends Phaser.Scene {
     if (!save.seenTip) {
       this.showTips();
     } else {
-      // auto-open return hub if morning gift waiting
       void syncRetentionClock().then(() => {
         const snap = getSnapshot();
         this.refreshRetentionHint();
@@ -210,7 +214,6 @@ export class MenuScene extends Phaser.Scene {
         }
       });
     }
-
   }
 
   private refreshRetentionHint(): void {
@@ -218,10 +221,10 @@ export class MenuScene extends Phaser.Scene {
     const snap = getSnapshot();
     const bits: string[] = [`${tf('streak')} ${snap.streak}`];
     if (snap.morningAvailable) bits.push(tf('morningClaim'));
-    if (snap.idleSparks > 0) bits.push(`+${snap.idleCoins}`);
-    if (snap.unreadLetters.length) bits.push(`${tf('letterNew')} ${snap.unreadLetters.length}`);
-    bits.push(`${tf('shards')} ${snap.weekShards}/${WEEKLY_SHARDS_NEEDED}`);
-    this.retentionHint.setText(bits.join(' · '));
+    if (snap.idleSparks > 0) bits.push(`+${snap.idleSparks}`);
+    if (snap.unreadLetters.length) bits.push(`${tf('letterNew')}`);
+    bits.push(`${snap.weekShards}/${WEEKLY_SHARDS_NEEDED}`);
+    this.retentionHint.setText(bits.join('  ·  '));
   }
 
   private cycleMode(dir: number): void {
@@ -265,22 +268,23 @@ export class MenuScene extends Phaser.Scene {
       this.lantern = drawLantern(
         this,
         this.scale.width / 2,
-        this.scale.height * 0.34,
+        this.scale.height * 0.32,
         skin,
         'amber',
-        1.85,
+        2.05,
       );
+      this.lantern.setDepth(20);
       this.tweens.add({
         targets: this.lantern,
-        y: this.lantern.y - 14,
-        duration: 1800,
+        y: this.lantern.y - 12,
+        duration: 2000,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
       });
     }
 
-    this.coinsText.setText(`${tf('coins')}: ${getSave().coins}`);
+    this.coinsText.setText(`${tf('coins')}  ${getSave().coins}`);
     this.refreshSkinLabel();
   }
 
@@ -295,34 +299,52 @@ export class MenuScene extends Phaser.Scene {
     );
   }
 
-  private makeButton(x: number, y: number, label: string, onClick: () => void): void {
-    const bg = this.add.image(x, y, 'ui-btn').setDisplaySize(280, 72).setInteractive({ useHandCursor: true });
-    this.add
-      .text(x, y, label, {
-        fontFamily: 'Outfit, sans-serif',
-        fontSize: '30px',
-        color: '#071018',
-        fontStyle: '700',
-      })
-      .setOrigin(0.5)
-      .setDepth(2);
-    bg.on('pointerover', () => bg.setTint(0xffd6a5));
-    bg.on('pointerout', () => bg.clearTint());
-    bg.on('pointerup', onClick);
-  }
-
-  private makeChip(x: number, y: number, label: string, onClick: () => void): void {
-    const bg = this.add
-      .rectangle(x, y, 44, 44, 0x1b2838, 0.92)
-      .setStrokeStyle(2, 0xa8e4f5, 0.35)
+  private makePlayButton(x: number, y: number, label: string, onClick: () => void): void {
+    const w = 280;
+    const h = 68;
+    const g = this.add.graphics().setDepth(20);
+    const draw = (hover: boolean) => {
+      g.clear();
+      g.fillStyle(0xc45c3e, 1);
+      g.fillRoundedRect(x - w / 2, y - h / 2 + 5, w, h, 18);
+      g.fillStyle(hover ? 0xffc56a : 0xffb347, 1);
+      g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 18);
+      g.fillStyle(0xffffff, 0.22);
+      g.fillRoundedRect(x - w / 2 + 14, y - h / 2 + 8, w - 28, 18, 10);
+    };
+    draw(false);
+    const hit = this.add
+      .rectangle(x, y, w, h, 0x000000, 0.001)
+      .setDepth(21)
       .setInteractive({ useHandCursor: true });
     this.add
       .text(x, y, label, {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '26px',
-        color: '#F7F3E8',
+        fontSize: '30px',
+        color: '#0C1C2E',
+        fontStyle: '700',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(22);
+    hit.on('pointerover', () => draw(true));
+    hit.on('pointerout', () => draw(false));
+    hit.on('pointerup', onClick);
+  }
+
+  private makeChip(x: number, y: number, label: string, onClick: () => void): void {
+    const bg = this.add
+      .rectangle(x, y, 42, 42, 0x123048, 0.85)
+      .setStrokeStyle(1.5, 0xa8e4f5, 0.35)
+      .setDepth(20)
+      .setInteractive({ useHandCursor: true });
+    this.add
+      .text(x, y, label, {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '24px',
+        color: '#FFF8EC',
+      })
+      .setOrigin(0.5)
+      .setDepth(21);
     bg.on('pointerup', onClick);
   }
 
@@ -350,19 +372,28 @@ export class MenuScene extends Phaser.Scene {
       )
       .setOrigin(0.5)
       .setDepth(52);
-    const okBg = this.add
-      .image(width / 2, height / 2 + 130, 'ui-btn')
-      .setDisplaySize(220, 56)
-      .setDepth(52)
+    const okX = width / 2;
+    const okY = height / 2 + 130;
+    const okW = 220;
+    const okH = 56;
+    const okG = this.add.graphics().setDepth(52);
+    okG.fillStyle(0xc45c3e, 1);
+    okG.fillRoundedRect(okX - okW / 2, okY - okH / 2 + 4, okW, okH, 16);
+    okG.fillStyle(0xffb347, 1);
+    okG.fillRoundedRect(okX - okW / 2, okY - okH / 2, okW, okH, 16);
+    const okHit = this.add
+      .rectangle(okX, okY, okW, okH, 0x000000, 0.001)
+      .setDepth(53)
       .setInteractive({ useHandCursor: true });
     const ok = this.add
-      .text(width / 2, height / 2 + 130, tf('gotIt'), {
+      .text(okX, okY, tf('gotIt'), {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '26px',
-        color: '#071018',
+        color: '#0C1C2E',
+        fontStyle: '700',
       })
       .setOrigin(0.5)
-      .setDepth(53);
+      .setDepth(54);
 
     const closeTips = async () => {
       if (!this.tipsOpen) return;
@@ -371,7 +402,8 @@ export class MenuScene extends Phaser.Scene {
       overlay.destroy();
       panel.destroy();
       tip.destroy();
-      okBg.destroy();
+      okG.destroy();
+      okHit.destroy();
       ok.destroy();
       await patchSave({ seenTip: true });
       const snap = getSnapshot();
@@ -379,7 +411,7 @@ export class MenuScene extends Phaser.Scene {
         this.retentionOverlay?.show();
       }
     };
-    okBg.on('pointerup', () => void closeTips());
+    okHit.on('pointerup', () => void closeTips());
     overlay.setInteractive().on('pointerup', () => void closeTips());
   }
 }
