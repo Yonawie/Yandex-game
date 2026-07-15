@@ -21,6 +21,8 @@ interface FallingEntity {
   go: Phaser.GameObjects.Image;
 }
 
+const CARETAKER_AT = [100, 200, 400] as const;
+
 export class GameScene extends Phaser.Scene {
   private mode!: ModeDef;
   private playerLane = 1;
@@ -30,6 +32,7 @@ export class GameScene extends Phaser.Scene {
   private distance = 0;
   private entities: FallingEntity[] = [];
   private threads: Phaser.GameObjects.TileSprite[] = [];
+  private threadBaseX: number[] = [];
   private starField: Phaser.GameObjects.Image[] = [];
   private scoreText!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
@@ -39,12 +42,23 @@ export class GameScene extends Phaser.Scene {
   private colorBadge!: Phaser.GameObjects.Image;
   private laneGlow!: Phaser.GameObjects.Image;
   private matchRing!: Phaser.GameObjects.Image;
+  private comboAura!: Phaser.GameObjects.Image;
   private dangerMarks: Phaser.GameObjects.Image[] = [];
+  private caretakers: Phaser.GameObjects.Image[] = [];
+  private caretakerShown = new Set<number>();
+  private ghostLeft!: Phaser.GameObjects.Image;
+  private ghostRight!: Phaser.GameObjects.Image;
+  private ghostHint!: Phaser.GameObjects.Text;
+  private ghostUntil = 0;
+  private ghostCleared = false;
+  private stormRain: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   private alive = true;
   private continued = false;
   private pointerDownHandler!: (pointer: Phaser.Input.Pointer) => void;
   private trailEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private lastMilestone = 0;
+  private lastComboTier = 0;
+  private camLean = 0;
 
   private spawner!: Spawner;
   private eventsDir!: EventDirector;
@@ -72,6 +86,12 @@ export class GameScene extends Phaser.Scene {
     this.scroll = this.mode.baseScroll;
     this.distance = 0;
     this.entities = [];
+    this.caretakerShown.clear();
+    this.caretakers = [];
+    this.ghostCleared = false;
+    this.lastComboTier = 0;
+    this.camLean = 0;
+    this.stormRain = null;
 
     this.spawner = new Spawner(this.mode);
     this.eventsDir = new EventDirector();
@@ -86,9 +106,11 @@ export class GameScene extends Phaser.Scene {
     this.lastMilestone = 0;
     this.dangerMarks = [];
 
+    this.cameras.main.setRotation(0);
+    this.cameras.main.setZoom(1);
+
     this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height).setDepth(0);
 
-    // atmosphere layers — soft blobs, no tiled mesh
     this.add
       .image(width * 0.78, height * 0.16, 'moon')
       .setAlpha(0.9)
@@ -125,7 +147,6 @@ export class GameScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    // sparse stars only (never tile a tiny sprite — that becomes a grid)
     this.starField = [];
     for (let i = 0; i < 28; i++) {
       const s = this.add
@@ -137,7 +158,20 @@ export class GameScene extends Phaser.Scene {
       this.starField.push(s);
     }
 
+    // caretaker silhouettes wait off / invisible until height milestones
+    for (let i = 0; i < CARETAKER_AT.length; i++) {
+      const side = i % 2 === 0 ? 0.14 : 0.86;
+      const img = this.add
+        .image(width * side, height * (0.22 + i * 0.06), 'caretaker')
+        .setDepth(3)
+        .setAlpha(0)
+        .setScale(1.1 + i * 0.15)
+        .setFlipX(i % 2 === 1);
+      this.caretakers.push(img);
+    }
+
     this.threads = [];
+    this.threadBaseX = [];
     for (let lane = 0; lane < this.mode.lanes; lane++) {
       const x = laneX(width, lane, this.mode.lanes, this.mode.lanePadding);
       const thread = this.add
@@ -145,6 +179,7 @@ export class GameScene extends Phaser.Scene {
         .setAlpha(0.9)
         .setDepth(5);
       this.threads.push(thread);
+      this.threadBaseX.push(x);
     }
 
     const py = height * this.mode.playerYRatio;
@@ -179,6 +214,13 @@ export class GameScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
+    this.comboAura = this.add
+      .image(this.lantern.x, py, 'combo-aura')
+      .setDepth(17)
+      .setTint(HUE_HEX[this.playerHue])
+      .setAlpha(0)
+      .setScale(0.8);
+
     this.dangerMarks = [];
     for (let lane = 0; lane < this.mode.lanes; lane++) {
       const mark = this.add
@@ -193,7 +235,7 @@ export class GameScene extends Phaser.Scene {
       .image(width / 2, height / 2, 'vignette')
       .setDisplaySize(width, height)
       .setDepth(35)
-      .setAlpha(0.7)
+      .setAlpha(this.mode.id === 'storm' ? 0.85 : 0.7)
       .setScrollFactor(0);
 
     this.trailEmitter = this.add.particles(0, 0, 'px', {
@@ -209,6 +251,23 @@ export class GameScene extends Phaser.Scene {
       emitting: true,
     });
     this.trailEmitter.setDepth(15);
+
+    if (this.mode.id === 'storm') {
+      this.stormRain = this.add.particles(width / 2, -20, 'rain-drop', {
+        x: { min: 0, max: width },
+        y: -20,
+        lifespan: 1400,
+        speedY: { min: 420, max: 720 },
+        speedX: { min: -40, max: 20 },
+        scale: { min: 0.7, max: 1.4 },
+        alpha: { start: 0.45, end: 0 },
+        quantity: 2,
+        frequency: 40,
+        tint: [0x8ecae6, 0xcbd5e1, 0xf4a261],
+        blendMode: 'ADD',
+      });
+      this.stormRain.setDepth(6);
+    }
 
     this.add.image(28, 42, 'hud-chip').setOrigin(0, 0.5).setDisplaySize(210, 44).setDepth(39).setAlpha(0.9);
     this.add
@@ -283,19 +342,81 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0)
       .setDepth(45);
 
+    // ghost tap onboarding — first ~10s of early runs
+    this.ghostLeft = this.add
+      .image(width * 0.18, height * 0.55, 'ghost-chevron')
+      .setDepth(42)
+      .setAlpha(0)
+      .setScale(1.2);
+    this.ghostRight = this.add
+      .image(width * 0.82, height * 0.55, 'ghost-chevron')
+      .setDepth(42)
+      .setAlpha(0)
+      .setScale(1.2)
+      .setFlipX(true);
+    this.ghostHint = this.add
+      .text(width / 2, height * 0.48, tf('ghostHint'), {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '20px',
+        color: '#F7F3E8',
+      })
+      .setOrigin(0.5)
+      .setDepth(42)
+      .setAlpha(0);
+
+    const showGhost = save.runs <= 3;
+    this.ghostUntil = showGhost ? this.time.now + 10000 : 0;
+    if (showGhost) {
+      this.tweens.add({
+        targets: [this.ghostLeft, this.ghostRight, this.ghostHint],
+        alpha: { from: 0.15, to: 0.75 },
+        duration: 700,
+        yoyo: true,
+        repeat: 6,
+        ease: 'Sine.easeInOut',
+      });
+      this.tweens.add({
+        targets: this.ghostLeft,
+        x: width * 0.18 - 10,
+        duration: 600,
+        yoyo: true,
+        repeat: 6,
+      });
+      this.tweens.add({
+        targets: this.ghostRight,
+        x: width * 0.82 + 10,
+        duration: 600,
+        yoyo: true,
+        repeat: 6,
+      });
+    }
+
     const firstBeat = this.story.tick(0);
     if (firstBeat) this.showStory(firstBeat.ru, firstBeat.en);
 
     this.pointerDownHandler = (pointer) => {
       if (!this.alive) return;
+      this.clearGhostTutor();
       if (pointer.x < width / 2) this.moveLane(-1);
       else this.moveLane(1);
     };
     this.input.on('pointerdown', this.pointerDownHandler);
-    this.input.keyboard?.on('keydown-LEFT', () => this.moveLane(-1));
-    this.input.keyboard?.on('keydown-RIGHT', () => this.moveLane(1));
-    this.input.keyboard?.on('keydown-A', () => this.moveLane(-1));
-    this.input.keyboard?.on('keydown-D', () => this.moveLane(1));
+    this.input.keyboard?.on('keydown-LEFT', () => {
+      this.clearGhostTutor();
+      this.moveLane(-1);
+    });
+    this.input.keyboard?.on('keydown-RIGHT', () => {
+      this.clearGhostTutor();
+      this.moveLane(1);
+    });
+    this.input.keyboard?.on('keydown-A', () => {
+      this.clearGhostTutor();
+      this.moveLane(-1);
+    });
+    this.input.keyboard?.on('keydown-D', () => {
+      this.clearGhostTutor();
+      this.moveLane(1);
+    });
 
     void patchSave({ runs: save.runs + 1 });
     yandex.startGameplay();
@@ -328,9 +449,22 @@ export class GameScene extends Phaser.Scene {
         img.x = Phaser.Math.Between(0, width);
       }
     });
-    this.threads.forEach((t) => {
+
+    const stormAmp = this.mode.id === 'storm' ? 5 : 0;
+    this.threads.forEach((t, i) => {
       t.tilePositionY -= this.scroll * scrollMul * dt * 0.9;
+      if (stormAmp) {
+        t.x = this.threadBaseX[i] + Math.sin(this.time.now / 180 + i * 1.3) * stormAmp;
+      }
     });
+
+    if (this.mode.id === 'storm' && Math.random() < dt * 1.2) {
+      this.cameras.main.shake(60, 0.0025);
+    }
+
+    if (!this.ghostCleared && this.ghostUntil > 0 && this.time.now > this.ghostUntil) {
+      this.clearGhostTutor();
+    }
 
     const table =
       active?.def.spawnTable ??
@@ -368,7 +502,6 @@ export class GameScene extends Phaser.Scene {
       e.go.y += this.scroll * scrollMul * dt;
       if (def.rotates) e.go.rotation += dt * 1.4;
 
-      // matching fireflies pulse brighter; wrong colors stay dimmer
       if (e.kind === 'firefly' && e.hue) {
         const match = e.hue === this.playerHue;
         const pulse = 0.75 + Math.sin(this.time.now / 180 + i) * 0.2;
@@ -394,7 +527,12 @@ export class GameScene extends Phaser.Scene {
       if (e.go.y > playerY + 8 && e.kind === 'void' && !(e.go.getData('passed') as boolean)) {
         e.go.setData('passed', true);
         this.voidsPassed += 1;
-        this.popFloat(e.go.x, playerY - 40, '+1', COLORS.danger);
+        const laneDelta = Math.abs(e.lane - this.playerLane);
+        if (laneDelta === 1) {
+          this.nearMiss(e.go.x, playerY - 36);
+        } else {
+          this.popFloat(e.go.x, playerY - 40, '+1', COLORS.danger);
+        }
       }
 
       if (e.go.y > height + 60) {
@@ -406,10 +544,14 @@ export class GameScene extends Phaser.Scene {
     this.dangerMarks.forEach((mark, lane) => {
       const want = dangerNear[lane] ? 0.95 : 0;
       mark.setAlpha(Phaser.Math.Linear(mark.alpha, want, 1 - Math.pow(0.001, dt)));
-      if (dangerNear[lane]) {
+      if (dangerNear[lane] && this.mode.id !== 'storm') {
+        this.threads[lane]?.setTint(COLORS.danger);
+      } else if (!stormAmp) {
+        this.threads[lane]?.clearTint();
+      } else if (dangerNear[lane]) {
         this.threads[lane]?.setTint(COLORS.danger);
       } else {
-        this.threads[lane]?.clearTint();
+        this.threads[lane]?.setTint(0x8ecae6);
       }
     });
 
@@ -417,6 +559,7 @@ export class GameScene extends Phaser.Scene {
     this.scoreText.setText(`${tf('score')}: ${Math.floor(this.scores.score)}`);
     this.heightText.setText(`${tf('height')}: ${Math.floor(this.distance)}`);
     this.comboText.setText(this.scores.combo > 1 ? `${tf('combo')} ×${this.scores.combo}` : '');
+    this.refreshComboAura();
 
     const milestone = Math.floor(this.distance / 50) * 50;
     if (milestone >= 50 && milestone > this.lastMilestone) {
@@ -425,6 +568,8 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.flash(90, 30, 40, 50);
       playTone('portal');
     }
+
+    this.revealCaretakers();
 
     const beat = this.story.tick(this.distance);
     if (beat && beat.meters > 0) this.showStory(beat.ru, beat.en);
@@ -437,6 +582,103 @@ export class GameScene extends Phaser.Scene {
     this.laneGlow.x = this.lantern.x;
     this.matchRing.x = this.lantern.x;
     this.matchRing.y = this.lantern.y;
+    this.comboAura.x = this.lantern.x;
+    this.comboAura.y = this.lantern.y;
+
+    // ease camera lean back
+    this.camLean = Phaser.Math.Linear(this.camLean, 0, 1 - Math.pow(0.02, dt));
+    this.cameras.main.setRotation(this.camLean);
+  }
+
+  private clearGhostTutor(): void {
+    if (this.ghostCleared) return;
+    this.ghostCleared = true;
+    this.tweens.killTweensOf([this.ghostLeft, this.ghostRight, this.ghostHint]);
+    this.tweens.add({
+      targets: [this.ghostLeft, this.ghostRight, this.ghostHint],
+      alpha: 0,
+      duration: 220,
+    });
+  }
+
+  private revealCaretakers(): void {
+    for (let i = 0; i < CARETAKER_AT.length; i++) {
+      const at = CARETAKER_AT[i];
+      if (this.distance < at || this.caretakerShown.has(at)) continue;
+      this.caretakerShown.add(at);
+      const img = this.caretakers[i];
+      if (!img) continue;
+      this.tweens.add({
+        targets: img,
+        alpha: 0.55,
+        y: img.y - 18,
+        duration: 900,
+        ease: 'Sine.easeOut',
+      });
+      this.popFloat(img.x, img.y - 40, getLang() === 'ru' ? 'хранитель' : 'keeper', COLORS.amber);
+      playTone('portal');
+    }
+  }
+
+  private nearMiss(x: number, y: number): void {
+    this.burst(x, y, 0xffc9b8);
+    this.popFloat(x, y, tf('nearMiss'), COLORS.coral);
+    const spark = this.add.image(x, y, 'spark').setDepth(31).setTint(COLORS.coral).setScale(1.6);
+    this.tweens.add({
+      targets: spark,
+      scale: 3,
+      alpha: 0,
+      duration: 380,
+      onComplete: () => spark.destroy(),
+    });
+    playTone('ui');
+  }
+
+  private portalRipple(x: number, y: number, tint: number): void {
+    const ring = this.add.image(x, y, 'ripple').setDepth(28).setTint(tint).setScale(0.4).setAlpha(0.9);
+    this.tweens.add({
+      targets: ring,
+      scale: 2.4,
+      alpha: 0,
+      duration: 480,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy(),
+    });
+    const ring2 = this.add.image(x, y, 'ripple').setDepth(28).setTint(0xffffff).setScale(0.2).setAlpha(0.7);
+    this.tweens.add({
+      targets: ring2,
+      scale: 1.6,
+      alpha: 0,
+      duration: 360,
+      onComplete: () => ring2.destroy(),
+    });
+    this.cameras.main.zoomTo(1.05, 120, 'Sine.easeOut', true, (_cam, progress) => {
+      if (progress === 1) this.cameras.main.zoomTo(1, 180, 'Sine.easeIn');
+    });
+  }
+
+  private refreshComboAura(): void {
+    const combo = this.scores.combo;
+    const tier = combo >= 10 ? 2 : combo >= 5 ? 1 : 0;
+    const wantAlpha = tier === 0 ? 0 : tier === 1 ? 0.45 : 0.7;
+    const wantScale = tier === 0 ? 0.8 : tier === 1 ? 1.35 : 1.8;
+    this.comboAura.setAlpha(Phaser.Math.Linear(this.comboAura.alpha, wantAlpha, 0.12));
+    this.comboAura.setScale(Phaser.Math.Linear(this.comboAura.scale, wantScale, 0.12));
+    this.comboAura.setTint(HUE_HEX[this.playerHue]);
+
+    if (tier > this.lastComboTier) {
+      this.lastComboTier = tier;
+      this.tweens.add({
+        targets: this.comboAura,
+        scale: wantScale * 1.25,
+        duration: 160,
+        yoyo: true,
+      });
+      this.burst(this.lantern.x, this.lantern.y, HUE_HEX[this.playerHue]);
+      playTone('combo', combo);
+    } else if (tier < this.lastComboTier) {
+      this.lastComboTier = tier;
+    }
   }
 
   private materialize(req: SpawnRequest): void {
@@ -483,6 +725,7 @@ export class GameScene extends Phaser.Scene {
       duration: 70,
       yoyo: true,
     });
+    this.camLean = dir * 0.028;
   }
 
   private handleHit(e: FallingEntity): void {
@@ -496,6 +739,7 @@ export class GameScene extends Phaser.Scene {
       this.recolorLantern();
       playTone('portal');
       this.burst(e.go.x, e.go.y, HUE_HEX[e.hue]);
+      this.portalRipple(e.go.x, e.go.y, HUE_HEX[e.hue]);
       this.popFloat(e.go.x, e.go.y - 30, getLang() === 'ru' ? 'новый свет' : 'new light', HUE_HEX[e.hue]);
       this.cameras.main.flash(120, 40, 60, 70);
       return;
@@ -512,7 +756,6 @@ export class GameScene extends Phaser.Scene {
             ? `+${def.score} ×${this.scores.combo}`
             : `+${def.score}`;
         this.popFloat(e.go.x, e.go.y - 24, label, HUE_HEX[e.hue ?? 'amber']);
-        if (this.scores.combo === 5 || this.scores.combo === 10) playTone('combo', this.scores.combo);
       } else {
         this.scores.penalize(def.wrongPenalty ?? 5);
         playTone('hit');
@@ -557,6 +800,7 @@ export class GameScene extends Phaser.Scene {
     this.colorBadge.setTexture(`badge-${this.playerHue}`);
     this.laneGlow.setTint(HUE_HEX[this.playerHue]);
     this.matchRing.setTint(HUE_HEX[this.playerHue]);
+    this.comboAura.setTint(HUE_HEX[this.playerHue]);
     this.tweens.add({
       targets: this.colorBadge,
       scale: 1.35,
@@ -621,13 +865,18 @@ export class GameScene extends Phaser.Scene {
     playTone('hit');
     yandex.stopGameplay();
     this.cameras.main.shake(220, 0.02);
+    this.cameras.main.setRotation(0);
+    this.camLean = 0;
     this.trailEmitter.stop();
+    this.stormRain?.stop();
+    this.clearGhostTutor();
     this.tweens.add({
       targets: this.lantern,
       alpha: 0.2,
       scale: 0.6,
       duration: 280,
     });
+    this.comboAura.setAlpha(0);
     void this.afterDeath();
   }
 
@@ -714,7 +963,40 @@ export class GameScene extends Phaser.Scene {
   private revive(): void {
     this.continued = true;
     this.alive = true;
-    this.lantern.setAlpha(1).setScale(1.1);
+    this.lastComboTier = 0;
+
+    // relight: wick from dark → flame bloom
+    this.lantern.setAlpha(0.15).setScale(0.55);
+    const flame = this.lantern.getData('flame') as Phaser.GameObjects.Ellipse | undefined;
+    const outer = this.lantern.getData('outerGlow') as Phaser.GameObjects.Arc | undefined;
+    flame?.setScale(0.2);
+    outer?.setAlpha(0);
+
+    this.tweens.add({
+      targets: this.lantern,
+      alpha: 1,
+      scale: 1.45,
+      duration: 520,
+      ease: 'Back.easeOut',
+    });
+    if (flame) {
+      this.tweens.add({
+        targets: flame,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 420,
+        ease: 'Back.easeOut',
+      });
+    }
+    if (outer) {
+      this.tweens.add({
+        targets: outer,
+        alpha: 0.28,
+        scale: 1.15,
+        duration: 500,
+      });
+    }
+
     for (let i = this.entities.length - 1; i >= 0; i--) {
       const e = this.entities[i];
       if (e.kind === 'void' && Math.abs(e.go.y - this.lantern.y) < 220) {
@@ -722,14 +1004,23 @@ export class GameScene extends Phaser.Scene {
         this.entities.splice(i, 1);
       }
     }
-    this.trailEmitter.start();
-    this.cameras.main.flash(200, 244, 162, 97);
+
+    this.time.delayedCall(180, () => {
+      this.burst(this.lantern.x, this.lantern.y, HUE_HEX[this.playerHue]);
+      this.trailEmitter.start();
+      this.stormRain?.start();
+    });
+
+    this.popFloat(this.lantern.x, this.lantern.y - 50, tf('relight'), HUE_HEX[this.playerHue]);
+    this.cameras.main.flash(280, 244, 162, 97);
     playTone('start');
     yandex.startGameplay();
   }
 
   private goResult(): void {
     this.input.off('pointerdown', this.pointerDownHandler);
+    this.cameras.main.setRotation(0);
+    this.cameras.main.setZoom(1);
     const stats: RunStats = {
       score: Math.floor(this.scores.score),
       height: Math.floor(this.distance),

@@ -23,6 +23,9 @@ export interface Dictionary {
   tipColor: string;
   tipPortal: string;
   gotIt: string;
+  ghostHint: string;
+  nearMiss: string;
+  relight: string;
   gameOver: string;
   newRecord: string;
   coins: string;
@@ -84,6 +87,9 @@ export const dictionaries: Record<Lang, Dictionary> = {
     tipColor: 'Собирай светлячков своего цвета',
     tipPortal: 'Порталы меняют окраску огонька',
     gotIt: 'Понятно',
+    ghostHint: 'Тап влево или вправо',
+    nearMiss: 'рядом!',
+    relight: 'зажжено',
     gameOver: 'Погас',
     newRecord: 'Новый рекорд!',
     coins: 'Искры',
@@ -142,6 +148,9 @@ export const dictionaries: Record<Lang, Dictionary> = {
     tipColor: 'Collect fireflies of your color',
     tipPortal: 'Portals recolor your flame',
     gotIt: 'Got it',
+    ghostHint: 'Tap left or right',
+    nearMiss: 'close!',
+    relight: 'relit',
     gameOver: 'Extinguished',
     newRecord: 'New record!',
     coins: 'Sparks',

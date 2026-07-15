@@ -172,13 +172,23 @@ async function main() {
     const qa = window.__stayLitQA;
     const cache = qa?.game?.textures;
     if (!cache) return [];
-    return ['void', 'match-ring', 'danger-mark', 'vignette', 'orb-amber', 'portal-teal'].filter(
-      (k) => cache.exists(k),
-    );
+    return [
+      'void',
+      'match-ring',
+      'danger-mark',
+      'vignette',
+      'orb-amber',
+      'portal-teal',
+      'caretaker',
+      'ghost-chevron',
+      'combo-aura',
+      'rain-drop',
+      'ripple',
+    ].filter((k) => cache.exists(k));
   });
   ok(
     'new visual textures loaded',
-    textures.length === 6,
+    textures.length === 11,
     `got=${textures.join(',')}`,
   );
 

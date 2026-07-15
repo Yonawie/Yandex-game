@@ -29,6 +29,11 @@ export function generateTextures(scene: Phaser.Scene): void {
   makeVignette(scene);
   makeMatchRing(scene);
   makeDangerMark(scene);
+  makeCaretaker(scene);
+  makeGhostChevron(scene);
+  makeComboAura(scene);
+  makeRainDrop(scene);
+  makeRipple(scene);
 }
 
 function gph(scene: Phaser.Scene): Phaser.GameObjects.Graphics {
@@ -220,6 +225,66 @@ function makeDangerMark(scene: Phaser.Scene): void {
   g.fillRect(14, 10, 4, 10);
   g.fillCircle(16, 24, 2.5);
   g.generateTexture('danger-mark', 32, 32);
+  g.destroy();
+}
+
+function makeCaretaker(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  // distant keeper silhouette holding a faint lantern
+  g.fillStyle(0x02060c, 0.92);
+  g.fillEllipse(48, 28, 22, 26); // hood
+  g.fillTriangle(48, 36, 28, 96, 68, 96); // cloak
+  g.fillRect(42, 70, 12, 28); // body
+  g.fillStyle(COLORS.amber, 0.55);
+  g.fillCircle(66, 58, 7);
+  g.fillStyle(0xfff0c8, 0.85);
+  g.fillCircle(66, 58, 3);
+  g.fillStyle(0x02060c, 0.9);
+  g.fillRect(60, 62, 3, 18); // pole
+  g.generateTexture('caretaker', 96, 110);
+  g.destroy();
+}
+
+function makeGhostChevron(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.fillStyle(0xffffff, 0.85);
+  g.fillTriangle(8, 32, 40, 8, 40, 24);
+  g.fillTriangle(8, 32, 40, 40, 40, 56);
+  g.fillStyle(0xffffff, 0.35);
+  g.fillCircle(52, 32, 10);
+  g.generateTexture('ghost-chevron', 64, 64);
+  g.destroy();
+}
+
+function makeComboAura(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.lineStyle(3, 0xffffff, 0.55);
+  g.strokeCircle(48, 48, 40);
+  g.lineStyle(2, 0xffffff, 0.3);
+  g.strokeCircle(48, 48, 46);
+  g.lineStyle(6, 0xffffff, 0.12);
+  g.strokeCircle(48, 48, 34);
+  g.generateTexture('combo-aura', 96, 96);
+  g.destroy();
+}
+
+function makeRainDrop(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.fillStyle(0x8ecae6, 0.9);
+  g.fillRect(2, 0, 2, 14);
+  g.fillStyle(0xffffff, 0.5);
+  g.fillRect(2, 0, 2, 4);
+  g.generateTexture('rain-drop', 6, 16);
+  g.destroy();
+}
+
+function makeRipple(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.lineStyle(4, 0xffffff, 0.9);
+  g.strokeCircle(48, 48, 30);
+  g.lineStyle(2, 0xffffff, 0.4);
+  g.strokeCircle(48, 48, 38);
+  g.generateTexture('ripple', 96, 96);
   g.destroy();
 }
 
