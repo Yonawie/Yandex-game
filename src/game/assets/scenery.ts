@@ -54,9 +54,9 @@ export function placeNightScenery(
     const far = scene.add
       .image(width / 2, height * 0.78, 'ridge-far')
       .setDepth(Depth.PARALLAX_FAR)
-      .setAlpha(0.35)
+      .setAlpha(0.18)
       .setDisplaySize(width * 1.15, height * 0.28)
-      .setTint(0x6a90b0)
+      .setTint(0x9ab8d0)
       .setData('parallax', 6)
       .setData('drift', 8);
     opts.parallaxLayers?.push(far);
@@ -67,9 +67,9 @@ export function placeNightScenery(
     const near = scene.add
       .image(width / 2, height * 0.88, 'ridge-near')
       .setDepth(Depth.PARALLAX_FAR + 0.5)
-      .setAlpha(0.45)
+      .setAlpha(0.22)
       .setDisplaySize(width * 1.2, height * 0.26)
-      .setTint(0x4a6a88)
+      .setTint(0x7a9bb8)
       .setData('parallax', 14)
       .setData('drift', 14);
     opts.parallaxLayers?.push(near);

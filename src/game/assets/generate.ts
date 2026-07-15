@@ -110,15 +110,14 @@ function makeStar(scene: Phaser.Scene): void {
 
 function makeThread(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0xa8e4f5, 0.14);
+  g.fillStyle(0xc5f0ff, 0.22);
   g.fillRect(4, 0, 20, 128);
-  g.fillStyle(0xd4eef8, 0.95);
+  g.fillStyle(0xe8f7ff, 1);
   g.fillRect(12, 0, 4, 128);
-  g.fillStyle(0xffffff, 0.6);
+  g.fillStyle(0xffffff, 0.85);
   g.fillRect(13, 0, 1, 128);
   for (let y = 10; y < 128; y += 26) {
-    // diamond knots
-    g.fillStyle(COLORS.amber, 0.9);
+    g.fillStyle(COLORS.amber, 1);
     g.fillTriangle(14, y - 5, 19, y, 14, y + 5);
     g.fillTriangle(14, y - 5, 9, y, 14, y + 5);
     g.fillStyle(COLORS.amberHot, 1);
@@ -348,17 +347,17 @@ function makeVignette(scene: Phaser.Scene): void {
   const g = gph(scene);
   g.fillStyle(0x000000, 0);
   g.fillRect(0, 0, 64, 64);
-  // softer frame — keep focus without crushing brightness
-  g.fillStyle(0x061018, 0.32);
-  g.fillRect(0, 0, 64, 6);
-  g.fillRect(0, 58, 64, 6);
-  g.fillRect(0, 0, 6, 64);
-  g.fillRect(58, 0, 6, 64);
-  g.fillStyle(0x061018, 0.16);
-  g.fillRect(0, 0, 64, 12);
-  g.fillRect(0, 52, 64, 12);
-  g.fillRect(0, 0, 12, 64);
-  g.fillRect(52, 0, 12, 64);
+  // very light frame only — keep sky readable during run
+  g.fillStyle(0x061018, 0.14);
+  g.fillRect(0, 0, 64, 4);
+  g.fillRect(0, 60, 64, 4);
+  g.fillRect(0, 0, 4, 64);
+  g.fillRect(60, 0, 4, 64);
+  g.fillStyle(0x061018, 0.07);
+  g.fillRect(0, 0, 64, 8);
+  g.fillRect(0, 56, 64, 8);
+  g.fillRect(0, 0, 8, 64);
+  g.fillRect(56, 0, 8, 64);
   g.generateTexture('vignette', 64, 64);
   g.destroy();
 }
@@ -567,85 +566,109 @@ export function drawLantern(
   scene: Phaser.Scene,
   x: number,
   y: number,
-  skin: SkinDef,
+  _skin: SkinDef,
   hue: HueId,
   scale = 1,
 ): Phaser.GameObjects.Container {
   const glowColor = HUE_HEX[hue];
+  const key = `lantern-${hue}`;
+  const hasArt = scene.textures.exists(key);
 
-  // soft rectangular light wash — not giant ovals
-  const farGlow = scene.add.rectangle(0, 10, 70, 70, glowColor, 0.1).setOrigin(0.5);
-  const outerGlow = scene.add.rectangle(0, 8, 52, 56, glowColor, 0.2).setOrigin(0.5);
-  const midGlow = scene.add.rectangle(0, 10, 38, 42, glowColor, 0.28).setOrigin(0.5);
+  // diamond wash behind player — soft light without oval blobs
+  const farGlow = scene.add
+    .image(0, 6, scene.textures.exists('lane-glow') ? 'lane-glow' : 'px')
+    .setTint(glowColor)
+    .setAlpha(0.35)
+    .setScale(hasArt ? 2.4 : 1.6)
+    .setBlendMode(Phaser.BlendModes.ADD);
+  const midGlow = scene.add
+    .image(0, 4, scene.textures.exists('lane-glow') ? 'lane-glow' : 'px')
+    .setTint(glowColor)
+    .setAlpha(0.5)
+    .setScale(hasArt ? 1.55 : 1.1)
+    .setBlendMode(Phaser.BlendModes.ADD);
 
-  const cap = scene.add.rectangle(0, -28, 26, 10, 0x3a4d5e, 1).setOrigin(0.5);
-  const hook = scene.add.rectangle(0, -36, 4, 12, 0xc8d8e6, 1).setOrigin(0.5, 1);
-  const ring = scene.add.rectangle(0, -40, 10, 10, 0x000000, 0).setOrigin(0.5);
-  ring.setStrokeStyle(2, 0xc8d8e6, 1);
+  let body: Phaser.GameObjects.GameObject;
+  let flame: Phaser.GameObjects.Triangle | undefined;
+  let glass: Phaser.GameObjects.Rectangle | undefined;
 
-  const frame = scene.add.rectangle(0, 4, 34, 40, 0x243544, 1).setOrigin(0.5);
-  frame.setStrokeStyle(2, 0xd4e4f0, 0.85);
-  const glass = scene.add.rectangle(0, 4, 26, 32, skin.glow, 0.5).setOrigin(0.5);
+  if (hasArt) {
+    body = scene.add.image(0, 0, key).setOrigin(0.5).setDisplaySize(78, 98);
+  } else {
+    // procedural fallback
+    const cap = scene.add.rectangle(0, -28, 26, 10, 0x3a4d5e, 1).setOrigin(0.5);
+    const hook = scene.add.rectangle(0, -36, 4, 12, 0xc8d8e6, 1).setOrigin(0.5, 1);
+    const frame = scene.add.rectangle(0, 4, 34, 40, 0x243544, 1).setOrigin(0.5);
+    frame.setStrokeStyle(2, 0xd4e4f0, 0.85);
+    glass = scene.add.rectangle(0, 4, 26, 32, HUE_HEX[hue], 0.45).setOrigin(0.5);
+    flame = scene.add.triangle(0, 4, 0, -14, 10, 14, -10, 14, glowColor, 1);
+    const flameCore = scene.add.triangle(0, 6, 0, -6, 5, 10, -5, 10, COLORS.amberHot, 1);
+    const base = scene.add.rectangle(0, 26, 30, 8, 0x3a4d5e, 1).setOrigin(0.5);
+    body = scene.add.container(0, 0, [hook, cap, frame, glass, flame, flameCore, base]);
+  }
 
-  // stylized triangular flame
-  const flame = scene.add.triangle(0, 4, 0, -14, 10, 14, -10, 14, glowColor, 1);
-  const flameCore = scene.add.triangle(0, 6, 0, -6, 5, 10, -5, 10, COLORS.amberHot, 1);
-  const flameTip = scene.add.triangle(0, -2, 0, -10, 3, 2, -3, 2, 0xfffaf0, 1);
-
-  const base = scene.add.rectangle(0, 26, 30, 8, 0x3a4d5e, 1).setOrigin(0.5);
-
-  const c = scene.add.container(x, y, [
-    farGlow,
-    outerGlow,
-    midGlow,
-    hook,
-    ring,
-    cap,
-    frame,
-    glass,
-    flame,
-    flameCore,
-    flameTip,
-    base,
-  ]);
-  c.setData('outerGlow', outerGlow);
+  const c = scene.add.container(x, y, [farGlow, midGlow, body]);
+  c.setData('outerGlow', midGlow);
   c.setData('midGlow', midGlow);
   c.setData('farGlow', farGlow);
+  c.setData('body', body);
   c.setData('flame', flame);
   c.setData('glass', glass);
+  c.setData('hue', hue);
   c.setScale(scale);
   c.setDepth(20);
 
   scene.tweens.add({
-    targets: [flame, flameCore],
-    scaleX: 1.08,
-    scaleY: 0.92,
-    duration: 260,
+    targets: [midGlow, farGlow],
+    alpha: { from: midGlow.alpha * 0.75, to: midGlow.alpha },
+    duration: 900,
     yoyo: true,
     repeat: -1,
     ease: 'Sine.easeInOut',
   });
-  scene.tweens.add({
-    targets: [outerGlow, farGlow],
-    alpha: { from: 0.12, to: 0.28 },
-    duration: 900,
-    yoyo: true,
-    repeat: -1,
-  });
+  if (hasArt && body instanceof Phaser.GameObjects.Image) {
+    scene.tweens.add({
+      targets: body,
+      angle: { from: -2.5, to: 2.5 },
+      duration: 1800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  } else if (flame) {
+    scene.tweens.add({
+      targets: flame,
+      scaleX: 1.08,
+      scaleY: 0.92,
+      duration: 260,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
 
   return c;
 }
 
 export function recolorDrawnLantern(lantern: Phaser.GameObjects.Container, hue: HueId): void {
   const color = HUE_HEX[hue];
-  const outerGlow = lantern.getData('outerGlow') as Phaser.GameObjects.Rectangle | undefined;
-  const midGlow = lantern.getData('midGlow') as Phaser.GameObjects.Rectangle | undefined;
-  const farGlow = lantern.getData('farGlow') as Phaser.GameObjects.Rectangle | undefined;
+  const outerGlow = lantern.getData('outerGlow') as Phaser.GameObjects.Image | undefined;
+  const midGlow = lantern.getData('midGlow') as Phaser.GameObjects.Image | undefined;
+  const farGlow = lantern.getData('farGlow') as Phaser.GameObjects.Image | undefined;
+  const body = lantern.getData('body') as Phaser.GameObjects.Image | Phaser.GameObjects.Container | undefined;
   const flame = lantern.getData('flame') as Phaser.GameObjects.Triangle | undefined;
-  outerGlow?.setFillStyle(color, 0.2);
-  midGlow?.setFillStyle(color, 0.28);
-  farGlow?.setFillStyle(color, 0.1);
+
+  outerGlow?.setTint(color);
+  midGlow?.setTint(color);
+  farGlow?.setTint(color);
   flame?.setFillStyle(color, 1);
+
+  if (body instanceof Phaser.GameObjects.Image) {
+    const key = `lantern-${hue}`;
+    if (lantern.scene.textures.exists(key)) body.setTexture(key);
+    else body.setTint(color);
+  }
+  lantern.setData('hue', hue);
 }
 
 export function laneX(width: number, lane: number, lanes = 3, pad = 0.18): number {

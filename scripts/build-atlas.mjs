@@ -15,6 +15,9 @@ const SPRITES = [
   ['portal-teal', 'art-portal-teal.png'],
   ['portal-coral', 'art-portal-coral.png'],
   ['shard', 'art-shard.png'],
+  ['lantern-amber', 'art-lantern-amber.png'],
+  ['lantern-teal', 'art-lantern-teal.png'],
+  ['lantern-coral', 'art-lantern-coral.png'],
 ];
 
 await mkdir(path.join(root, 'public/atlases'), { recursive: true });
@@ -47,7 +50,11 @@ json.dump({'frames':frames,'meta':{'app':'stay-lit-atlas','version':'1.0','image
 sky=Image.open(os.path.join(src,'bg-sky.png')).convert('RGB')
 if sky.size[0]>480:
     sky=sky.resize((480,int(480*sky.size[1]/sky.size[0])), Image.Resampling.LANCZOS)
-sky.save(os.path.join(bg,'bg-sky.webp'),'WEBP', quality=82, method=6)
+from PIL import ImageEnhance
+sky=ImageEnhance.Brightness(sky).enhance(1.22)
+sky=ImageEnhance.Contrast(sky).enhance(1.05)
+sky=ImageEnhance.Color(sky).enhance(1.06)
+sky.save(os.path.join(bg,'bg-sky.webp'),'WEBP', quality=84, method=6)
 print('OK atlas',aw,'x',ah,'webp',os.path.getsize(os.path.join(bg,'bg-sky.webp')))
 `
 const r = spawnSync('python3', ['-c', py], { encoding: 'utf8' });

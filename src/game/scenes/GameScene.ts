@@ -217,9 +217,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.grade.attach(this, {
-      vignetteAlpha: this.mode.id === 'storm' ? 0.55 : 0.38,
-      gradeTint: this.mode.id === 'storm' ? 0x1a2840 : 0x1a3a55,
-      gradeAlpha: this.mode.id === 'storm' ? 0.14 : 0.08,
+      vignetteAlpha: this.mode.id === 'storm' ? 0.2 : 0.1,
+      gradeTint: this.mode.id === 'storm' ? 0xb8d4ff : 0xffe6c8,
+      gradeAlpha: this.mode.id === 'storm' ? 0.05 : 0.045,
     });
 
     this.trailEmitter = this.add.particles(0, 0, 'px', {
@@ -962,7 +962,7 @@ export class GameScene extends Phaser.Scene {
     // relight: wick from dark → flame bloom
     this.lantern.setAlpha(0.15).setScale(0.55);
     const flame = this.lantern.getData('flame') as Phaser.GameObjects.Triangle | undefined;
-    const outer = this.lantern.getData('outerGlow') as Phaser.GameObjects.Rectangle | undefined;
+    const outer = this.lantern.getData('outerGlow') as Phaser.GameObjects.Image | undefined;
     flame?.setScale(0.2);
     outer?.setAlpha(0);
 

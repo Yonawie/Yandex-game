@@ -17,10 +17,10 @@ export class ColorGrade {
         .setScrollFactor(0);
     }
     this.grade = scene.add
-      .rectangle(width / 2, height / 2, width, height, opts.gradeTint ?? 0x1a3a55, opts.gradeAlpha ?? 0.08)
+      .rectangle(width / 2, height / 2, width, height, opts.gradeTint ?? 0xffe6c8, opts.gradeAlpha ?? 0.04)
       .setDepth(Depth.GRADE)
       .setScrollFactor(0)
-      .setBlendMode(Phaser.BlendModes.MULTIPLY);
+      .setBlendMode(Phaser.BlendModes.ADD);
   }
 
   setMood(opts: { vignetteAlpha?: number; gradeTint?: number; gradeAlpha?: number }): void {
@@ -43,7 +43,7 @@ export class ColorGrade {
       duration: ms,
       ease: 'Sine.easeOut',
       onComplete: () => {
-        this.grade?.setFillStyle(0x1a3a55, prevA);
+        this.grade?.setFillStyle(0xffe6c8, prevA);
         this.grade?.setAlpha(prevA);
       },
     });
