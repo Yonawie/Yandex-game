@@ -3,7 +3,7 @@ import { COLORS, HUE_HEX, SKINS, type HueId } from '@/data/balance';
 import { getEntityDef, resolveTexture } from '@/content/entities';
 import { resolveMode, getActiveModeId, loadRemoteBalancePatch } from '@/content/runtimeConfig';
 import type { EntityKind, ModeDef, RunEventDef, SpawnRequest } from '@/content/types';
-import { drawLantern, laneX } from '@/game/assets/generate';
+import { drawLantern, laneX, recolorDrawnLantern } from '@/game/assets/generate';
 import { Spawner } from '@/game/systems/Spawner';
 import { EventDirector } from '@/game/systems/EventDirector';
 import { ScoreSystem } from '@/game/systems/ScoreSystem';
@@ -29,12 +29,14 @@ export class GameScene extends Phaser.Scene {
   private distance = 0;
   private entities: FallingEntity[] = [];
   private threads: Phaser.GameObjects.TileSprite[] = [];
-  private stars!: Phaser.GameObjects.TileSprite;
+  private starField: Phaser.GameObjects.Image[] = [];
   private scoreText!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
   private heightText!: Phaser.GameObjects.Text;
   private storyText!: Phaser.GameObjects.Text;
   private eventText!: Phaser.GameObjects.Text;
+  private colorBadge!: Phaser.GameObjects.Image;
+  private laneGlow!: Phaser.GameObjects.Image;
   private alive = true;
   private continued = false;
   private pointerDownHandler!: (pointer: Phaser.Input.Pointer) => void;
@@ -73,31 +75,81 @@ export class GameScene extends Phaser.Scene {
     this.story.reset();
 
     this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height).setDepth(0);
-    this.stars = this.add
-      .tileSprite(width / 2, height / 2, width, height, 'star')
-      .setAlpha(0.35)
+
+    // atmosphere layers — soft blobs, no tiled mesh
+    this.add
+      .image(width * 0.78, height * 0.16, 'moon')
+      .setAlpha(0.9)
+      .setScale(1.35)
       .setDepth(1);
-    for (let i = 0; i < 40; i++) {
-      this.add
+    const nebulaA = this.add
+      .image(width * 0.22, height * 0.38, 'nebula')
+      .setAlpha(0.4)
+      .setScale(2.6)
+      .setDepth(1)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    const nebulaB = this.add
+      .image(width * 0.82, height * 0.58, 'nebula')
+      .setAlpha(0.28)
+      .setScale(3)
+      .setDepth(1)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(COLORS.coral);
+    this.tweens.add({
+      targets: nebulaA,
+      x: nebulaA.x + 36,
+      alpha: 0.5,
+      duration: 7000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    this.tweens.add({
+      targets: nebulaB,
+      y: nebulaB.y - 28,
+      duration: 9000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // sparse stars only (never tile a tiny sprite — that becomes a grid)
+    this.starField = [];
+    for (let i = 0; i < 28; i++) {
+      const s = this.add
         .image(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), 'star')
-        .setAlpha(Phaser.Math.FloatBetween(0.12, 0.55))
-        .setScale(Phaser.Math.FloatBetween(0.4, 1.2))
-        .setDepth(1)
-        .setData('drift', Phaser.Math.FloatBetween(20, 60));
+        .setAlpha(Phaser.Math.FloatBetween(0.2, 0.75))
+        .setScale(Phaser.Math.FloatBetween(0.6, 1.8))
+        .setDepth(2)
+        .setData('drift', Phaser.Math.FloatBetween(12, 40));
+      this.starField.push(s);
     }
 
     this.threads = [];
     for (let lane = 0; lane < this.mode.lanes; lane++) {
       const x = laneX(width, lane, this.mode.lanes, this.mode.lanePadding);
       const thread = this.add
-        .tileSprite(x, height / 2, 10, height + 40, 'thread')
-        .setAlpha(0.55)
+        .tileSprite(x, height / 2, 32, height + 80, 'thread')
+        .setAlpha(0.9)
         .setDepth(5);
       this.threads.push(thread);
     }
 
     const py = height * this.mode.playerYRatio;
-    this.lantern = drawLantern(this, laneX(width, this.playerLane), py, skin, this.playerHue, 1.1);
+    this.laneGlow = this.add
+      .image(laneX(width, this.playerLane, this.mode.lanes, this.mode.lanePadding), py + 42, 'lane-glow')
+      .setDepth(8)
+      .setAlpha(0.95)
+      .setScale(1.15);
+
+    this.lantern = drawLantern(
+      this,
+      laneX(width, this.playerLane),
+      py,
+      skin,
+      this.playerHue,
+      1.45,
+    );
 
     this.trailEmitter = this.add.particles(0, 0, 'px', {
       follow: this.lantern,
@@ -113,27 +165,55 @@ export class GameScene extends Phaser.Scene {
     });
     this.trailEmitter.setDepth(15);
 
+    this.add.image(28, 42, 'hud-chip').setOrigin(0, 0.5).setDisplaySize(210, 44).setDepth(39).setAlpha(0.9);
+    this.add
+      .image(width - 28, 42, 'hud-chip')
+      .setOrigin(1, 0.5)
+      .setDisplaySize(170, 44)
+      .setDepth(39)
+      .setAlpha(0.9);
+
     this.scoreText = this.add
-      .text(32, 36, `${tf('score')}: 0`, {
+      .text(48, 30, `${tf('score')}: 0`, {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '28px',
+        fontSize: '24px',
         color: '#F7F3E8',
       })
       .setDepth(40);
     this.comboText = this.add
-      .text(32, 72, '', {
+      .text(48, 56, '', {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '22px',
+        fontSize: '18px',
         color: '#F4A261',
       })
       .setDepth(40);
     this.heightText = this.add
-      .text(width - 32, 36, `${tf('height')}: 0`, {
+      .text(width - 48, 30, `${tf('height')}: 0`, {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '22px',
+        fontSize: '20px',
         color: '#9BB0C1',
       })
       .setOrigin(1, 0)
+      .setDepth(40);
+
+    this.colorBadge = this.add.image(56, 108, 'badge-amber').setDepth(40).setScale(1.15);
+    this.add
+      .text(78, 108, tf('yourLight'), {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '16px',
+        color: '#F7F3E8',
+      })
+      .setOrigin(0, 0.5)
+      .setDepth(40);
+
+    this.add
+      .text(width / 2, height - 36, `${tf('collectHint')}  ·  ${tf('avoidHint')}`, {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '18px',
+        color: '#F7F3E8',
+      })
+      .setOrigin(0.5)
+      .setAlpha(0.9)
       .setDepth(40);
 
     this.storyText = this.add
@@ -196,15 +276,11 @@ export class GameScene extends Phaser.Scene {
     const started = this.eventsDir.update(this.distance, this.mode);
     if (started) this.announceEvent(started);
 
-    this.stars.tilePositionY -= this.scroll * scrollMul * dt * 0.15;
-    this.children.list.forEach((child) => {
-      if (child.getData('drift')) {
-        const img = child as Phaser.GameObjects.Image;
-        img.y += (img.getData('drift') as number) * dt;
-        if (img.y > height + 10) {
-          img.y = -10;
-          img.x = Phaser.Math.Between(0, width);
-        }
+    this.starField.forEach((img) => {
+      img.y += (img.getData('drift') as number) * dt;
+      if (img.y > height + 10) {
+        img.y = -10;
+        img.x = Phaser.Math.Between(0, width);
       }
     });
     this.threads.forEach((t) => {
@@ -250,6 +326,7 @@ export class GameScene extends Phaser.Scene {
       laneX(width, this.playerLane, this.mode.lanes, this.mode.lanePadding),
       1 - Math.pow(0.001, dt),
     );
+    this.laneGlow.x = this.lantern.x;
   }
 
   private materialize(req: SpawnRequest): void {
@@ -257,10 +334,30 @@ export class GameScene extends Phaser.Scene {
     const { width } = this.scale;
     const x = laneX(width, req.lane, this.mode.lanes, this.mode.lanePadding);
     const key = resolveTexture(def, req.hue);
-    const go = this.add.image(x, -40, key).setDepth(12).setScale(def.scale);
-    if (req.kind === 'portal') go.setAlpha(0.95);
-    if (def.rotates && req.kind === 'shard') {
-      this.tweens.add({ targets: go, angle: 360, duration: 1800, repeat: -1 });
+    const go = this.add.image(x, -50, key).setDepth(12).setScale(def.scale * 0.6).setAlpha(0);
+    this.tweens.add({
+      targets: go,
+      alpha: 1,
+      scale: def.scale,
+      duration: 220,
+      ease: 'Back.easeOut',
+    });
+    this.tweens.add({
+      targets: go,
+      scaleX: def.scale * 1.06,
+      scaleY: def.scale * 0.94,
+      duration: 650,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    if (def.rotates) {
+      this.tweens.add({
+        targets: go,
+        angle: req.kind === 'shard' ? 360 : 180,
+        duration: req.kind === 'shard' ? 2000 : 3500,
+        repeat: -1,
+      });
     }
     this.entities.push({ kind: req.kind, lane: req.lane, hue: req.hue, go });
   }
@@ -313,9 +410,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private recolorLantern(): void {
-    const glow = this.lantern.list[0] as Phaser.GameObjects.Arc;
-    glow.setFillStyle(HUE_HEX[this.playerHue], 0.28);
+    recolorDrawnLantern(this.lantern, this.playerHue);
     this.trailEmitter.setParticleTint(HUE_HEX[this.playerHue]);
+    this.colorBadge.setTexture(`badge-${this.playerHue}`);
+    this.laneGlow.setTint(HUE_HEX[this.playerHue]);
+    this.tweens.add({
+      targets: this.colorBadge,
+      scale: 1.35,
+      duration: 120,
+      yoyo: true,
+    });
   }
 
   private burst(x: number, y: number, tint: number): void {

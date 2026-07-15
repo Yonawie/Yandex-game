@@ -31,16 +31,22 @@ export class MenuScene extends Phaser.Scene {
     this.modeIndex = Math.max(0, modes.findIndex((m) => m.id === getActiveModeId()));
 
     this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height);
+    this.add.image(width * 0.78, height * 0.14, 'moon').setAlpha(0.85).setScale(1.2);
+    this.add
+      .image(width * 0.2, height * 0.4, 'nebula')
+      .setAlpha(0.35)
+      .setScale(2.4)
+      .setBlendMode(Phaser.BlendModes.ADD);
     this.stars = this.add.group();
-    for (let i = 0; i < 48; i++) {
+    for (let i = 0; i < 22; i++) {
       const s = this.add
         .image(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), 'star')
-        .setAlpha(Phaser.Math.FloatBetween(0.15, 0.7))
-        .setScale(Phaser.Math.FloatBetween(0.5, 1.4));
+        .setAlpha(Phaser.Math.FloatBetween(0.2, 0.7))
+        .setScale(Phaser.Math.FloatBetween(0.7, 1.6));
       this.stars.add(s);
     }
 
-    const aurora = this.add.circle(width * 0.3, height * 0.25, 180, COLORS.teal, 0.08);
+    const aurora = this.add.circle(width * 0.3, height * 0.25, 180, COLORS.teal, 0.1);
     this.tweens.add({
       targets: aurora,
       x: width * 0.7,
@@ -70,7 +76,7 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.lantern = drawLantern(this, width / 2, height * 0.38, SKINS[this.skinIndex], 'amber', 1.5);
+    this.lantern = drawLantern(this, width / 2, height * 0.38, SKINS[this.skinIndex], 'amber', 1.85);
     this.tweens.add({
       targets: this.lantern,
       y: this.lantern.y - 14,
@@ -209,7 +215,7 @@ export class MenuScene extends Phaser.Scene {
         this.scale.height * 0.38,
         skin,
         'amber',
-        1.5,
+        1.85,
       );
       this.tweens.add({
         targets: this.lantern,

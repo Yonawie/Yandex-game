@@ -31,6 +31,9 @@ export interface Dictionary {
   layer: string;
   mode: string;
   modeLocked: string;
+  yourLight: string;
+  collectHint: string;
+  avoidHint: string;
 }
 
 export const dictionaries: Record<Lang, Dictionary> = {
@@ -65,6 +68,9 @@ export const dictionaries: Record<Lang, Dictionary> = {
     layer: 'Слой',
     mode: 'Режим',
     modeLocked: 'Открой высотой',
+    yourLight: 'Твой свет',
+    collectHint: 'бери свой цвет',
+    avoidHint: 'обходи пустоты',
   },
   en: {
     brand: 'Stay Lit',
@@ -97,6 +103,9 @@ export const dictionaries: Record<Lang, Dictionary> = {
     layer: 'Layer',
     mode: 'Mode',
     modeLocked: 'Unlock with height',
+    yourLight: 'Your light',
+    collectHint: 'take your color',
+    avoidHint: 'avoid voids',
   },
 };
 
