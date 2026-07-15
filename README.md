@@ -4,7 +4,9 @@ Endless vertical arcade for **Яндекс Игры**.
 
 Стек: **Phaser 3 + TypeScript + Vite + Yandex Games SDK**.
 
+- **Универсальный стек YaGames:** [`docs/YANDEX_STACK.md`](docs/YANDEX_STACK.md)
 - ТЗ: [`docs/TZ.md`](docs/TZ.md)
+- Visual Bible: [`docs/VISUAL_BIBLE.md`](docs/VISUAL_BIBLE.md)
 - Как тестировать: [`docs/PLAY.md`](docs/PLAY.md)
 - Retention: [`docs/RETENTION.md`](docs/RETENTION.md)
 - Публикация: [`docs/PUBLISH.md`](docs/PUBLISH.md)
