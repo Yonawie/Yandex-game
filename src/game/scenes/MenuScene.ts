@@ -352,10 +352,14 @@ export class MenuScene extends Phaser.Scene {
     this.tipsOpen = true;
     const { width, height } = this.scale;
     const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.55).setDepth(50);
-    const panel = this.add
-      .image(width / 2, height / 2, 'ui-panel')
-      .setDisplaySize(width * 0.84, 400)
-      .setDepth(51);
+    // Soft amber depth under tip panel — no soft oval glow bake
+    const tipPanel = this.add.graphics().setDepth(51);
+    const pw = width * 0.84;
+    const ph = 400;
+    tipPanel.fillStyle(0x0a1a28, 0.96);
+    tipPanel.fillRoundedRect(width / 2 - pw / 2, height / 2 - ph / 2, pw, ph, 22);
+    tipPanel.lineStyle(2, 0xffb347, 0.45);
+    tipPanel.strokeRoundedRect(width / 2 - pw / 2, height / 2 - ph / 2, pw, ph, 22);
     const tip = this.add
       .text(
         width / 2,
@@ -400,7 +404,7 @@ export class MenuScene extends Phaser.Scene {
       this.tipsOpen = false;
       unlockAudio();
       overlay.destroy();
-      panel.destroy();
+      tipPanel.destroy();
       tip.destroy();
       okG.destroy();
       okHit.destroy();
