@@ -258,126 +258,105 @@ export class Renderer {
     const { ctx, w, h, game } = this;
     const S = game.style();
 
-    if (this.worldMode) {
-      ctx.fillStyle = "rgba(0,0,0,0.22)";
-      ctx.fillRect(0, 0, w, h);
+    // full-bleed amber→coral wash — instantly distinct from old teal menu
+    const wash = ctx.createLinearGradient(0, 0, w, h);
+    wash.addColorStop(0, "#2A0A18");
+    wash.addColorStop(0.45, S.bg[1]);
+    wash.addColorStop(1, "#0A2A32");
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, w, h);
+
+    // diagonal light streaks
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    for (let i = 0; i < 6; i++) {
+      const x = ((t * 40 + i * 90) % (w + 120)) - 60;
+      const streak = ctx.createLinearGradient(x, 0, x + 40, h);
+      streak.addColorStop(0, "transparent");
+      streak.addColorStop(0.5, S.accentHot);
+      streak.addColorStop(1, "transparent");
+      ctx.fillStyle = streak;
+      ctx.fillRect(x, 0, 28, h);
     }
+    ctx.restore();
 
-    // passive demo wall behind logo
-    this.drawDemoWall(t);
+    // impossible-to-miss version ribbon
+    ctx.fillStyle = S.rare;
+    ctx.fillRect(0, 0, w, 34);
+    ctx.fillStyle = "#12040A";
+    ctx.font = `800 13px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("ВИДИМЫЙ АПГРЕЙД · PREMIUM v4", w / 2, 17);
+    ctx.textBaseline = "alphabetic";
 
-    // brand cubes "ЭХО" with crack / rebuild cycle
+    // huge brand wordmark
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillStyle = S.ink;
+    ctx.font = `900 ${Math.min(100, w * 0.3)}px ${DISPLAY}`;
+    ctx.shadowColor = S.rare;
+    ctx.shadowBlur = 40;
+    ctx.fillText("ЭХО", w / 2, h * 0.16);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = S.accent;
+    ctx.font = `700 14px ${FONT}`;
+    ctx.fillText("янтарь · коралл · удар", w / 2, h * 0.16 + 26);
+    ctx.restore();
+
+    // giant logo cubes (MaterialFactory v3 tiles)
     const logo = ["Э", "Х", "О"];
-    const cw = Math.min(54, w * 0.14);
-    const gap = 10;
+    const cw = Math.min(86, w * 0.22);
+    const gap = 16;
     const total = logo.length * cw + (logo.length - 1) * gap;
     const x0 = (w - total) / 2;
-    const y0 = h * 0.16;
-    const cycle = (t % 9) / 9;
-    const crackI = Math.floor(t / 3) % 3;
+    const y0 = h * 0.24;
     logo.forEach((ch, i) => {
-      const x = x0 + i * (cw + gap);
-      const phase = crackI === i ? cycle * 3 - Math.floor(cycle * 3) : 0;
-      // phase within this letter's 3s window when it's cracking
-      let local = 0;
-      if (crackI === i) {
-        const seg = t % 3;
-        local = seg / 3;
-      }
-      const shatter = local > 0.35 && local < 0.72;
-      const rebuild = local >= 0.72;
-      const y = y0 + Math.sin(t * 2.4 + i) * 3;
-      if (shatter) {
-        ctx.save();
-        ctx.globalAlpha = 0.35 + (1 - (local - 0.35) / 0.37) * 0.4;
-        this.drawBevelCube(x, y, cw, cw, ch, {
-          armor: 0,
-          mirror: false,
-          preview: false,
-          alpha: 0.55,
-          breath: 0,
-        });
-        // shards
-        for (let s = 0; s < 5; s++) {
-          const a = s * 1.3 + t * 4;
-          ctx.fillStyle = S.particle[s % 3];
-          ctx.globalAlpha = 0.5;
-          ctx.beginPath();
-          ctx.moveTo(x + cw / 2, y + cw / 2);
-          ctx.lineTo(x + cw / 2 + Math.cos(a) * 28, y + cw / 2 + Math.sin(a) * 22);
-          ctx.lineTo(x + cw / 2 + Math.cos(a + 0.5) * 18, y + cw / 2 + Math.sin(a + 0.5) * 16);
-          ctx.fill();
-        }
-        ctx.restore();
-      } else {
-        const alpha = rebuild ? 0.55 + (local - 0.72) / 0.28 * 0.45 : 1;
-        this.drawBevelCube(x, y, cw, cw, ch, {
-          armor: 0,
-          mirror: false,
-          preview: false,
-          alpha,
-          breath: Math.sin(t * 3 + i) * 0.8,
-        });
-        if (local > 0.15 && local < 0.35) this.drawCrackLines(x, y, cw, cw, local);
-      }
-      void phase;
+      const bob = Math.sin(t * 2.8 + i * 1.2) * 8;
+      this.drawBevelCube(x0 + i * (cw + gap), y0 + bob, cw, cw, ch, {
+        armor: 0,
+        mirror: i === 1,
+        preview: i === Math.floor(t * 1.5) % 3,
+        alpha: 1,
+        breath: bob,
+      });
     });
 
-    ctx.fillStyle = S.muted;
-    ctx.font = `500 13px ${FONT}`;
-    ctx.textAlign = "center";
-    ctx.fillText("Ломай стену словом", w / 2, h * 0.16 + cw + 36);
-
     ctx.fillStyle = S.accentHot;
-    ctx.font = `700 13px ${FONT}`;
-    ctx.fillText(`◆ ${game.save.coins}`, w / 2, h * 0.16 + cw + 58);
-    ctx.fillStyle = S.muted;
-    ctx.font = `600 11px ${FONT}`;
-    ctx.fillText(`рекорд ${game.save.best}`, w / 2, h * 0.16 + cw + 76);
+    ctx.font = `600 16px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.fillText("Ломай стену словом", w / 2, y0 + cw + 38);
+
+    // shards counter
+    ctx.save();
+    const pw = 190;
+    const px = (w - pw) / 2;
+    const py = y0 + cw + 54;
+    this.roundRect(px, py, pw, 36, 18, S.panel, true);
+    ctx.strokeStyle = S.rare;
+    ctx.lineWidth = 2;
+    this.pathRound(px, py, pw, 36, 18);
+    ctx.stroke();
+    ctx.fillStyle = S.accentHot;
+    ctx.font = `800 14px ${FONT}`;
+    ctx.fillText(`◆ ${game.save.coins}  ·  рекорд ${game.save.best}`, w / 2, py + 23);
+    ctx.restore();
 
     const btns = [
-      { id: "play-normal", label: "Играть · Норма", primary: true },
+      { id: "play-normal", label: "ИГРАТЬ", primary: true },
       { id: "play-easy", label: "Лёгкий", primary: false },
       { id: "play-hard", label: "Сложный", primary: false },
       { id: "play-infinity", label: "∞ Бесконечность", primary: true },
-      { id: "open-shop", label: "Стили", primary: false },
+      { id: "open-shop", label: "Стили мира", primary: false },
     ];
     btns.forEach((b, i) => {
-      const bw = Math.min(300, w * 0.82);
-      this.mechBtn((w - bw) / 2, h * 0.5 + i * 48, bw, 42, b.label, b.id, b.primary);
+      const bw = Math.min(320, w * 0.86);
+      const bh = i === 0 ? 56 : 44;
+      const by = h * 0.54 + (i === 0 ? 0 : 56 + (i - 1) * 48);
+      this.mechBtn((w - bw) / 2, by, bw, bh, b.label, b.id, b.primary);
     });
-  }
 
-  private drawDemoWall(t: number) {
-    const { ctx, w, h, game } = this;
-    const S = game.style();
-    const cols = 7;
-    const rows = 4;
-    const size = Math.min(28, w * 0.07);
-    const gap = 3;
-    const totalW = cols * size + (cols - 1) * gap;
-    const x0 = (w - totalW) / 2;
-    const yBase = h * 0.34;
-    ctx.save();
-    ctx.globalAlpha = 0.28;
-    for (let c = 0; c < cols; c++) {
-      for (let r = 0; r < rows; r++) {
-        const pulse = Math.sin(t * 1.2 + c * 0.4 + r * 0.5);
-        if (pulse > 0.82) continue; // vanish occasionally
-        const letters = "СТЕНАЭХО";
-        const ch = letters[(c + r * 3) % letters.length];
-        const x = x0 + c * (size + gap);
-        const y = yBase - r * (size + gap) + Math.sin(t * 0.8 + c) * 1.5;
-        this.roundRect(x, y, size, size, 5, S.brickDeep, true);
-        this.roundRect(x + 1.5, y + 1.5, size - 3, size - 4, 4, S.brick, true);
-        ctx.fillStyle = S.letter;
-        ctx.font = `800 ${size * 0.55}px ${FONT}`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(ch, x + size / 2, y + size / 2 + 0.5);
-      }
-    }
-    ctx.restore();
+    paintColorGrade(ctx, w, h, S, t, 0.15);
   }
 
   private drawShop(t: number) {
@@ -679,7 +658,7 @@ export class Renderer {
       for (let r = 0; r < stack.length; r++) {
         const cell = stack[r];
         const breath = Math.sin(t * 2.1 + c * 0.55 + r * 0.35) * 1.1 + breathGlobal * 0.3;
-        const gap = 5;
+        const gap = 9;
         const bw = board.cw - gap;
         const bh = board.ch - gap;
         const x = board.x + c * board.cw + gap / 2;
@@ -726,7 +705,7 @@ export class Renderer {
   private drawCracks(_t: number) {
     const { game, board } = this;
     for (const c of game.cracks) {
-      const gap = 5;
+      const gap = 9;
       const bw = board.cw - gap;
       const bh = board.ch - gap;
       const x = board.x + c.col * board.cw + gap / 2;
