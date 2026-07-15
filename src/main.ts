@@ -98,6 +98,9 @@ function handleUi(id: string) {
     case "undo":
       game.undoLast();
       break;
+    case "hint":
+      game.applyHint();
+      break;
     case "submit":
       game.submit();
       break;
