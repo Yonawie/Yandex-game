@@ -14,6 +14,11 @@ import { tf, getLang } from '@/i18n';
 import { playTone } from '@/game/audio/sfx';
 import { yandex } from '@/sdk/yandex';
 import type { RunStats } from '@/retention/service';
+import { JuiceCamera } from '@/visual/JuiceCamera';
+import { VfxDirector } from '@/visual/VfxDirector';
+import { ColorGrade } from '@/visual/ColorGrade';
+import { Depth } from '@/visual/depths';
+import { haptic, hapticCombo } from '@/visual/haptic';
 
 interface FallingEntity {
   kind: EntityKind;
@@ -50,6 +55,9 @@ export class GameScene extends Phaser.Scene {
   private ghostLeft!: Phaser.GameObjects.Image;
   private ghostRight!: Phaser.GameObjects.Image;
   private ghostHint!: Phaser.GameObjects.Text;
+  private juice!: JuiceCamera;
+  private vfx!: VfxDirector;
+  private grade!: ColorGrade;
   private ghostUntil = 0;
   private ghostCleared = false;
   private stormRain: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
@@ -111,13 +119,17 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setRotation(0);
     this.cameras.main.setZoom(1);
 
+    this.juice = new JuiceCamera(this);
+    this.vfx = new VfxDirector(this);
+    this.grade = new ColorGrade();
+
     addBg(this);
 
     const parallax: Phaser.GameObjects.Image[] = [];
     placeNightScenery(this, { parallaxLayers: parallax, skipBg: true });
     this.parallax = parallax;
     parallax.forEach((img, i) => {
-      img.setData('parallax', 4 + i * 3);
+      if (img.getData('parallax') == null) img.setData('parallax', 4 + i * 3);
     });
     // keep a few drifting sparkles for climb feel
     this.starField = [];
@@ -126,7 +138,7 @@ export class GameScene extends Phaser.Scene {
         .image(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), 'star')
         .setAlpha(Phaser.Math.FloatBetween(0.3, 0.85))
         .setScale(Phaser.Math.FloatBetween(0.5, 1.2))
-        .setDepth(2)
+        .setDepth(Depth.AMBIENT)
         .setData('drift', Phaser.Math.FloatBetween(18, 48));
       this.starField.push(s);
     }
@@ -204,12 +216,11 @@ export class GameScene extends Phaser.Scene {
       this.dangerMarks.push(mark);
     }
 
-    this.add
-      .image(width / 2, height / 2, 'vignette')
-      .setDisplaySize(width, height)
-      .setDepth(35)
-      .setAlpha(this.mode.id === 'storm' ? 0.55 : 0.38)
-      .setScrollFactor(0);
+    this.grade.attach(this, {
+      vignetteAlpha: this.mode.id === 'storm' ? 0.55 : 0.38,
+      gradeTint: this.mode.id === 'storm' ? 0x1a2840 : 0x1a3a55,
+      gradeAlpha: this.mode.id === 'storm' ? 0.14 : 0.08,
+    });
 
     this.trailEmitter = this.add.particles(0, 0, 'px', {
       follow: this.lantern,
@@ -424,6 +435,13 @@ export class GameScene extends Phaser.Scene {
     });
     this.parallax.forEach((img) => {
       const speed = (img.getData('parallax') as number) || 6;
+      // ridges sway horizontally; stars drift downward
+      if (img.texture.key.startsWith('ridge')) {
+        const baseX = img.getData('baseX') ?? img.x;
+        img.setData('baseX', baseX);
+        img.x = (baseX as number) + Math.sin(this.time.now / 2200 + speed) * 10;
+        return;
+      }
       img.y += speed * dt * 0.08;
       if (img.y > height + 100) img.y = -60;
     });
@@ -437,7 +455,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     if (this.mode.id === 'storm' && Math.random() < dt * 1.2) {
-      this.cameras.main.shake(60, 0.0025);
+      this.juice.tapShake(0.0025, 60);
     }
 
     if (!this.ghostCleared && this.ghostUntil > 0 && this.time.now > this.ghostUntil) {
@@ -542,9 +560,11 @@ export class GameScene extends Phaser.Scene {
     const milestone = Math.floor(this.distance / 50) * 50;
     if (milestone >= 50 && milestone > this.lastMilestone) {
       this.lastMilestone = milestone;
-      this.popFloat(width / 2, height * 0.28, `${milestone}`, COLORS.amber);
+      this.vfx.stamp(`${milestone}`, '#FFB347');
+      this.juice.punchZoom(1.03, 80, 160);
       this.cameras.main.flash(90, 30, 40, 50);
-      playTone('portal');
+      playTone('stamp');
+      haptic(16);
     }
 
     this.revealCaretakers();
@@ -599,9 +619,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private nearMiss(x: number, y: number): void {
-    this.burst(x, y, 0xffc9b8);
+    this.vfx.shred(x, y, 0xffc9b8, 8);
     this.popFloat(x, y, tf('nearMiss'), COLORS.coral);
-    const spark = this.add.image(x, y, 'spark').setDepth(31).setTint(COLORS.coral).setScale(1.6);
+    const spark = this.add.image(x, y, 'spark').setDepth(Depth.VFX).setTint(COLORS.coral).setScale(1.6);
     this.tweens.add({
       targets: spark,
       scale: 3,
@@ -610,29 +630,12 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => spark.destroy(),
     });
     playTone('ui');
+    haptic(10);
   }
 
   private portalRipple(x: number, y: number, tint: number): void {
-    const ring = this.add.image(x, y, 'ripple').setDepth(28).setTint(tint).setScale(0.4).setAlpha(0.9);
-    this.tweens.add({
-      targets: ring,
-      scale: 2.4,
-      alpha: 0,
-      duration: 480,
-      ease: 'Cubic.easeOut',
-      onComplete: () => ring.destroy(),
-    });
-    const ring2 = this.add.image(x, y, 'ripple').setDepth(28).setTint(0xffffff).setScale(0.2).setAlpha(0.7);
-    this.tweens.add({
-      targets: ring2,
-      scale: 1.6,
-      alpha: 0,
-      duration: 360,
-      onComplete: () => ring2.destroy(),
-    });
-    this.cameras.main.zoomTo(1.05, 120, 'Sine.easeOut', true, (_cam, progress) => {
-      if (progress === 1) this.cameras.main.zoomTo(1, 180, 'Sine.easeIn');
-    });
+    this.vfx.shockwave(x, y, tint, 2.4);
+    this.juice.punchZoom(1.05, 120, 180);
   }
 
   private refreshComboAura(): void {
@@ -652,8 +655,21 @@ export class GameScene extends Phaser.Scene {
         duration: 160,
         yoyo: true,
       });
-      this.burst(this.lantern.x, this.lantern.y, HUE_HEX[this.playerHue]);
-      playTone('combo', combo);
+      this.vfx.shred(this.lantern.x, this.lantern.y, HUE_HEX[this.playerHue], 16);
+      this.vfx.shockwave(this.lantern.x, this.lantern.y, HUE_HEX[this.playerHue], 1.8);
+      const stamp =
+        tier >= 2
+          ? getLang() === 'ru'
+            ? 'ПЛАМЯ!'
+            : 'BLAZE!'
+          : getLang() === 'ru'
+            ? 'ЖАР'
+            : 'HEAT';
+      this.vfx.stamp(stamp, '#FFB347');
+      playTone('stamp');
+      hapticCombo(tier);
+      this.juice.hitStop(tier >= 2 ? 65 : 48);
+      this.juice.punchZoom(tier >= 2 ? 1.06 : 1.04);
     } else if (tier < this.lastComboTier) {
       this.lastComboTier = tier;
     }
@@ -716,10 +732,12 @@ export class GameScene extends Phaser.Scene {
       this.playerHue = e.hue;
       this.recolorLantern();
       playTone('portal');
-      this.burst(e.go.x, e.go.y, HUE_HEX[e.hue]);
+      this.vfx.shred(e.go.x, e.go.y, HUE_HEX[e.hue], 12);
       this.portalRipple(e.go.x, e.go.y, HUE_HEX[e.hue]);
       this.popFloat(e.go.x, e.go.y - 30, getLang() === 'ru' ? 'новый свет' : 'new light', HUE_HEX[e.hue]);
       this.cameras.main.flash(120, 40, 60, 70);
+      this.juice.hitStop(50);
+      haptic(18);
       return;
     }
     if (def.score != null && def.colored) {
@@ -728,7 +746,11 @@ export class GameScene extends Phaser.Scene {
         this.matchedCollects += 1;
         this.maxCombo = Math.max(this.maxCombo, this.scores.combo);
         playTone('collect', this.scores.combo);
-        this.burst(e.go.x, e.go.y, HUE_HEX[e.hue ?? 'amber']);
+        this.vfx.shred(e.go.x, e.go.y, HUE_HEX[e.hue ?? 'amber'], 10);
+        this.vfx.shockwave(e.go.x, e.go.y, HUE_HEX[e.hue ?? 'amber'], 1.4);
+        this.juice.hitStop(42);
+        this.juice.tapShake(0.004, 55);
+        haptic(14);
         const label =
           this.scores.combo > 1
             ? `+${def.score} ×${this.scores.combo}`
@@ -738,14 +760,18 @@ export class GameScene extends Phaser.Scene {
         this.scores.penalize(def.wrongPenalty ?? 5);
         playTone('hit');
         this.popFloat(e.go.x, e.go.y - 20, `−${def.wrongPenalty ?? 5}`, COLORS.danger);
-        this.cameras.main.shake(100, this.mode.softShake);
+        this.juice.hardHit();
+        this.grade.pulse(this, 0x4a1020, 0.2, 180);
+        haptic(28);
       }
       return;
     }
     if (def.score != null) {
       this.scores.collect(def.score, this.time.now, this.mode, Boolean(def.forceCombo));
       playTone('combo', this.scores.combo);
-      this.burst(e.go.x, e.go.y, COLORS.mint);
+      this.vfx.shred(e.go.x, e.go.y, COLORS.mint, 12);
+      this.juice.hitStop(48);
+      haptic(16);
       this.popFloat(e.go.x, e.go.y - 24, `+${def.score}`, COLORS.mint);
     }
   }
@@ -793,22 +819,6 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private burst(x: number, y: number, tint: number): void {
-    const emitter = this.add.particles(x, y, 'px', {
-      speed: { min: 40, max: 160 },
-      lifespan: 400,
-      scale: { start: 0.8, end: 0 },
-      alpha: { start: 0.9, end: 0 },
-      tint,
-      quantity: 10,
-      blendMode: 'ADD',
-      emitting: false,
-    });
-    emitter.setDepth(30);
-    emitter.explode(12);
-    this.time.delayedCall(500, () => emitter.destroy());
-  }
-
   private showStory(ru: string, en: string): void {
     this.storyText.setText(getLang() === 'ru' ? ru : en);
     this.tweens.killTweensOf(this.storyText);
@@ -834,15 +844,21 @@ export class GameScene extends Phaser.Scene {
       yoyo: true,
       hold: 1200,
     });
-    playTone('portal');
+    this.vfx.stamp(getLang() === 'ru' ? ev.nameRu : ev.nameEn, '#A8E4F5');
+    playTone('stamp');
+    this.juice.punchZoom(1.03);
   }
 
   private die(): void {
     if (!this.alive) return;
     this.alive = false;
     playTone('hit');
+    haptic(32);
     yandex.stopGameplay();
-    this.cameras.main.shake(220, 0.02);
+    this.juice.hardHit();
+    this.cameras.main.shake(180, 0.018);
+    this.grade.pulse(this, 0x2a0810, 0.28, 260);
+    this.vfx.shred(this.lantern.x, this.lantern.y, COLORS.danger, 18);
     this.cameras.main.setRotation(0);
     this.camLean = 0;
     this.trailEmitter.stop();
@@ -984,7 +1000,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(180, () => {
-      this.burst(this.lantern.x, this.lantern.y, HUE_HEX[this.playerHue]);
+      this.vfx.shred(this.lantern.x, this.lantern.y, HUE_HEX[this.playerHue], 14);
+      this.vfx.shockwave(this.lantern.x, this.lantern.y, HUE_HEX[this.playerHue], 1.6);
       this.trailEmitter.start();
       this.stormRain?.start();
     });
@@ -992,6 +1009,7 @@ export class GameScene extends Phaser.Scene {
     this.popFloat(this.lantern.x, this.lantern.y - 50, tf('relight'), HUE_HEX[this.playerHue]);
     this.cameras.main.flash(280, 244, 162, 97);
     playTone('start');
+    haptic(20);
     yandex.startGameplay();
   }
 

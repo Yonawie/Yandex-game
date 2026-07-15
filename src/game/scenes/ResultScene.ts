@@ -11,6 +11,7 @@ import { getLang, tf } from '@/i18n';
 import { playTone } from '@/game/audio/sfx';
 import { yandex } from '@/sdk/yandex';
 import { placeMenuAtmosphere } from '@/game/assets/scenery';
+import { makeAmberButton } from '@/visual/uiPress';
 
 interface ResultData {
   score: number;
@@ -155,35 +156,7 @@ export class ResultScene extends Phaser.Scene {
   }
 
   private makePlayButton(x: number, y: number, label: string, onClick: () => void): void {
-    const w = 280;
-    const h = 68;
-    const g = this.add.graphics().setDepth(20);
-    const draw = (hover: boolean) => {
-      g.clear();
-      g.fillStyle(0xc45c3e, 1);
-      g.fillRoundedRect(x - w / 2, y - h / 2 + 5, w, h, 18);
-      g.fillStyle(hover ? 0xffc56a : 0xffb347, 1);
-      g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 18);
-      g.fillStyle(0xffffff, 0.22);
-      g.fillRoundedRect(x - w / 2 + 14, y - h / 2 + 8, w - 28, 18, 10);
-    };
-    draw(false);
-    const hit = this.add
-      .rectangle(x, y, w, h, 0x000000, 0.001)
-      .setDepth(21)
-      .setInteractive({ useHandCursor: true });
-    this.add
-      .text(x, y, label, {
-        fontFamily: 'Outfit, sans-serif',
-        fontSize: '28px',
-        color: '#0C1C2E',
-        fontStyle: '700',
-      })
-      .setOrigin(0.5)
-      .setDepth(22);
-    hit.on('pointerover', () => draw(true));
-    hit.on('pointerout', () => draw(false));
-    hit.on('pointerup', onClick);
+    makeAmberButton(this, x, y, label, onClick, { depth: 20, fontSize: '28px' });
   }
 
   private makeGhostButton(x: number, y: number, label: string, onClick: () => void): void {

@@ -23,6 +23,7 @@ export function generateTextures(scene: Phaser.Scene): void {
   ensure(scene, 'shard', () => makeShard(scene));
   ensure(scene, 'px', () => makeParticle(scene));
   ensure(scene, 'spark', () => makeSpark(scene));
+  ensure(scene, 'shred', () => makeShred(scene));
   ensure(scene, 'ui-panel', () => makeUiPanel(scene));
   ensure(scene, 'ui-btn', () => makeButton(scene));
   ensure(scene, 'hud-chip', () => makeHudChip(scene));
@@ -489,6 +490,17 @@ function makeParticle(scene: Phaser.Scene): void {
   g.fillStyle(0xffffff, 1);
   g.fillCircle(5, 5, 5);
   g.generateTexture('px', 10, 10);
+  g.destroy();
+}
+
+/** Material shred chips — angular, not soft mote circles. */
+function makeShred(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.fillStyle(0xffffff, 1);
+  g.fillTriangle(2, 2, 14, 4, 6, 16);
+  g.fillStyle(0xffffff, 0.85);
+  g.fillTriangle(10, 1, 18, 8, 8, 12);
+  g.generateTexture('shred', 20, 18);
   g.destroy();
 }
 
