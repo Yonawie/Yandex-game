@@ -16,13 +16,17 @@ export const RARE_LETTERS = new Set(["Ф", "Ц", "Щ"]);
 
 export const TRAY_SIZE = 9;
 
-/** Softer length curve + higher floor so short words still pay. */
+/**
+ * Награда за длину: короткие слова дают базу, длинные — заметный буст.
+ * Без подсказок навык собирать 5–8 букв должен окупаться.
+ */
 export function lengthCoef(len: number): number {
-  if (len >= 8) return 3.2;
-  if (len >= 6) return 2.4;
+  if (len >= 8) return 3.8;
+  if (len >= 6) return 2.8;
+  if (len >= 5) return 2.15;
   if (len >= 4) return 1.7;
-  if (len === 3) return 1.35;
-  return 1.15;
+  if (len === 3) return 1.25;
+  return 1.0;
 }
 
 export type EchoBalance = {
@@ -99,10 +103,15 @@ export function rareComboMult(streak: number): number {
   return 1;
 }
 
-/** Global score scale — short hits should feel rewarding. */
-export const SCORE_SCALE = 12;
-export const BRICK_BONUS = 18;
-export const ECHO_BONUS = 40;
+/**
+ * Формула очков (см. Game.submit):
+ * round((ΣLETTER × lengthCoef × SCORE_SCALE + bricks×BRICK_BONUS + echo?ECHO_BONUS)
+ *   × rareCombo × echoMult × chainMult × infinityMult)
+ * chainMult = 1 + chain×0.35; echoMult = 1.7 при Эхо.
+ */
+export const SCORE_SCALE = 13;
+export const BRICK_BONUS = 22;
+export const ECHO_BONUS = 55;
 
 export const INFINITY_MULT_STEP = 1.15;
 export const INFINITY_MULT_CAP = 4;

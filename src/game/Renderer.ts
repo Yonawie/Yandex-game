@@ -995,10 +995,6 @@ export class Renderer {
       ctx.fillStyle = hits ? S.rare : S.muted;
       ctx.font = `600 11px ${FONT}`;
       ctx.fillText(hits ? `выбьет ${hits}` : "нет букв стены", w / 2, y - 18);
-    } else if (game.hint) {
-      ctx.fillStyle = S.muted;
-      ctx.font = `600 13px ${FONT}`;
-      ctx.fillText(`можно: ${game.hint}`, w / 2, y - 34);
     } else {
       ctx.fillStyle = `${S.muted}aa`;
       ctx.font = `600 13px ${FONT}`;
@@ -1056,17 +1052,16 @@ export class Renderer {
     const { w, h, game } = this;
     const S = game.style();
     const y = h - 88;
-    const side = Math.min(52, w * 0.13);
-    const strikeW = Math.min(168, w * 0.42);
-    const gap = 8;
-    const total = side * 3 + strikeW + gap * 3;
+    const side = Math.min(56, w * 0.14);
+    const strikeW = Math.min(190, w * 0.48);
+    const gap = 10;
+    const total = side * 2 + strikeW + gap * 2;
     const x0 = (w - total) / 2;
 
     this.mechBtn(x0, y + 4, side, 44, "↩", "undo", false);
-    this.mechBtn(x0 + side + gap, y + 4, side, 44, "!", "hint", false);
 
     // massive УДАР
-    const sx = x0 + (side + gap) * 2;
+    const sx = x0 + side + gap;
     const pulse = 1 + Math.sin(t * 3) * 0.015 + game.strikePulse * 0.04;
     const sw = strikeW * pulse;
     const sh = 52;

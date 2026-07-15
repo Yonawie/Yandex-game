@@ -13,7 +13,7 @@ import {
   lengthCoef,
   rareComboMult,
 } from "../data/balance";
-import { SEED_WORDS, findWordFromLetters, isValidWord } from "../data/dictionary";
+import { pickSeedWord, trayHasWord, isValidWord } from "../data/dictionary";
 import {
   EchoSave,
   buyStyle,
@@ -45,16 +45,23 @@ function weightedLetter(): string {
 }
 
 export function dealPlayableTray(size = TRAY_SIZE, prefer: string[] = []): string[] {
-  const wallSet = new Set(prefer);
-  const overlapping = SEED_WORDS.filter((w) => {
-    const u = w.toUpperCase().replace(/Ё/g, "Е");
-    let hits = 0;
-    for (const ch of u) if (wallSet.has(ch)) hits++;
-    return hits >= Math.min(2, u.length);
-  });
-  const pool = overlapping.length ? overlapping : SEED_WORDS;
-  const seed = pool[Math.floor(Math.random() * pool.length)] ?? "дом";
-  const tray = seed.toUpperCase().replace(/Ё/g, "Е").split("");
+  return ensurePlayableTray([], size, prefer);
+}
+
+/** Собрать трей, в котором гарантированно есть словарное слово (и пересечение со стеной). */
+export function ensurePlayableTray(
+  keep: string[] = [],
+  size = TRAY_SIZE,
+  prefer: string[] = [],
+): string[] {
+  const seed = pickSeedWord(prefer).toUpperCase().replace(/Ё/g, "Е");
+  const seedLetters = seed.split("");
+  const kept = keep.filter((ch) => ch && ch !== "");
+  const tray: string[] = [...seedLetters];
+  for (const ch of kept) {
+    if (tray.length >= size) break;
+    tray.push(ch);
+  }
   for (const ch of prefer) {
     if (tray.length >= size) break;
     if (ch) tray.push(ch);
@@ -64,7 +71,14 @@ export function dealPlayableTray(size = TRAY_SIZE, prefer: string[] = []): strin
     const j = Math.floor(Math.random() * (i + 1));
     [tray[i], tray[j]] = [tray[j], tray[i]];
   }
-  return tray.slice(0, size);
+  const out = tray.slice(0, size);
+  // Структурная гарантия: seed целиком в первых size (size≥5). На всякий — проверка.
+  if (!trayHasWord(out)) {
+    const forced = seedLetters.concat(out).slice(0, size);
+    while (forced.length < size) forced.push(weightedLetter());
+    return forced;
+  }
+  return out;
 }
 
 function makeCell(letter: string, armorChance: number, mirrorChance: number): WallCell {
@@ -105,7 +119,6 @@ export class Game {
   infinityMult = 1;
   continueUsed = false;
   wallsBroken = 0;
-  hint = "";
   save: EchoSave = loadSave();
   shopScroll = 0;
   /** Giant word stamp after a hit */
@@ -184,7 +197,6 @@ export class Game {
     this.echoTray = [];
     this.echoT = 0;
     this.inEchoCombo = false;
-    this.hint = "";
     this.stamp = "";
     this.stampT = 0;
     this.lastCoinGain = 0;
@@ -204,9 +216,8 @@ export class Game {
     this.seedWordRibbon();
 
     this.tray = dealPlayableTray(TRAY_SIZE, this.wallTopLetters());
-    this.refreshHint();
     this.phase = "playing";
-    this.tip("Собери слово и жми УДАР · подсказка внизу");
+    this.tip("Собери слово и жми УДАР");
   }
 
   wallTopLetters(): string[] {
@@ -224,8 +235,10 @@ export class Game {
   }
 
   private seedWordRibbon() {
-    const seeds = SEED_WORDS.filter((w) => w.length >= 4 && w.length <= this.cols);
-    const w = (seeds[Math.floor(Math.random() * seeds.length)] ?? "стена").toUpperCase();
+    // Лента слова по нижнему ряду — помогает стартовым ударам.
+    let w = pickSeedWord([]).toUpperCase().replace(/Ё/g, "Е");
+    while (w.length > this.cols) w = pickSeedWord([]).toUpperCase().replace(/Ё/g, "Е");
+    if (w.length < 4) w = "СТЕНА".slice(0, this.cols);
     for (let i = 0; i < w.length && i < this.cols; i++) {
       const cell = makeCell(w[i], this.armorChance, this.mirrorChance);
       if (this.stacks[i].length === 0) this.stacks[i].push(cell);
@@ -252,31 +265,6 @@ export class Game {
 
   usingEcho(): boolean {
     return this.echoT > 0 && this.echoTray.length > 0;
-  }
-
-  refreshHint() {
-    const letters = this.activeTray().filter((ch) => ch !== "");
-    this.hint = findWordFromLetters(letters) ?? "";
-  }
-
-  applyHint() {
-    if (this.phase !== "playing" || !this.hint) return;
-    const tray = this.activeTray();
-    const need = this.hint.split("");
-    const used = new Set<number>();
-    const picks: number[] = [];
-    for (const ch of need) {
-      const idx = tray.findIndex((t, i) => t === ch && !used.has(i));
-      if (idx < 0) {
-        this.tip("Подсказку не удалось собрать — сбрось трей");
-        return;
-      }
-      used.add(idx);
-      picks.push(idx);
-    }
-    this.pick = picks;
-    this.refreshPreview();
-    Sfx.place();
   }
 
   selectTray(i: number) {
@@ -357,18 +345,14 @@ export class Game {
     if (!isValidWord(word)) {
       Sfx.invalid();
       this.flash = 0.18;
-      this.tip(
-        this.hint
-          ? `«${word}» нет в словаре · попробуй «${this.hint}»`
-          : `«${word}» нет в словаре · жми «!», чтобы подставить слово`,
-      );
+      this.tip(`«${word}» нет в словаре`);
       return { ok: false, reason: "Словарь" };
     }
 
     const targets = this.previewTargets(word);
     if (!targets.length) {
       Sfx.invalid();
-      this.tip("Нужна хотя бы одна буква со стены · жми «!»");
+      this.tip("Нужна хотя бы одна буква со стены");
       return { ok: false, reason: "Нет совпадений" };
     }
 
@@ -439,8 +423,8 @@ export class Game {
 
     let letterSum = 0;
     for (const ch of word) letterSum += LETTER_SCORE[ch] ?? 2;
-    const chainMult = 1 + this.chain * 0.4;
-    const echoMult = doEcho ? 1.75 : 1;
+    const chainMult = 1 + this.chain * 0.35;
+    const echoMult = doEcho ? 1.7 : 1;
     const gain = Math.round(
       (letterSum * lengthCoef(word.length) * SCORE_SCALE +
         destroySet.size * BRICK_BONUS +
@@ -467,21 +451,11 @@ export class Game {
     this.consumePicks();
 
     if (fallen.length) {
-      this.echoTray = [...fallen];
-      while (this.echoTray.length < Math.min(10, Math.max(6, fallen.length + 3))) {
-        this.echoTray.push(weightedLetter());
-      }
-      // bias echo tray with remaining wall letters
-      for (const ch of this.wallTopLetters().slice(0, 2)) this.echoTray.push(ch);
-      for (let i = this.echoTray.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [this.echoTray[i], this.echoTray[j]] = [this.echoTray[j], this.echoTray[i]];
-      }
-      this.echoTray = this.echoTray.slice(0, 10);
+      const echoSize = Math.min(10, Math.max(6, fallen.length + 3));
+      this.echoTray = ensurePlayableTray(fallen, echoSize, this.wallTopLetters());
       this.echoT = this.echoWindow;
       this.inEchoCombo = true;
       this.chain += 1;
-      this.refreshHint();
       this.tip(`Эхо ${this.echoWindow.toFixed(0)}с · цепь ×${this.chain} · бей ещё!`);
     }
 
@@ -520,20 +494,21 @@ export class Game {
       for (let i = 0; i < this.echoTray.length; i++) {
         if (!this.pick.includes(i)) next.push(this.echoTray[i]);
       }
-      this.echoTray = next;
-      if (!this.echoTray.length) {
+      if (!next.length) {
         this.echoT = 0;
         this.endEchoWindow(false);
+      } else if (trayHasWord(next)) {
+        this.echoTray = next;
+      } else if (next.length >= 3) {
+        this.echoTray = ensurePlayableTray(next, Math.max(next.length, 6), this.wallTopLetters());
       } else {
-        this.refreshHint();
+        this.echoT = 0;
+        this.endEchoWindow(false);
       }
     } else {
       for (const i of this.pick) this.tray[i] = "";
       const kept = this.tray.filter((ch) => ch !== "");
-      const fresh = dealPlayableTray(TRAY_SIZE, this.wallTopLetters());
-      this.tray = [...kept, ...fresh].slice(0, TRAY_SIZE);
-      while (this.tray.length < TRAY_SIZE) this.tray.push(weightedLetter());
-      this.refreshHint();
+      this.tray = ensurePlayableTray(kept, TRAY_SIZE, this.wallTopLetters());
     }
   }
 
@@ -545,7 +520,6 @@ export class Game {
     this.pick = [];
     this.previewIds = new Set();
     if (fromTimeout) this.chain = 0;
-    this.refreshHint();
     this.resolveTurnGrowth();
     this.checkDeath();
   }
@@ -615,12 +589,11 @@ export class Game {
     this.pick = [];
     this.previewIds = new Set();
     this.tray = dealPlayableTray(TRAY_SIZE, this.wallTopLetters());
-    this.refreshHint();
     if (this.difficulty === "hard") {
       this.growWall(true);
       this.tip("Новый трей · стена подросла");
     } else {
-      this.tip(this.hint ? `Новый трей · можно «${this.hint}»` : "Новый трей");
+      this.tip("Новый набор букв");
     }
     Sfx.place();
     this.checkDeath();
@@ -635,7 +608,6 @@ export class Game {
       if (this.stacks[c].length > 3) this.stacks[c].pop();
     }
     this.tray = dealPlayableTray(TRAY_SIZE, this.wallTopLetters());
-    this.refreshHint();
     this.growCD = this.growEvery;
     this.phase = "playing";
     this.tip("Стену срезали — бей эхом!");
