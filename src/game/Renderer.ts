@@ -1,6 +1,7 @@
 import { RARE_LETTERS, rareComboMult } from "../data/balance";
 import { STYLES } from "../data/styles";
 import { Game } from "./Game";
+import { paintColorGrade } from "./visual/ColorGrade";
 import { CubeKind, MaterialFactory } from "./visual/MaterialFactory";
 
 const FONT = "Manrope, system-ui, sans-serif";
@@ -13,8 +14,9 @@ export class Renderer {
   w = 390;
   h = 700;
   dpr = 1;
-  /** Pixi overlays VFX; Canvas always draws the full scene (visible upgrade). */
   worldMode = false;
+  /** Visual depress on УДАР button */
+  strikePress = 0;
 
   board = { x: 0, y: 0, w: 0, h: 0, cw: 0, ch: 0 };
   hits: { id: string; x: number; y: number; w: number; h: number }[] = [];
@@ -88,24 +90,11 @@ export class Renderer {
     this.drawActions(t);
     this.drawMessage();
 
-    // cinematic vignette
-    ctx.save();
-    const vig = ctx.createRadialGradient(w / 2, h * 0.42, h * 0.2, w / 2, h * 0.5, h * 0.75);
-    vig.addColorStop(0, "transparent");
-    vig.addColorStop(1, "rgba(0,0,0,0.45)");
-    ctx.fillStyle = vig;
-    ctx.fillRect(0, 0, w, h);
-    ctx.restore();
-
-    if (game.flash > 0) {
-      ctx.save();
-      ctx.globalAlpha = Math.min(0.45, game.flash);
-      ctx.fillStyle = S.accentHot;
-      ctx.fillRect(0, 0, w, h);
-      ctx.restore();
-    }
+    paintColorGrade(ctx, w, h, S, t, game.flash);
 
     if (game.phase === "result") this.drawResult();
+
+    if (this.strikePress > 0) this.strikePress = Math.max(0, this.strikePress - 0.08);
   }
 
   private drawAtmosphere(t: number) {
@@ -1064,29 +1053,48 @@ export class Renderer {
 
     this.mechBtn(x0, y + 4, side, 44, "↩", "undo", false);
 
-    // massive УДАР
+    // massive УДАР — depress juice
+    const press = this.strikePress;
     const sx = x0 + side + gap;
-    const pulse = 1 + Math.sin(t * 3) * 0.015 + game.strikePulse * 0.04;
+    const pulse = 1 + Math.sin(t * 3) * 0.015 + game.strikePulse * 0.04 - press * 0.04;
     const sw = strikeW * pulse;
     const sh = 52;
+    const drawY = y + press * 5;
     this.hits.push({ id: "submit", x: sx - (sw - strikeW) / 2, y, w: sw, h: sh });
     const { ctx } = this;
     ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,0.4)";
-    this.roundRect(sx - (sw - strikeW) / 2 + 3, y + 5, sw, sh, 12, "rgba(0,0,0,0.4)", true);
-    const g = ctx.createLinearGradient(sx, y, sx, y + sh);
-    g.addColorStop(0, S.brickHi);
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    this.roundRect(
+      sx - (sw - strikeW) / 2 + 3,
+      drawY + 5 + (1 - press) * 2,
+      sw,
+      sh,
+      12,
+      "rgba(0,0,0,0.45)",
+      true,
+    );
+    const g = ctx.createLinearGradient(sx, drawY, sx, drawY + sh);
+    g.addColorStop(0, press > 0.3 ? S.accent : S.brickHi);
     g.addColorStop(0.4, S.accent);
     g.addColorStop(1, S.brickDeep);
     ctx.fillStyle = g;
-    this.pathRound(sx - (sw - strikeW) / 2, y, sw, sh, 12);
+    this.pathRound(sx - (sw - strikeW) / 2, drawY, sw, sh, 12);
     ctx.fill();
+    if (press > 0.2) {
+      ctx.strokeStyle = S.accentHot;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = S.accentHot;
+      ctx.shadowBlur = 16;
+      this.pathRound(sx - (sw - strikeW) / 2, drawY, sw, sh, 12);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
     ctx.fillStyle = S.ink;
     if (S.id === "candy" || S.id === "ink") ctx.fillStyle = "#1a1020";
     ctx.font = `800 20px ${DISPLAY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("УДАР", sx - (sw - strikeW) / 2 + sw / 2, y + sh / 2 + 1);
+    ctx.fillText("УДАР", sx - (sw - strikeW) / 2 + sw / 2, drawY + sh / 2 + 1);
     ctx.restore();
 
     this.mechBtn(sx + strikeW + gap, y + 4, side, 44, "↻", "reshuffle", false);

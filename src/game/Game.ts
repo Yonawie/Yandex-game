@@ -398,11 +398,11 @@ export class Game {
         }
       }
       this.shocks.push({ x: 0.5, y: 0.45, r: 0, max: 1.85, life: 0.7 });
-      this.flash = 0.35;
-      this.shake = 0.45;
+      this.flash = 0.42;
+      this.shake = 0.15;
     } else {
       this.shocks.push({ x: 0.5, y: 0.45, r: 0, max: 1.1, life: 0.4 });
-      this.shake = 0.22;
+      this.shake = 0.08;
     }
 
     Sfx.smash(this.style().breakLabel, doEcho);

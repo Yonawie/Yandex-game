@@ -3,6 +3,7 @@ import { StyleId } from "./data/styles";
 import { Sfx } from "./game/audio/sfx";
 import { Game } from "./game/Game";
 import { Renderer } from "./game/Renderer";
+import { juice } from "./game/visual/JuiceCamera";
 import { VfxDirector } from "./game/visual/VfxDirector";
 import { WorldView } from "./game/visual/WorldView";
 
@@ -57,11 +58,13 @@ function resize() {
 }
 
 async function bootVisual() {
+  juice.attach(stage);
   try {
     await world.init();
     worldReady = true;
     vfx = new VfxDirector(world);
     game.onStrike = (payload) => {
+      renderer.strikePress = 1;
       vfx?.playStrike({
         ...payload,
         style: game.style(),
@@ -69,8 +72,13 @@ async function bootVisual() {
     };
     resize();
   } catch (err) {
-    console.warn("WorldView init failed, fallback to Canvas", err);
+    console.warn("WorldView init failed, Canvas juice still active", err);
     renderer.worldMode = false;
+    // Canvas-only: still run camera juice on strike
+    game.onStrike = (payload) => {
+      renderer.strikePress = 1;
+      juice.strike(payload.heavy);
+    };
   }
 }
 
@@ -147,6 +155,7 @@ function handleUi(id: string) {
       break;
     case "submit":
       Sfx.strikeButton();
+      renderer.strikePress = 1;
       game.submit();
       break;
     case "reshuffle":
@@ -212,6 +221,7 @@ window.addEventListener("keydown", (e) => {
   if (game.phase !== "playing") return;
   if (e.key === "Enter") {
     Sfx.strikeButton();
+    renderer.strikePress = 1;
     game.submit();
   }
   if (e.key === "Backspace" || e.key === "Escape") game.undoLast();
@@ -225,7 +235,18 @@ function frame(now: number) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   const t = now / 1000;
-  game.update(dt);
+
+  juice.update(dt);
+  // hit-stop: freeze world sim briefly
+  if (!juice.frozen) {
+    game.update(dt);
+  } else {
+    // keep FX timers lightly alive so stamp/flash don't freeze forever
+    if (game.stampT > 0) game.stampT = Math.max(0, game.stampT - dt * 0.35);
+    if (game.flash > 0) game.flash = Math.max(0, game.flash - dt * 0.35);
+    if (game.shake > 0) game.shake = Math.max(0, game.shake - dt);
+  }
+
   if (game.phase === "result" && gameplayOn) {
     gameplayStop();
     deathsSinceFs++;
