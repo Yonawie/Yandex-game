@@ -14,10 +14,19 @@ import {
   rareComboMult,
 } from "../data/balance";
 import { SEED_WORDS, findWordFromLetters, isValidWord } from "../data/dictionary";
+import {
+  EchoSave,
+  buyStyle,
+  coinsFromScore,
+  equipStyle,
+  grantRunRewards,
+  loadSave,
+} from "../data/save";
+import { StyleId, VisualStyle, styleById } from "../data/styles";
 import { Sfx } from "./audio/sfx";
 import type { FloatText, Particle, Shockwave, WallCell } from "./types";
 
-export type GamePhase = "menu" | "playing" | "result";
+export type GamePhase = "menu" | "shop" | "playing" | "result";
 
 let _id = 1;
 function nextId() {
@@ -97,6 +106,14 @@ export class Game {
   continueUsed = false;
   wallsBroken = 0;
   hint = "";
+  save: EchoSave = loadSave();
+  shopScroll = 0;
+  /** Giant word stamp after a hit */
+  stamp = "";
+  stampT = 0;
+  /** Coins earned this result (shown once) */
+  lastCoinGain = 0;
+  rewardedThisResult = false;
 
   particles: Particle[] = [];
   shocks: Shockwave[] = [];
@@ -107,6 +124,36 @@ export class Game {
   shake = 0;
   /** cell ids that current word would hit (for highlight) */
   previewIds = new Set<number>();
+
+  style(): VisualStyle {
+    return styleById(this.save.equipped);
+  }
+
+  openShop() {
+    this.phase = "shop";
+    this.shopScroll = 0;
+  }
+
+  closeShop() {
+    this.phase = "menu";
+  }
+
+  buyOrEquip(id: StyleId) {
+    if (this.save.owned.includes(id)) {
+      this.save = equipStyle(this.save, id);
+      this.tip(`Стиль «${styleById(id).name}» экипирован`);
+      Sfx.place();
+      return;
+    }
+    if (this.save.coins < styleById(id).price) {
+      this.tip("Не хватает осколков");
+      Sfx.invalid();
+      return;
+    }
+    this.save = buyStyle(this.save, id);
+    this.tip(`Куплено · ${styleById(id).name}`);
+    Sfx.valid();
+  }
 
   start(diff: Difficulty) {
     this.difficulty = diff;
@@ -135,6 +182,10 @@ export class Game {
     this.echoT = 0;
     this.inEchoCombo = false;
     this.hint = "";
+    this.stamp = "";
+    this.stampT = 0;
+    this.lastCoinGain = 0;
+    this.rewardedThisResult = false;
     this.previewIds = new Set();
     this.particles = [];
     this.shocks = [];
@@ -396,8 +447,10 @@ export class Game {
       y: 0.32,
       text: doEcho ? `ЭХО +${gain}` : `+${gain}`,
       life: 1.25,
-      color: doEcho ? "#FF6B8A" : "#FFF6D6",
+      color: doEcho ? this.style().rare : this.style().accentHot,
     });
+    this.stamp = word;
+    this.stampT = doEcho ? 0.85 : 0.55;
 
     this.consumePicks();
 
@@ -503,6 +556,7 @@ export class Game {
   private spawnFall(col: number, row: number, letter: string) {
     const x = (col + 0.5) / this.cols;
     const y = 1 - (row + 0.5) / this.maxH;
+    const cols = this.style().particle;
     for (let i = 0; i < 8; i++) {
       const ang = Math.random() * Math.PI * 2;
       this.particles.push({
@@ -512,7 +566,7 @@ export class Game {
         vy: -0.25 - Math.random() * 0.45,
         life: 0.55 + Math.random() * 0.45,
         max: 1,
-        color: i % 3 === 0 ? "#D6F7FF" : i % 3 === 1 ? "#FF6B8A" : "#E8A85C",
+        color: cols[i % 3],
         size: 0.018 + Math.random() * 0.025,
         letter: i === 0 ? letter : undefined,
       });
@@ -556,11 +610,19 @@ export class Game {
     return true;
   }
 
+  private settleResult() {
+    if (this.rewardedThisResult) return;
+    this.rewardedThisResult = true;
+    this.lastCoinGain = coinsFromScore(this.score);
+    this.save = grantRunRewards(this.save, this.score);
+  }
+
   checkDeath() {
     if (this.stacks.some((s) => s.length >= this.maxH)) {
       this.phase = "result";
       this.echoT = 0;
       this.inEchoCombo = false;
+      this.settleResult();
     }
   }
 
@@ -568,6 +630,7 @@ export class Game {
     if (this.messageT > 0) this.messageT -= dt;
     if (this.flash > 0) this.flash -= dt;
     if (this.shake > 0) this.shake -= dt;
+    if (this.stampT > 0) this.stampT -= dt;
 
     for (const p of this.particles) {
       p.x += p.vx * dt;

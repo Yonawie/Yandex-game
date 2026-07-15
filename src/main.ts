@@ -1,4 +1,5 @@
 import { Difficulty } from "./data/balance";
+import { StyleId } from "./data/styles";
 import { Sfx } from "./game/audio/sfx";
 import { Game } from "./game/Game";
 import { Renderer } from "./game/Renderer";
@@ -82,6 +83,10 @@ function handleUi(id: string) {
     game.selectTray(Number(id.slice(5)));
     return;
   }
+  if (id.startsWith("style-")) {
+    game.buyOrEquip(id.slice(6) as StyleId);
+    return;
+  }
   switch (id) {
     case "play-normal":
       startDiff("normal");
@@ -94,6 +99,16 @@ function handleUi(id: string) {
       break;
     case "play-infinity":
       startDiff("infinity");
+      break;
+    case "open-shop":
+      gameplayStop();
+      game.openShop();
+      break;
+    case "close-shop":
+      game.closeShop();
+      break;
+    case "shop-up":
+      game.shopScroll = Math.max(0, game.shopScroll - 160);
       break;
     case "undo":
       game.undoLast();
@@ -152,7 +167,19 @@ canvas.addEventListener(
   { passive: true },
 );
 
+// shop scroll via wheel
+canvas.addEventListener(
+  "wheel",
+  (e) => {
+    if (game.phase !== "shop") return;
+    e.preventDefault();
+    game.shopScroll += e.deltaY;
+  },
+  { passive: false },
+);
+
 window.addEventListener("keydown", (e) => {
+  if (game.phase === "shop" && e.key === "Escape") game.closeShop();
   if (game.phase !== "playing") return;
   if (e.key === "Enter") game.submit();
   if (e.key === "Backspace" || e.key === "Escape") game.undoLast();
