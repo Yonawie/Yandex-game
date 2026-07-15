@@ -26,6 +26,9 @@ export function generateTextures(scene: Phaser.Scene): void {
   makeColorBadge(scene, 'badge-amber', HUE_HEX.amber);
   makeColorBadge(scene, 'badge-teal', HUE_HEX.teal);
   makeColorBadge(scene, 'badge-coral', HUE_HEX.coral);
+  makeVignette(scene);
+  makeMatchRing(scene);
+  makeDangerMark(scene);
 }
 
 function gph(scene: Phaser.Scene): Phaser.GameObjects.Graphics {
@@ -141,34 +144,82 @@ function makeVoid(scene: Phaser.Scene): void {
   const g = gph(scene);
   const cx = 40;
   const cy = 40;
-  // danger halo
-  g.fillStyle(COLORS.danger, 0.18);
-  g.fillCircle(cx, cy, 38);
-  // dark core
-  g.fillStyle(0x04070c, 1);
-  g.fillCircle(cx, cy, 28);
-  // jagged ring
-  g.lineStyle(5, COLORS.danger, 1);
-  g.strokeCircle(cx, cy, 26);
-  g.lineStyle(2, 0xffb4a2, 0.85);
-  g.strokeCircle(cx, cy, 18);
-  // inward teeth
-  g.fillStyle(COLORS.danger, 0.95);
+  // outer danger bloom — hard read vs soft nebula
+  g.fillStyle(COLORS.danger, 0.28);
+  g.fillCircle(cx, cy, 39);
+  g.fillStyle(0x1a0508, 1);
+  g.fillCircle(cx, cy, 30);
+  // hexagonal silhouette
+  g.fillStyle(0x02040a, 1);
+  const hex: { x: number; y: number }[] = [];
   for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2;
-    const x1 = cx + Math.cos(a) * 24;
-    const y1 = cy + Math.sin(a) * 24;
-    const x2 = cx + Math.cos(a) * 10;
-    const y2 = cy + Math.sin(a) * 10;
-    const x3 = cx + Math.cos(a + 0.25) * 22;
-    const y3 = cy + Math.sin(a + 0.25) * 22;
+    const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+    hex.push({ x: cx + Math.cos(a) * 22, y: cy + Math.sin(a) * 22 });
+  }
+  g.beginPath();
+  g.moveTo(hex[0].x, hex[0].y);
+  for (let i = 1; i < hex.length; i++) g.lineTo(hex[i].x, hex[i].y);
+  g.closePath();
+  g.fillPath();
+  g.lineStyle(4, COLORS.danger, 1);
+  g.strokePath();
+  g.lineStyle(2, 0xffc9b8, 0.9);
+  g.strokeCircle(cx, cy, 14);
+  // inward teeth
+  g.fillStyle(COLORS.danger, 1);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+    const x1 = cx + Math.cos(a) * 20;
+    const y1 = cy + Math.sin(a) * 20;
+    const x2 = cx + Math.cos(a) * 8;
+    const y2 = cy + Math.sin(a) * 8;
+    const x3 = cx + Math.cos(a + 0.28) * 18;
+    const y3 = cy + Math.sin(a + 0.28) * 18;
     g.fillTriangle(x1, y1, x2, y2, x3, y3);
   }
-  // X mark
-  g.lineStyle(3, 0xff8a80, 0.9);
-  g.lineBetween(cx - 8, cy - 8, cx + 8, cy + 8);
-  g.lineBetween(cx + 8, cy - 8, cx - 8, cy + 8);
+  g.lineStyle(3, 0xff8a80, 1);
+  g.lineBetween(cx - 7, cy - 7, cx + 7, cy + 7);
+  g.lineBetween(cx + 7, cy - 7, cx - 7, cy + 7);
   g.generateTexture('void', 80, 80);
+  g.destroy();
+}
+
+function makeVignette(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.fillStyle(0x000000, 0);
+  g.fillRect(0, 0, 64, 64);
+  g.fillStyle(0x02060c, 0.55);
+  g.fillRect(0, 0, 64, 8);
+  g.fillRect(0, 56, 64, 8);
+  g.fillRect(0, 0, 8, 64);
+  g.fillRect(56, 0, 8, 64);
+  g.fillStyle(0x02060c, 0.28);
+  g.fillRect(0, 0, 64, 14);
+  g.fillRect(0, 50, 64, 14);
+  g.fillRect(0, 0, 14, 64);
+  g.fillRect(50, 0, 14, 64);
+  g.generateTexture('vignette', 64, 64);
+  g.destroy();
+}
+
+function makeMatchRing(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.lineStyle(4, 0xffffff, 0.95);
+  g.strokeCircle(32, 32, 26);
+  g.lineStyle(2, 0xffffff, 0.35);
+  g.strokeCircle(32, 32, 30);
+  g.generateTexture('match-ring', 64, 64);
+  g.destroy();
+}
+
+function makeDangerMark(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.fillStyle(COLORS.danger, 0.55);
+  g.fillTriangle(16, 2, 30, 30, 2, 30);
+  g.fillStyle(0xffffff, 0.95);
+  g.fillRect(14, 10, 4, 10);
+  g.fillCircle(16, 24, 2.5);
+  g.generateTexture('danger-mark', 32, 32);
   g.destroy();
 }
 

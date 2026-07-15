@@ -22,6 +22,7 @@ export interface Dictionary {
   tipTap: string;
   tipColor: string;
   tipPortal: string;
+  gotIt: string;
   gameOver: string;
   newRecord: string;
   coins: string;
@@ -82,6 +83,7 @@ export const dictionaries: Record<Lang, Dictionary> = {
     tipTap: 'Тап влево / вправо — смена нити',
     tipColor: 'Собирай светлячков своего цвета',
     tipPortal: 'Порталы меняют окраску огонька',
+    gotIt: 'Понятно',
     gameOver: 'Погас',
     newRecord: 'Новый рекорд!',
     coins: 'Искры',
@@ -139,6 +141,7 @@ export const dictionaries: Record<Lang, Dictionary> = {
     tipTap: 'Tap left / right to change thread',
     tipColor: 'Collect fireflies of your color',
     tipPortal: 'Portals recolor your flame',
+    gotIt: 'Got it',
     gameOver: 'Extinguished',
     newRecord: 'New record!',
     coins: 'Sparks',

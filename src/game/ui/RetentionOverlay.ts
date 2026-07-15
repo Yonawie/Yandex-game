@@ -124,19 +124,29 @@ export class RetentionOverlay {
       buttons.push(bg, label);
     });
 
+    const closeBg = scene.add
+      .image(width / 2, height * 0.9, 'ui-btn')
+      .setDisplaySize(200, 48)
+      .setTint(0x9bb0c1)
+      .setInteractive({ useHandCursor: true });
     const close = scene.add
       .text(width / 2, height * 0.9, tf('close'), {
         fontFamily: 'Outfit, sans-serif',
-        fontSize: '20px',
-        color: '#9BB0C1',
+        fontSize: '22px',
+        color: '#071018',
       })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    close.on('pointerup', () => this.hide());
-    buttons.push(close);
+      .setOrigin(0.5);
+    const hide = () => this.hide();
+    closeBg.on('pointerup', hide);
+    close.setInteractive({ useHandCursor: true }).on('pointerup', hide);
+    buttons.push(closeBg, close);
 
     this.root.add(buttons);
     this.refresh();
+  }
+
+  isOpen(): boolean {
+    return this.root.visible;
   }
 
   show(): void {

@@ -22,9 +22,14 @@ export class MenuScene extends Phaser.Scene {
   private modeText!: Phaser.GameObjects.Text;
   private retentionHint!: Phaser.GameObjects.Text;
   private retentionOverlay: RetentionOverlay | null = null;
+  private tipsOpen = false;
 
   constructor() {
     super('Menu');
+  }
+
+  private uiBlocked(): boolean {
+    return this.tipsOpen || Boolean(this.retentionOverlay?.isOpen());
   }
 
   create(): void {
@@ -136,8 +141,9 @@ export class MenuScene extends Phaser.Scene {
     this.refreshModeLabel();
 
     this.makeButton(width / 2, height * 0.68, tf('play'), () => {
+      if (this.uiBlocked()) return;
       const mode = modes[this.modeIndex];
-      if (!isModeUnlocked(mode.id, save.bestHeight)) {
+      if (!isModeUnlocked(mode.id, getSave().bestHeight)) {
         playTone('hit');
         return;
       }
@@ -166,18 +172,26 @@ export class MenuScene extends Phaser.Scene {
     this.makeChip(width * 0.72, height * 0.78, '›', () => void this.cycleSkin(1));
     this.refreshSkinLabel();
 
+    const hubBg = this.add
+      .image(width / 2, height * 0.865, 'ui-btn')
+      .setDisplaySize(240, 48)
+      .setTint(0x2a9d8f)
+      .setInteractive({ useHandCursor: true });
     const hub = this.add
       .text(width / 2, height * 0.865, tf('retention'), {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '20px',
-        color: '#F4A261',
+        color: '#071018',
       })
       .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    hub.on('pointerup', () => {
+      .setDepth(3);
+    const openHub = () => {
+      unlockAudio();
       playTone('ui');
       this.retentionOverlay?.show();
-    });
+    };
+    hubBg.on('pointerup', openHub);
+    hub.setInteractive({ useHandCursor: true }).on('pointerup', openHub);
 
     const soundLabel = save.sound ? tf('soundOn') : tf('soundOff');
     const soundBtn = this.add
@@ -206,7 +220,18 @@ export class MenuScene extends Phaser.Scene {
       console.warn('Retention overlay failed', e);
     }
 
-    if (!save.seenTip) this.showTips();
+    if (!save.seenTip) {
+      this.showTips();
+    } else {
+      // auto-open return hub if morning gift waiting
+      void syncRetentionClock().then(() => {
+        const snap = getSnapshot();
+        this.refreshRetentionHint();
+        if (snap.morningAvailable || snap.idleSparks > 0 || snap.unreadLetters.length > 0) {
+          this.time.delayedCall(450, () => this.retentionOverlay?.show());
+        }
+      });
+    }
 
     this.events.on(Phaser.Scenes.Events.UPDATE, () => {
       this.stars.getChildren().forEach((obj) => {
@@ -328,16 +353,17 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private showTips(): void {
+    this.tipsOpen = true;
     const { width, height } = this.scale;
     const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.55).setDepth(50);
     const panel = this.add
       .image(width / 2, height / 2, 'ui-panel')
-      .setDisplaySize(width * 0.84, 360)
+      .setDisplaySize(width * 0.84, 400)
       .setDepth(51);
     const tip = this.add
       .text(
         width / 2,
-        height / 2 - 40,
+        height / 2 - 50,
         `${tf('tipTap')}\n\n${tf('tipColor')}\n\n${tf('tipPortal')}`,
         {
           fontFamily: 'Outfit, sans-serif',
@@ -350,21 +376,36 @@ export class MenuScene extends Phaser.Scene {
       )
       .setOrigin(0.5)
       .setDepth(52);
-    const ok = this.add
-      .text(width / 2, height / 2 + 120, tf('play'), {
-        fontFamily: 'Outfit, sans-serif',
-        fontSize: '26px',
-        color: '#F4A261',
-      })
-      .setOrigin(0.5)
+    const okBg = this.add
+      .image(width / 2, height / 2 + 130, 'ui-btn')
+      .setDisplaySize(220, 56)
       .setDepth(52)
       .setInteractive({ useHandCursor: true });
-    ok.on('pointerup', async () => {
+    const ok = this.add
+      .text(width / 2, height / 2 + 130, tf('gotIt'), {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '26px',
+        color: '#071018',
+      })
+      .setOrigin(0.5)
+      .setDepth(53);
+
+    const closeTips = async () => {
+      if (!this.tipsOpen) return;
+      this.tipsOpen = false;
+      unlockAudio();
       overlay.destroy();
       panel.destroy();
       tip.destroy();
+      okBg.destroy();
       ok.destroy();
       await patchSave({ seenTip: true });
-    });
+      const snap = getSnapshot();
+      if (snap.morningAvailable || snap.idleSparks > 0 || snap.unreadLetters.length > 0) {
+        this.retentionOverlay?.show();
+      }
+    };
+    okBg.on('pointerup', () => void closeTips());
+    overlay.setInteractive().on('pointerup', () => void closeTips());
   }
 }

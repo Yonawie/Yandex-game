@@ -38,10 +38,13 @@ export class GameScene extends Phaser.Scene {
   private eventText!: Phaser.GameObjects.Text;
   private colorBadge!: Phaser.GameObjects.Image;
   private laneGlow!: Phaser.GameObjects.Image;
+  private matchRing!: Phaser.GameObjects.Image;
+  private dangerMarks: Phaser.GameObjects.Image[] = [];
   private alive = true;
   private continued = false;
   private pointerDownHandler!: (pointer: Phaser.Input.Pointer) => void;
   private trailEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private lastMilestone = 0;
 
   private spawner!: Spawner;
   private eventsDir!: EventDirector;
@@ -80,6 +83,8 @@ export class GameScene extends Phaser.Scene {
     this.matchedCollects = 0;
     this.voidsPassed = 0;
     this.maxCombo = 0;
+    this.lastMilestone = 0;
+    this.dangerMarks = [];
 
     this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height).setDepth(0);
 
@@ -157,6 +162,39 @@ export class GameScene extends Phaser.Scene {
       this.playerHue,
       1.45,
     );
+
+    this.matchRing = this.add
+      .image(this.lantern.x, py, 'match-ring')
+      .setDepth(18)
+      .setTint(HUE_HEX[this.playerHue])
+      .setAlpha(0.55)
+      .setScale(1.15);
+    this.tweens.add({
+      targets: this.matchRing,
+      scale: 1.32,
+      alpha: 0.85,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    this.dangerMarks = [];
+    for (let lane = 0; lane < this.mode.lanes; lane++) {
+      const mark = this.add
+        .image(laneX(width, lane, this.mode.lanes, this.mode.lanePadding), py - 70, 'danger-mark')
+        .setDepth(19)
+        .setAlpha(0)
+        .setScale(1.2);
+      this.dangerMarks.push(mark);
+    }
+
+    this.add
+      .image(width / 2, height / 2, 'vignette')
+      .setDisplaySize(width, height)
+      .setDepth(35)
+      .setAlpha(0.7)
+      .setScrollFactor(0);
 
     this.trailEmitter = this.add.particles(0, 0, 'px', {
       follow: this.lantern,
@@ -323,11 +361,25 @@ export class GameScene extends Phaser.Scene {
     for (const req of requests) this.materialize(req);
 
     const playerY = height * this.mode.playerYRatio;
+    const dangerNear = new Array(this.mode.lanes).fill(false);
     for (let i = this.entities.length - 1; i >= 0; i--) {
       const e = this.entities[i];
       const def = getEntityDef(e.kind);
       e.go.y += this.scroll * scrollMul * dt;
       if (def.rotates) e.go.rotation += dt * 1.4;
+
+      // matching fireflies pulse brighter; wrong colors stay dimmer
+      if (e.kind === 'firefly' && e.hue) {
+        const match = e.hue === this.playerHue;
+        const pulse = 0.75 + Math.sin(this.time.now / 180 + i) * 0.2;
+        e.go.setAlpha(match ? Math.min(1, pulse) : 0.55);
+        e.go.setScale(def.scale * (match ? 1 + Math.sin(this.time.now / 220 + i) * 0.06 : 0.92));
+      }
+
+      if (e.kind === 'void') {
+        const approach = e.go.y > playerY - 280 && e.go.y < playerY + 40;
+        if (approach) dangerNear[e.lane] = true;
+      }
 
       const near =
         e.lane === this.playerLane &&
@@ -342,6 +394,7 @@ export class GameScene extends Phaser.Scene {
       if (e.go.y > playerY + 8 && e.kind === 'void' && !(e.go.getData('passed') as boolean)) {
         e.go.setData('passed', true);
         this.voidsPassed += 1;
+        this.popFloat(e.go.x, playerY - 40, '+1', COLORS.danger);
       }
 
       if (e.go.y > height + 60) {
@@ -350,10 +403,28 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    this.dangerMarks.forEach((mark, lane) => {
+      const want = dangerNear[lane] ? 0.95 : 0;
+      mark.setAlpha(Phaser.Math.Linear(mark.alpha, want, 1 - Math.pow(0.001, dt)));
+      if (dangerNear[lane]) {
+        this.threads[lane]?.setTint(COLORS.danger);
+      } else {
+        this.threads[lane]?.clearTint();
+      }
+    });
+
     this.maxCombo = Math.max(this.maxCombo, this.scores.combo);
     this.scoreText.setText(`${tf('score')}: ${Math.floor(this.scores.score)}`);
     this.heightText.setText(`${tf('height')}: ${Math.floor(this.distance)}`);
     this.comboText.setText(this.scores.combo > 1 ? `${tf('combo')} ×${this.scores.combo}` : '');
+
+    const milestone = Math.floor(this.distance / 50) * 50;
+    if (milestone >= 50 && milestone > this.lastMilestone) {
+      this.lastMilestone = milestone;
+      this.popFloat(width / 2, height * 0.28, `${milestone}`, COLORS.amber);
+      this.cameras.main.flash(90, 30, 40, 50);
+      playTone('portal');
+    }
 
     const beat = this.story.tick(this.distance);
     if (beat && beat.meters > 0) this.showStory(beat.ru, beat.en);
@@ -364,6 +435,8 @@ export class GameScene extends Phaser.Scene {
       1 - Math.pow(0.001, dt),
     );
     this.laneGlow.x = this.lantern.x;
+    this.matchRing.x = this.lantern.x;
+    this.matchRing.y = this.lantern.y;
   }
 
   private materialize(req: SpawnRequest): void {
@@ -423,6 +496,7 @@ export class GameScene extends Phaser.Scene {
       this.recolorLantern();
       playTone('portal');
       this.burst(e.go.x, e.go.y, HUE_HEX[e.hue]);
+      this.popFloat(e.go.x, e.go.y - 30, getLang() === 'ru' ? 'новый свет' : 'new light', HUE_HEX[e.hue]);
       this.cameras.main.flash(120, 40, 60, 70);
       return;
     }
@@ -433,10 +507,16 @@ export class GameScene extends Phaser.Scene {
         this.maxCombo = Math.max(this.maxCombo, this.scores.combo);
         playTone('collect', this.scores.combo);
         this.burst(e.go.x, e.go.y, HUE_HEX[e.hue ?? 'amber']);
+        const label =
+          this.scores.combo > 1
+            ? `+${def.score} ×${this.scores.combo}`
+            : `+${def.score}`;
+        this.popFloat(e.go.x, e.go.y - 24, label, HUE_HEX[e.hue ?? 'amber']);
         if (this.scores.combo === 5 || this.scores.combo === 10) playTone('combo', this.scores.combo);
       } else {
         this.scores.penalize(def.wrongPenalty ?? 5);
         playTone('hit');
+        this.popFloat(e.go.x, e.go.y - 20, `−${def.wrongPenalty ?? 5}`, COLORS.danger);
         this.cameras.main.shake(100, this.mode.softShake);
       }
       return;
@@ -445,7 +525,30 @@ export class GameScene extends Phaser.Scene {
       this.scores.collect(def.score, this.time.now, this.mode, Boolean(def.forceCombo));
       playTone('combo', this.scores.combo);
       this.burst(e.go.x, e.go.y, COLORS.mint);
+      this.popFloat(e.go.x, e.go.y - 24, `+${def.score}`, COLORS.mint);
     }
+  }
+
+  private popFloat(x: number, y: number, label: string, color: number): void {
+    const hex = `#${color.toString(16).padStart(6, '0')}`;
+    const t = this.add
+      .text(x, y, label, {
+        fontFamily: 'Outfit, sans-serif',
+        fontSize: '22px',
+        color: hex,
+        fontStyle: '700',
+      })
+      .setOrigin(0.5)
+      .setDepth(50)
+      .setAlpha(0.95);
+    this.tweens.add({
+      targets: t,
+      y: y - 48,
+      alpha: 0,
+      duration: 700,
+      ease: 'Cubic.easeOut',
+      onComplete: () => t.destroy(),
+    });
   }
 
   private recolorLantern(): void {
@@ -453,10 +556,17 @@ export class GameScene extends Phaser.Scene {
     this.trailEmitter.setParticleTint(HUE_HEX[this.playerHue]);
     this.colorBadge.setTexture(`badge-${this.playerHue}`);
     this.laneGlow.setTint(HUE_HEX[this.playerHue]);
+    this.matchRing.setTint(HUE_HEX[this.playerHue]);
     this.tweens.add({
       targets: this.colorBadge,
       scale: 1.35,
       duration: 120,
+      yoyo: true,
+    });
+    this.tweens.add({
+      targets: this.matchRing,
+      scale: 1.55,
+      duration: 160,
       yoyo: true,
     });
   }

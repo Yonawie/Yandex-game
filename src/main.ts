@@ -2,7 +2,7 @@ import './styles/main.css';
 import Phaser from 'phaser';
 import { createGameConfig } from '@/game/config';
 import { yandex } from '@/sdk/yandex';
-import { stopMusic, startMusic, isMuted } from '@/game/audio/sfx';
+import { stopMusic, startMusic, isMuted, unlockAudio } from '@/game/audio/sfx';
 
 const parent = 'game-root';
 const root = document.getElementById(parent);
@@ -16,6 +16,14 @@ document.addEventListener(
     e.preventDefault();
   },
   { passive: false },
+);
+
+document.addEventListener(
+  'pointerdown',
+  () => {
+    unlockAudio();
+  },
+  { once: true },
 );
 
 const game = new Phaser.Game(createGameConfig(parent));
