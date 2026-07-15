@@ -1,8 +1,9 @@
-import { MAP_W, MAP_H } from "../config.js";
-import { getLevelById, getMapPlacements, ITEM_CATALOG } from "../data/levels.js";
+import { MAP_W, MAP_H, COLORS, FONT_UI, FONT_DISPLAY } from "../config.js";
+import { getLevelById, getMapPlacements, ITEM_CATALOG, getLevelsForMap } from "../data/levels.js";
 import { MAP_META } from "../maps.js";
-import { recordLevelWin, loadProgress } from "../utils/storage.js";
+import { recordLevelWin } from "../utils/storage.js";
 import { showRewarded, showFullscreenAd, syncProgress } from "../utils/yandex.js";
+import { starRow } from "../ui.js";
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -183,53 +184,54 @@ export class GameScene extends Phaser.Scene {
     const { width } = this.scale;
     this.hud = this.add.container(0, 0).setScrollFactor(0).setDepth(1000);
 
-    const top = this.add.rectangle(width / 2, 28, width, 56, 0x0d2137, 0.82);
+    const top = this.add.rectangle(width / 2, 28, width, 56, COLORS.bgDeep, 0.88);
+    const line = this.add.rectangle(width / 2, 56, width, 1, COLORS.gold, 0.35);
     const title = this.add
-      .text(16, 28, `${meta.emoji} ${meta.title} — ${this.level.title}`, {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "16px",
-        fontStyle: "800",
-        color: "#ffffff",
+      .text(16, 28, `${meta.emoji}  ${meta.title}  ·  ${this.level.title}`, {
+        fontFamily: FONT_UI,
+        fontSize: "14px",
+        fontStyle: "600",
+        color: "#f3ead7",
       })
       .setOrigin(0, 0.5);
 
     this.counterText = this.add
-      .text(width / 2, 28, `Найдено 0 / ${this.level.targetCount}`, {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "18px",
-        fontStyle: "800",
-        color: "#ffd166",
+      .text(width / 2, 28, `Найдено  0 / ${this.level.targetCount}`, {
+        fontFamily: FONT_UI,
+        fontSize: "16px",
+        fontStyle: "700",
+        color: "#d4a84b",
       })
       .setOrigin(0.5);
 
     const back = this.add
-      .text(width - 14, 28, "✕", {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "22px",
-        color: "#ff6b6b",
+      .text(width - 16, 28, "✕", {
+        fontFamily: FONT_UI,
+        fontSize: "20px",
+        color: "#e85d4c",
       })
       .setOrigin(1, 0.5)
       .setInteractive({ useHandCursor: true });
     back.on("pointerdown", () => this.scene.start("MapSelect"));
 
-    const zoomIn = this.makeHudBtn(width - 54, 90, "+", () => {
+    const zoomIn = this.makeHudBtn(width - 50, 88, "+", () => {
       this.cameras.main.setZoom(Phaser.Math.Clamp(this.cameras.main.zoom * 1.2, 0.22, 1.8));
     });
-    const zoomOut = this.makeHudBtn(width - 54, 140, "−", () => {
+    const zoomOut = this.makeHudBtn(width - 50, 138, "−", () => {
       this.cameras.main.setZoom(Phaser.Math.Clamp(this.cameras.main.zoom / 1.2, 0.22, 1.8));
     });
-    const hintBtn = this.makeHudBtn(width - 54, 200, "💡", () => this.useHint());
+    const hintBtn = this.makeHudBtn(width - 50, 198, "✦", () => this.useHint());
 
-    this.hud.add([top, title, this.counterText, back, zoomIn, zoomOut, hintBtn]);
+    this.hud.add([top, line, title, this.counterText, back, zoomIn, zoomOut, hintBtn]);
   }
 
   makeHudBtn(x, y, label, cb) {
     const c = this.add.container(x, y).setScrollFactor(0);
-    const r = this.add.circle(0, 0, 22, 0x163554).setStrokeStyle(2, 0xffffff);
-    const t = this.add.text(0, 0, label, { fontSize: "20px", color: "#fff" }).setOrigin(0.5);
+    const r = this.add.circle(0, 0, 20, COLORS.panelSoft, 0.95).setStrokeStyle(1.5, COLORS.gold, 0.7);
+    const t = this.add.text(0, 0, label, { fontFamily: FONT_UI, fontSize: "18px", color: "#f3ead7" }).setOrigin(0.5);
     c.add([r, t]);
-    c.setSize(44, 44);
-    c.setInteractive(new Phaser.Geom.Circle(0, 0, 22), Phaser.Geom.Circle.Contains);
+    c.setSize(40, 40);
+    c.setInteractive(new Phaser.Geom.Circle(0, 0, 20), Phaser.Geom.Circle.Contains);
     c.on("pointerdown", (p) => {
       p.event?.stopPropagation?.();
       cb();
@@ -240,39 +242,38 @@ export class GameScene extends Phaser.Scene {
   createItemBar() {
     const { width, height } = this.scale;
     this.bar = this.add.container(0, 0).setScrollFactor(0).setDepth(1000);
-    const bg = this.add.rectangle(width / 2, height - 48, width, 96, 0x0d2137, 0.9);
-    this.bar.add(bg);
+    const bg = this.add.rectangle(width / 2, height - 46, width, 92, COLORS.bgDeep, 0.92);
+    const line = this.add.rectangle(width / 2, height - 92, width, 1, COLORS.gold, 0.3);
+    this.bar.add([bg, line]);
 
     this.slotMap = new Map();
     const targets = this.level.targets;
-    const slotW = Math.min(64, (width - 20) / targets.length);
+    const slotW = Math.min(58, (width - 24) / targets.length);
     const totalW = slotW * targets.length;
     const startX = (width - totalW) / 2 + slotW / 2;
 
     targets.forEach((id, i) => {
       const info = ITEM_CATALOG[id];
       const x = startX + i * slotW;
-      const y = height - 48;
+      const y = height - 46;
       const slot = this.add.container(x, y);
       const circle = this.add
-        .circle(0, 0, Math.min(26, slotW / 2 - 2), 0xffffff, 0.95)
-        .setStrokeStyle(3, Phaser.Display.Color.HexStringToColor(info.color).color);
-      const emoji = this.add.text(0, -2, info.emoji, { fontSize: `${Math.min(22, slotW - 16)}px` }).setOrigin(0.5);
+        .circle(0, 0, Math.min(24, slotW / 2 - 2), 0x1a2438, 0.98)
+        .setStrokeStyle(2, Phaser.Display.Color.HexStringToColor(info.color).color);
+      const emoji = this.add.text(0, -1, info.emoji, { fontSize: `${Math.min(20, slotW - 14)}px` }).setOrigin(0.5);
       slot.add([circle, emoji]);
       slot.setData("id", id);
       this.bar.add(slot);
       this.slotMap.set(id, { slot, circle, emoji });
-
-      // tooltip on hover / long press via title under — skip for dense bar; show name on first highlight
     });
 
     this.hintLabel = this.add
-      .text(width / 2, height - 92, "", {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "14px",
-        color: "#ffd166",
-        backgroundColor: "#0d2137cc",
-        padding: { x: 8, y: 4 },
+      .text(width / 2, height - 96, "", {
+        fontFamily: FONT_UI,
+        fontSize: "13px",
+        color: "#d4a84b",
+        backgroundColor: "#0a0e17cc",
+        padding: { x: 10, y: 5 },
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -304,11 +305,11 @@ export class GameScene extends Phaser.Scene {
     }
     const slot = this.slotMap.get(id);
     if (slot) {
-      slot.circle.setFillStyle(0x06d6a0);
+      slot.circle.setFillStyle(COLORS.mint);
       slot.emoji.setAlpha(0.35);
       this.tweens.add({ targets: slot.slot, scale: 0.7, duration: 200 });
     }
-    this.counterText.setText(`Найдено ${this.found.size} / ${this.level.targetCount}`);
+    this.counterText.setText(`Найдено  ${this.found.size} / ${this.level.targetCount}`);
     this.hintLabel.setText("");
     if (this.hintRing) {
       this.hintRing.destroy();
@@ -371,22 +372,33 @@ export class GameScene extends Phaser.Scene {
     const progress = recordLevelWin(this.levelId, this.level.mapId, stars, this.found.size);
     syncProgress(progress);
 
+    const mapLevels = getLevelsForMap(this.level.mapId);
+    const mapComplete = mapLevels.every((lv) => progress.completed[lv.id]);
+
     const { width, height } = this.scale;
-    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7).setScrollFactor(0).setDepth(2000).setInteractive();
-    const panel = this.add.rectangle(width / 2, height / 2, 420, 300, 0x163554).setScrollFactor(0).setDepth(2001).setStrokeStyle(4, 0xffd166);
+    const overlay = this.add
+      .rectangle(width / 2, height / 2, width, height, 0x000000, 0.78)
+      .setScrollFactor(0)
+      .setDepth(2000)
+      .setInteractive();
+    const panel = this.add
+      .rectangle(width / 2, height / 2, 440, 320, COLORS.panel)
+      .setScrollFactor(0)
+      .setDepth(2001)
+      .setStrokeStyle(1.5, COLORS.gold);
     const title = this.add
-      .text(width / 2, height / 2 - 100, "Отлично!", {
-        fontFamily: "Pacifico, cursive",
-        fontSize: "40px",
-        color: "#ffd166",
+      .text(width / 2, height / 2 - 110, "Нашлось!", {
+        fontFamily: FONT_DISPLAY,
+        fontSize: "42px",
+        color: "#f3ead7",
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(2002);
     const starsText = this.add
-      .text(width / 2, height / 2 - 40, "★".repeat(stars) + "☆".repeat(3 - stars), {
-        fontSize: "36px",
-        color: "#ffd166",
+      .text(width / 2, height / 2 - 50, starRow(stars), {
+        fontSize: "34px",
+        color: "#d4a84b",
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -394,25 +406,40 @@ export class GameScene extends Phaser.Scene {
     const info = this.add
       .text(
         width / 2,
-        height / 2 + 10,
-        `Время: ${Math.round(elapsed)}с · Ошибки: ${this.mistakes} · Подсказки: ${this.hintsUsed}`,
-        { fontFamily: "Nunito, sans-serif", fontSize: "14px", color: "#caf0f8" }
+        height / 2 + 4,
+        `Время ${Math.round(elapsed)}с   ·   ошибки ${this.mistakes}   ·   подсказки ${this.hintsUsed}`,
+        { fontFamily: FONT_UI, fontSize: "13px", color: "#8b9bb4" }
       )
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(2002);
 
+    let unlockNote = null;
+    if (mapComplete) {
+      unlockNote = this.add
+        .text(width / 2, height / 2 + 36, "Карта пройдена — открыта следующая!", {
+          fontFamily: FONT_UI,
+          fontSize: "14px",
+          fontStyle: "600",
+          color: "#3ecf8e",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(2002);
+    }
+
     const again = this.add
-      .rectangle(width / 2 - 90, height / 2 + 80, 150, 48, 0x06d6a0)
+      .rectangle(width / 2 - 95, height / 2 + 100, 160, 48, COLORS.panelSoft)
+      .setStrokeStyle(1.5, COLORS.gold, 0.6)
       .setScrollFactor(0)
       .setDepth(2002)
       .setInteractive({ useHandCursor: true });
     this.add
-      .text(width / 2 - 90, height / 2 + 80, "Ещё раз", {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "16px",
-        fontStyle: "800",
-        color: "#0d2137",
+      .text(width / 2 - 95, height / 2 + 100, "Ещё раз", {
+        fontFamily: FONT_UI,
+        fontSize: "15px",
+        fontStyle: "700",
+        color: "#f3ead7",
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -420,16 +447,16 @@ export class GameScene extends Phaser.Scene {
     again.on("pointerdown", () => this.scene.restart({ levelId: this.levelId }));
 
     const maps = this.add
-      .rectangle(width / 2 + 90, height / 2 + 80, 150, 48, 0x4cc9f0)
+      .rectangle(width / 2 + 95, height / 2 + 100, 160, 48, COLORS.gold)
       .setScrollFactor(0)
       .setDepth(2002)
       .setInteractive({ useHandCursor: true });
     this.add
-      .text(width / 2 + 90, height / 2 + 80, "К картам", {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "16px",
-        fontStyle: "800",
-        color: "#0d2137",
+      .text(width / 2 + 95, height / 2 + 100, "К картам", {
+        fontFamily: FONT_UI,
+        fontSize: "15px",
+        fontStyle: "700",
+        color: "#0a0e17",
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -439,6 +466,11 @@ export class GameScene extends Phaser.Scene {
       this.scene.start("MapSelect");
     });
 
-    this.tweens.add({ targets: [panel, title, starsText], scale: { from: 0.8, to: 1 }, duration: 300 });
+    this.tweens.add({
+      targets: [panel, title, starsText, unlockNote].filter(Boolean),
+      scale: { from: 0.85, to: 1 },
+      duration: 320,
+      ease: "Back.easeOut",
+    });
   }
 }

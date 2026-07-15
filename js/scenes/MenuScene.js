@@ -1,5 +1,15 @@
+import {
+  GAME_TITLE,
+  GAME_TAGLINE,
+  MAP_ORDER,
+  LEVELS_PER_MAP,
+  COLORS,
+  FONT_DISPLAY,
+  FONT_UI,
+} from "../config.js";
 import { loadProgress } from "../utils/storage.js";
 import { LEVELS } from "../data/levels.js";
+import { paintPremiumBg, makeGoldButton, titleStyle, uiStyle } from "../ui.js";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -8,23 +18,22 @@ export class MenuScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
-    const bg = this.add.graphics();
-    bg.fillGradientStyle(0x1a3a6b, 0x1a3a6b, 0xff6b35, 0xffd166, 1);
-    bg.fillRect(0, 0, width, height);
+    paintPremiumBg(this, width, height);
 
-    // floating orbs
-    for (let i = 0; i < 18; i++) {
+    // floating gold dust
+    for (let i = 0; i < 22; i++) {
       const c = this.add.circle(
-        Phaser.Math.Between(40, width - 40),
-        Phaser.Math.Between(40, height - 40),
-        Phaser.Math.Between(8, 28),
-        [0xff006e, 0x4cc9f0, 0xffd166, 0x06d6a0, 0x8338ec][i % 5],
-        0.25
+        Phaser.Math.Between(20, width - 20),
+        Phaser.Math.Between(20, height - 20),
+        Phaser.Math.Between(2, 5),
+        COLORS.gold,
+        0.2 + Math.random() * 0.25
       );
       this.tweens.add({
         targets: c,
-        y: c.y - Phaser.Math.Between(20, 60),
-        duration: 2000 + i * 120,
+        y: c.y - Phaser.Math.Between(30, 70),
+        alpha: 0.05,
+        duration: 2800 + i * 90,
         yoyo: true,
         repeat: -1,
         ease: "Sine.easeInOut",
@@ -32,66 +41,66 @@ export class MenuScene extends Phaser.Scene {
     }
 
     this.add
-      .text(width / 2, 70, "Живые картины", {
-        fontFamily: "Pacifico, cursive",
-        fontSize: "54px",
-        color: "#ffffff",
-        stroke: "#0d2137",
-        strokeThickness: 8,
+      .text(width / 2, 56, "HIDDEN WORLDS", {
+        fontFamily: FONT_UI,
+        fontSize: "11px",
+        fontStyle: "700",
+        color: "#d4a84b",
+        letterSpacing: 6,
       })
       .setOrigin(0.5);
 
+    const title = this.add
+      .text(width / 2, 110, GAME_TITLE, titleStyle("58px", "#f3ead7"))
+      .setOrigin(0.5);
+    title.setShadow(0, 8, "#000000", 12, true, true);
+
     this.add
-      .text(width / 2, 130, "Найди предметы на огромных ярких картах", {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "18px",
-        color: "#ffd166",
-      })
+      .text(width / 2, 168, GAME_TAGLINE, uiStyle("16px", "#8b9bb4"))
       .setOrigin(0.5);
 
     const p = loadProgress();
     const done = Object.keys(p.completed).length;
-    this.add
-      .text(width / 2, 165, `Уровней: ${LEVELS.length} · Пройдено: ${done} · Найдено вещей: ${p.totalFound || 0}`, {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "14px",
-        color: "#caf0f8",
+    const unlocked = p.unlockedMaps.length;
+
+    const stats = this.add.container(width / 2, 220);
+    const statBg = this.add.rectangle(0, 0, 520, 44, COLORS.panel, 0.85).setStrokeStyle(1, COLORS.line);
+    const statText = this.add
+      .text(0, 0, `${MAP_ORDER.length} карт  ·  ${LEVELS.length} уровней  ·  открыто ${unlocked}  ·  найдено ${p.totalFound || 0}`, {
+        fontFamily: FONT_UI,
+        fontSize: "13px",
+        color: "#c5d0e0",
       })
       .setOrigin(0.5);
+    stats.add([statBg, statText]);
 
-    const btn = this.add
-      .rectangle(width / 2, height / 2 + 20, 280, 64, 0x06d6a0)
-      .setInteractive({ useHandCursor: true })
-      .setStrokeStyle(4, 0xffffff);
-    const btnLabel = this.add
-      .text(width / 2, height / 2 + 20, "ИГРАТЬ", {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "28px",
-        fontStyle: "800",
-        color: "#0d2137",
-      })
-      .setOrigin(0.5);
-
-    btn.on("pointerover", () => btn.setFillStyle(0xffd166));
-    btn.on("pointerout", () => btn.setFillStyle(0x06d6a0));
-    btn.on("pointerdown", () => this.scene.start("MapSelect"));
+    const play = makeGoldButton(this, width / 2, height / 2 + 40, 260, 58, "Играть", () => {
+      this.scene.start("MapSelect");
+    });
 
     this.tweens.add({
-      targets: [btn, btnLabel],
-      scale: 1.05,
-      duration: 800,
+      targets: play,
+      y: play.y - 4,
+      duration: 1400,
       yoyo: true,
       repeat: -1,
       ease: "Sine.easeInOut",
     });
 
     this.add
-      .text(width / 2, height - 48, "Приближай · листай · ищи · 6 карт × 3 уровня", {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "14px",
-        color: "#ffffff",
+      .text(width / 2, height - 42, `Карты открываются по мере прохождения  ·  ${LEVELS_PER_MAP} уровня на карту`, {
+        fontFamily: FONT_UI,
+        fontSize: "13px",
+        color: "#5c6b82",
       })
-      .setOrigin(0.5)
-      .setAlpha(0.8);
+      .setOrigin(0.5);
+
+    this.add
+      .text(width / 2, height - 22, `Пройдено уровней: ${done}`, {
+        fontFamily: FONT_UI,
+        fontSize: "12px",
+        color: "#3ecf8e",
+      })
+      .setOrigin(0.5);
   }
 }

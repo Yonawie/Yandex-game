@@ -1,13 +1,30 @@
 let ysdk = null;
 let player = null;
 
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = src;
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("script fail"));
+    document.head.appendChild(s);
+  });
+}
+
 export async function initYandex() {
   try {
+    // Outside iframe YaGames floods console — skip until embedded
+    if (typeof window !== "undefined" && window.parent === window) return null;
+    await loadScript("https://yandex.ru/games/sdk/v2");
     if (typeof YaGames === "undefined") return null;
-    // Outside Yandex iframe the SDK throws postMessage errors — ignore quietly
     ysdk = await Promise.race([
       YaGames.init(),
-      new Promise((_, rej) => setTimeout(() => rej(new Error("ysdk timeout")), 2500)),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("ysdk timeout")), 2000)),
     ]);
     try {
       player = await ysdk.getPlayer({ scopes: false });

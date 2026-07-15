@@ -137,6 +137,10 @@ export function createMapCanvas(mapId) {
     underwater: paintUnderwater,
     jungle: paintJungle,
     neon: paintNeon,
+    venice: paintVenice,
+    tokyo: paintTokyo,
+    desert: paintDesert,
+    castle: paintCastle,
   };
   (painters[mapId] || paintWinter)(ctx);
   return canvas;
@@ -749,6 +753,149 @@ function paintNeon(ctx) {
   }
 }
 
+function paintVenice(ctx) {
+  const rng = mulberry32(707);
+  fillBg(ctx, "#7ec8e3", "#f7e1c6");
+  terraces(ctx, rng, ["#e8d5b7", "#d4b896", "#c9ada7", "#b8a99a"], 8);
+  // canals
+  ctx.fillStyle = "#2a9d8f";
+  for (let i = 0; i < 5; i++) {
+    const y = 900 + i * 500;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.bezierCurveTo(900, y - 40, 1800, y + 60, MAP_W, y);
+    ctx.lineTo(MAP_W, y + 70);
+    ctx.bezierCurveTo(1800, y + 130, 900, y + 30, 0, y + 70);
+    ctx.fill();
+  }
+  for (let i = 0; i < 40; i++) {
+    const x = rng() * MAP_W;
+    const y = 920 + Math.floor(rng() * 5) * 500 + rng() * 40;
+    ctx.fillStyle = "#111";
+    ctx.beginPath();
+    ctx.moveTo(x, y + 10);
+    ctx.lineTo(x + 40, y);
+    ctx.lineTo(x + 55, y + 18);
+    ctx.lineTo(x + 10, y + 28);
+    ctx.fill();
+  }
+  for (let i = 0; i < 80; i++) {
+    drawHouse(ctx, 80 + rng() * (MAP_W - 160), 700 + rng() * 2600, 55 + rng() * 35, 70 + rng() * 50,
+      ["#e76f51", "#f4a261", "#e9c46a", "#2a9d8f", "#c9ada7"][i % 5],
+      ["#9b2226", "#264653", "#6a4c93"][i % 3], false);
+  }
+  for (let i = 0; i < 160; i++) {
+    drawPerson(ctx, rng() * MAP_W, 800 + rng() * 2500, 0.65 + rng() * 0.5,
+      ["#e63946", "#457b9d", "#ffd166", "#fff"][i % 4], rng);
+  }
+}
+
+function paintTokyo(ctx) {
+  const rng = mulberry32(808);
+  fillBg(ctx, "#a0e9ff", "#ffe5ec");
+  terraces(ctx, rng, ["#ffc2d4", "#ffd6e0", "#caf0f8", "#bde0fe"], 8);
+  for (let i = 0; i < 100; i++) {
+    const x = 40 + (i % 12) * 220 + rng() * 20;
+    const y = 900 + Math.floor(i / 12) * 300;
+    const h = 100 + rng() * 140;
+    ctx.fillStyle = ["#ff8fab", "#90e0ef", "#fff", "#cdb4db", "#ffd6a5"][i % 5];
+    ctx.fillRect(x, y - h, 80 + rng() * 40, h);
+    ctx.fillStyle = "#e63946";
+    ctx.fillRect(x + 10, y - h - 18, 60, 10);
+  }
+  // torii
+  ctx.strokeStyle = "#e63946";
+  ctx.lineWidth = 14;
+  ctx.beginPath();
+  ctx.moveTo(600, 1600);
+  ctx.lineTo(600, 1300);
+  ctx.moveTo(900, 1600);
+  ctx.lineTo(900, 1300);
+  ctx.moveTo(560, 1320);
+  ctx.lineTo(940, 1320);
+  ctx.moveTo(580, 1280);
+  ctx.lineTo(920, 1280);
+  ctx.stroke();
+  for (let i = 0; i < 80; i++) {
+    ctx.fillStyle = ["#ff8fab", "#ffc2d4", "#fff"][i % 3];
+    ctx.beginPath();
+    ctx.arc(rng() * MAP_W, 700 + rng() * 2500, 10 + rng() * 12, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let i = 0; i < 180; i++) {
+    drawPerson(ctx, rng() * MAP_W, 900 + rng() * 2400, 0.65 + rng() * 0.5,
+      ["#e63946", "#ff8fab", "#222", "#3a86ff"][i % 4], rng);
+  }
+}
+
+function paintDesert(ctx) {
+  const rng = mulberry32(909);
+  fillBg(ctx, "#f4a261", "#e9c46a");
+  terraces(ctx, rng, ["#e76f51", "#f4a261", "#e9c46a", "#d4a373"], 9);
+  // oasis
+  ctx.fillStyle = "#48cae4";
+  ctx.beginPath();
+  ctx.ellipse(MAP_W * 0.5, 1800, 220, 90, 0, 0, Math.PI * 2);
+  ctx.fill();
+  for (let i = 0; i < 25; i++) {
+    drawTree(ctx, MAP_W * 0.5 + (rng() - 0.5) * 400, 1750 + rng() * 80, 1 + rng(), "#2d6a4f");
+  }
+  // palace
+  ctx.fillStyle = "#fff3b0";
+  ctx.fillRect(1100, 2400, 280, 160);
+  ctx.beginPath();
+  ctx.arc(1240, 2400, 70, Math.PI, 0);
+  ctx.fill();
+  for (let i = 0; i < 30; i++) {
+    const x = rng() * MAP_W;
+    const y = 1200 + rng() * 2000;
+    ctx.fillStyle = ["#e63946", "#8338ec", "#06d6a0", "#ffd166"][i % 4];
+    ctx.beginPath();
+    ctx.moveTo(x - 40, y);
+    ctx.lineTo(x, y - 70);
+    ctx.lineTo(x + 40, y);
+    ctx.fill();
+  }
+  for (let i = 0; i < 140; i++) {
+    drawPerson(ctx, rng() * MAP_W, 1000 + rng() * 2300, 0.65 + rng() * 0.5,
+      ["#e63946", "#fff", "#264653", "#ffd166"][i % 4], rng);
+  }
+}
+
+function paintCastle(ctx) {
+  const rng = mulberry32(1010);
+  fillBg(ctx, "#89c2d9", "#f8edeb");
+  terraces(ctx, rng, ["#95d5b2", "#b7e4c7", "#d8f3dc", "#a3b18a"], 8);
+  // castle
+  const cx = MAP_W * 0.5;
+  ctx.fillStyle = "#edf2f4";
+  ctx.fillRect(cx - 200, 1200, 400, 280);
+  ctx.fillRect(cx - 250, 1100, 80, 380);
+  ctx.fillRect(cx + 170, 1100, 80, 380);
+  ctx.fillStyle = "#014f86";
+  ctx.beginPath();
+  ctx.moveTo(cx - 260, 1100);
+  ctx.lineTo(cx - 210, 1020);
+  ctx.lineTo(cx - 160, 1100);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx + 160, 1100);
+  ctx.lineTo(cx + 210, 1020);
+  ctx.lineTo(cx + 260, 1100);
+  ctx.fill();
+  ctx.fillStyle = "#48cae4";
+  ctx.fillRect(cx - 320, 1480, 640, 50);
+  for (let i = 0; i < 50; i++) {
+    drawHouse(ctx, 100 + rng() * (MAP_W - 200), 1800 + rng() * 1500, 50 + rng() * 30, 45 + rng() * 40,
+      ["#f4a261", "#e9c46a", "#cdb4db", "#bde0fe"][i % 4],
+      ["#014f86", "#e63946", "#2d6a4f"][i % 3], false);
+  }
+  for (let i = 0; i < 160; i++) {
+    drawPerson(ctx, rng() * MAP_W, 1400 + rng() * 2000, 0.65 + rng() * 0.55,
+      ["#e63946", "#014f86", "#ffd166", "#8338ec"][i % 4], rng);
+  }
+}
+
 export const MAP_META = {
   winter: {
     id: "winter",
@@ -795,7 +942,39 @@ export const MAP_META = {
     title: "Неоновый мегаполис",
     emoji: "🌃",
     subtitle: "Ночные улицы и вывески",
-    accent: 0xff006e,
+    accent: 0xd4a84b,
     preview: ["#10002b", "#ff006e", "#00f5d4"],
+  },
+  venice: {
+    id: "venice",
+    title: "Венеция",
+    emoji: "🛶",
+    subtitle: "Каналы, маски и гондолы",
+    accent: 0x2a9d8f,
+    preview: ["#7ec8e3", "#e76f51", "#2a9d8f"],
+  },
+  tokyo: {
+    id: "tokyo",
+    title: "Токио",
+    emoji: "🏯",
+    subtitle: "Сакура, тории и перекрёстки",
+    accent: 0xff8fab,
+    preview: ["#ffe5ec", "#e63946", "#90e0ef"],
+  },
+  desert: {
+    id: "desert",
+    title: "Пустынный оазис",
+    emoji: "🏜️",
+    subtitle: "Дюны, базар и дворец",
+    accent: 0xe9c46a,
+    preview: ["#f4a261", "#e76f51", "#48cae4"],
+  },
+  castle: {
+    id: "castle",
+    title: "Сказочный замок",
+    emoji: "🏰",
+    subtitle: "Рыцари, дракон и турнир",
+    accent: 0x014f86,
+    preview: ["#89c2d9", "#edf2f4", "#e63946"],
   },
 };

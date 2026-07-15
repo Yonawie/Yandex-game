@@ -4,14 +4,41 @@ export const GAME_H = 540;
 export const MAP_W = 2800;
 export const MAP_H = 3600;
 
-export const STORAGE_KEY = "alive_pictures_progress_v1";
+/** Bumped so old "all unlocked" saves reset. */
+export const STORAGE_KEY = "naydi_chto_to_progress_v2";
+
+export const LEVELS_PER_MAP = 4;
+
+export const MAP_ORDER = [
+  "winter",
+  "paris",
+  "circus",
+  "underwater",
+  "jungle",
+  "neon",
+  "venice",
+  "tokyo",
+  "desert",
+  "castle",
+];
+
+export const GAME_TITLE = "Найди что-то";
+export const GAME_TAGLINE = "Огромные живые карты · найди всё скрытое";
 
 export const COLORS = {
-  uiBg: 0x0d2137,
-  uiPanel: 0x163554,
-  accent: 0xff6b35,
-  gold: 0xffd166,
-  success: 0x06d6a0,
-  danger: 0xef476f,
-  text: 0xffffff,
+  bg: 0x0a0e17,
+  bgDeep: 0x060912,
+  panel: 0x121a2b,
+  panelSoft: 0x1a2438,
+  line: 0x2a3548,
+  gold: 0xd4a84b,
+  goldSoft: 0xe8c878,
+  cream: 0xf3ead7,
+  mint: 0x3ecf8e,
+  coral: 0xe85d4c,
+  mist: 0x8b9bb4,
+  white: 0xffffff,
 };
+
+export const FONT_DISPLAY = "Fraunces, Georgia, serif";
+export const FONT_UI = "Manrope, Nunito, sans-serif";

@@ -1,3 +1,6 @@
+import { GAME_TITLE, COLORS, FONT_DISPLAY, FONT_UI, MAP_ORDER, MAP_W, MAP_H } from "../config.js";
+import { createMapCanvas, MAP_META } from "../maps.js";
+
 export class BootScene extends Phaser.Scene {
   constructor() {
     super("Boot");
@@ -6,29 +9,29 @@ export class BootScene extends Phaser.Scene {
   preload() {
     const { width, height } = this.scale;
     const g = this.add.graphics();
-    g.fillStyle(0x0d2137, 1);
+    g.fillGradientStyle(0x060912, 0x060912, 0x0a0e17, 0x152036, 1);
     g.fillRect(0, 0, width, height);
+
     this.add
-      .text(width / 2, height / 2 - 40, "Живые картины", {
-        fontFamily: "Pacifico, cursive",
-        fontSize: "42px",
-        color: "#ffd166",
+      .text(width / 2, height / 2 - 50, GAME_TITLE, {
+        fontFamily: FONT_DISPLAY,
+        fontSize: "40px",
+        color: "#f3ead7",
       })
       .setOrigin(0.5);
 
     this.status = this.add
-      .text(width / 2, height / 2 + 10, "Загрузка карт…", {
-        fontFamily: "Nunito, sans-serif",
-        fontSize: "16px",
-        color: "#caf0f8",
+      .text(width / 2, height / 2 + 6, "Подготовка миров…", {
+        fontFamily: FONT_UI,
+        fontSize: "14px",
+        color: "#8b9bb4",
       })
       .setOrigin(0.5);
 
-    this.bar = this.add.rectangle(width / 2 - 158, height / 2 + 50, 4, 12, 0x06d6a0).setOrigin(0, 0.5);
-    this.add.rectangle(width / 2, height / 2 + 50, 320, 18, 0x163554).setOrigin(0.5).setDepth(-1);
+    this.add.rectangle(width / 2, height / 2 + 48, 320, 6, COLORS.panel).setOrigin(0.5);
+    this.bar = this.add.rectangle(width / 2 - 158, height / 2 + 48, 4, 6, COLORS.gold).setOrigin(0, 0.5);
 
-    const maps = ["winter", "paris", "circus", "underwater", "jungle", "neon"];
-    maps.forEach((id) => {
+    MAP_ORDER.forEach((id) => {
       this.load.image(`hero_${id}`, `assets/maps/map-${id}-hero.png`);
     });
 
@@ -38,13 +41,9 @@ export class BootScene extends Phaser.Scene {
   }
 
   async create() {
-    const { MAP_W, MAP_H } = await import("../config.js");
-    const { createMapCanvas, MAP_META } = await import("../maps.js");
-    const ids = Object.keys(MAP_META);
-
-    for (let i = 0; i < ids.length; i++) {
-      const id = ids[i];
-      this.status.setText(`Собираем карту: ${MAP_META[id].title}`);
+    for (let i = 0; i < MAP_ORDER.length; i++) {
+      const id = MAP_ORDER[i];
+      this.status.setText(`${MAP_META[id].emoji}  ${MAP_META[id].title}`);
       const canvas = document.createElement("canvas");
       canvas.width = MAP_W;
       canvas.height = MAP_H;
@@ -61,8 +60,8 @@ export class BootScene extends Phaser.Scene {
 
       if (this.textures.exists(`map_${id}`)) this.textures.remove(`map_${id}`);
       this.textures.addCanvas(`map_${id}`, canvas);
-      this.bar.width = 4 + (310 * (i + 1)) / ids.length;
-      await new Promise((r) => setTimeout(r, 30));
+      this.bar.width = 4 + (310 * (i + 1)) / MAP_ORDER.length;
+      await new Promise((r) => setTimeout(r, 20));
     }
 
     this.scene.start("Menu");

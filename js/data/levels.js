@@ -1,3 +1,5 @@
+import { MAP_ORDER, LEVELS_PER_MAP } from "../config.js";
+
 /** Catalog of findable items: unique id, label, emoji, draw color */
 export const ITEM_CATALOG = {
   // Winter
@@ -281,6 +283,194 @@ export const ITEM_CATALOG = {
   walkman: { id: "walkman", label: "Плеер", emoji: "📱", color: "#c77dff" },
   bird_n: { id: "bird_n", label: "Неоновая птица", emoji: "🐦", color: "#00f5d4" },
   keycard: { id: "keycard", label: "Карта-ключ", emoji: "💳", color: "#4cc9f0" },
+
+  // Venice
+  gondola: { id: "gondola", label: "Гондола", emoji: "🛶", color: "#111" },
+  mask_ven: { id: "mask_ven", label: "Венецианская маска", emoji: "🎭", color: "#ffd166" },
+  winged_lion: { id: "winged_lion", label: "Крылатый лев", emoji: "🦁", color: "#ffd166" },
+  gelato: { id: "gelato", label: "Джелато", emoji: "🍨", color: "#ff8fab" },
+  violin_ven: { id: "violin_ven", label: "Скрипач", emoji: "🎻", color: "#6f4e37" },
+  lace: { id: "lace", label: "Кружево", emoji: "🧵", color: "#fff" },
+  bell_tower: { id: "bell_tower", label: "Колокольня", emoji: "🛎️", color: "#c2a878" },
+  pigeon_ven: { id: "pigeon_ven", label: "Голубь площади", emoji: "🕊️", color: "#adb5bd" },
+  bridge_heart: { id: "bridge_heart", label: "Замок на мосту", emoji: "🔒", color: "#adb5bd" },
+  candle_ven: { id: "candle_ven", label: "Свеча в окне", emoji: "🕯️", color: "#ffd166" },
+  pasta: { id: "pasta", label: "Паста", emoji: "🍝", color: "#e9c46a" },
+  fan: { id: "fan", label: "Веер", emoji: "🪭", color: "#e63946" },
+  camera_ven: { id: "camera_ven", label: "Турист с камерой", emoji: "📷", color: "#333" },
+  canal_fish: { id: "canal_fish", label: "Рыбка канала", emoji: "🐟", color: "#4cc9f0" },
+  mosaic: { id: "mosaic", label: "Мозаика", emoji: "🧩", color: "#8338ec" },
+  rose_ven: { id: "rose_ven", label: "Букет роз", emoji: "🌹", color: "#e63946" },
+  hat_gondolier: { id: "hat_gondolier", label: "Шляпа гондольера", emoji: "👒", color: "#222" },
+  fountain_ven: { id: "fountain_ven", label: "Фонтан", emoji: "⛲", color: "#90e0ef" },
+  piano: { id: "piano", label: "Рояль", emoji: "🎹", color: "#111" },
+  ring_ven: { id: "ring_ven", label: "Кольцо", emoji: "💍", color: "#ffd166" },
+  lantern_ven: { id: "lantern_ven", label: "Фонарь на воде", emoji: "🏮", color: "#ff6b35" },
+  cat_ven: { id: "cat_ven", label: "Кот на крыше", emoji: "🐈", color: "#f4a261" },
+  postcard_ven: { id: "postcard_ven", label: "Открытка", emoji: "💌", color: "#ff8fab" },
+  olive: { id: "olive", label: "Оливки", emoji: "🫒", color: "#40916c" },
+  wine_ven: { id: "wine_ven", label: "Бокал вина", emoji: "🍷", color: "#6a040f" },
+  moon_ven: { id: "moon_ven", label: "Луна над каналом", emoji: "🌙", color: "#e0aaff" },
+  suitcase_ven: { id: "suitcase_ven", label: "Чемодан", emoji: "🧳", color: "#6c584c" },
+  pearl_ven: { id: "pearl_ven", label: "Жемчуг", emoji: "⚪", color: "#f8f9fa" },
+  umbrella_ven: { id: "umbrella_ven", label: "Зонтик от солнца", emoji: "⛱️", color: "#e63946" },
+  accordion_ven: { id: "accordion_ven", label: "Аккордеон", emoji: "🪗", color: "#e63946" },
+  tile: { id: "tile", label: "Изразец", emoji: "🟦", color: "#3a86ff" },
+  bread_ven: { id: "bread_ven", label: "Чиаббата", emoji: "🥖", color: "#e9c46a" },
+  butterfly_ven: { id: "butterfly_ven", label: "Бабочка", emoji: "🦋", color: "#8338ec" },
+  key_ven: { id: "key_ven", label: "Старинный ключ", emoji: "🗝️", color: "#ffd166" },
+  vase_ven: { id: "vase_ven", label: "Ваза", emoji: "🏺", color: "#457b9d" },
+  feather_ven: { id: "feather_ven", label: "Перо маски", emoji: "🪶", color: "#fff" },
+  boat_flag: { id: "boat_flag", label: "Флажок лодки", emoji: "🚩", color: "#e63946" },
+  espresso: { id: "espresso", label: "Эспрессо", emoji: "☕", color: "#6f4e37" },
+  seagull: { id: "seagull", label: "Чайка", emoji: "🕊️", color: "#ced4da" },
+  mirror_ven: { id: "mirror_ven", label: "Зеркало", emoji: "🪞", color: "#caf0f8" },
+  coin_ven: { id: "coin_ven", label: "Монета в фонтане", emoji: "🪙", color: "#ffd166" },
+  flower_balc: { id: "flower_balc", label: "Цветок балкона", emoji: "🌸", color: "#ff8fab" },
+  map_ven: { id: "map_ven", label: "Карта города", emoji: "🗺️", color: "#2a9d8f" },
+  candleabra: { id: "candleabra", label: "Подсвечник", emoji: "🕯️", color: "#ffd166" },
+  dog_ven: { id: "dog_ven", label: "Собака на площади", emoji: "🐕", color: "#bc6c25" },
+
+  // Tokyo
+  torii: { id: "torii", label: "Тории", emoji: "⛩️", color: "#e63946" },
+  ramen_t: { id: "ramen_t", label: "Рамэн", emoji: "🍜", color: "#ffd166" },
+  sakura: { id: "sakura", label: "Сакура", emoji: "🌸", color: "#ff8fab" },
+  sushi: { id: "sushi", label: "Суши", emoji: "🍣", color: "#e63946" },
+  shinkansen: { id: "shinkansen", label: "Поезд-пуля", emoji: "🚄", color: "#3a86ff" },
+  koi: { id: "koi", label: "Карп кои", emoji: "🐠", color: "#ff6b35" },
+  maneki: { id: "maneki", label: "Манэки-нэко", emoji: "🐱", color: "#fff" },
+  fan_t: { id: "fan_t", label: "Сэнсу", emoji: "🪭", color: "#e63946" },
+  bento: { id: "bento", label: "Бэнто", emoji: "🍱", color: "#2a9d8f" },
+  lantern_t: { id: "lantern_t", label: "Красный фонарь", emoji: "🏮", color: "#e63946" },
+  onigiri: { id: "onigiri", label: "Онигири", emoji: "🍙", color: "#222" },
+  umbrella_t: { id: "umbrella_t", label: "Прозрачный зонт", emoji: "☂️", color: "#90e0ef" },
+  fox_mask: { id: "fox_mask", label: "Маска кицунэ", emoji: "🦊", color: "#f4a261" },
+  pagoda: { id: "pagoda", label: "Пагода-игрушка", emoji: "🏯", color: "#e63946" },
+  matcha: { id: "matcha", label: "Матча", emoji: "🍵", color: "#52b788" },
+  camera_t: { id: "camera_t", label: "Фотоаппарат", emoji: "📷", color: "#333" },
+  crane: { id: "crane", label: "Оригами-журавль", emoji: "🦢", color: "#fff" },
+  bike_t: { id: "bike_t", label: "Велосипед", emoji: "🚲", color: "#06d6a0" },
+  vending: { id: "vending", label: "Автомат с напитками", emoji: "🚰", color: "#3a86ff" },
+  fish_cake: { id: "fish_cake", label: "Наруто", emoji: "🍥", color: "#fff" },
+  sword: { id: "sword", label: "Катана", emoji: "🗡️", color: "#adb5bd" },
+  daruma: { id: "daruma", label: "Дарума", emoji: "🔴", color: "#e63946" },
+  cloud_t: { id: "cloud_t", label: "Облако сакуры", emoji: "☁️", color: "#ffc2d1" },
+  mop: { id: "mop", label: "Метла храма", emoji: "🧹", color: "#6f4e37" },
+  taiyaki: { id: "taiyaki", label: "Тайяки", emoji: "🐟", color: "#bc6c25" },
+  headphone_t: { id: "headphone_t", label: "Наушники", emoji: "🎧", color: "#c77dff" },
+  kite_t: { id: "kite_t", label: "Воздушный змей", emoji: "🪁", color: "#e63946" },
+  stamp: { id: "stamp", label: "Печать", emoji: "💮", color: "#ff8fab" },
+  frog_t: { id: "frog_t", label: "Лягушка храма", emoji: "🐸", color: "#52b788" },
+  bell_t: { id: "bell_t", label: "Храмовый колокол", emoji: "🔔", color: "#ffd166" },
+  bao: { id: "bao", label: "Паровая булочка", emoji: "🥟", color: "#f8f9fa" },
+  raccoon_t: { id: "raccoon_t", label: "Тануки", emoji: "🦝", color: "#6c757d" },
+  skate_t: { id: "skate_t", label: "Скейт", emoji: "🛹", color: "#00f5d4" },
+  cherry: { id: "cherry", label: "Вишня", emoji: "🍒", color: "#e63946" },
+  turtle_t: { id: "turtle_t", label: "Черепаха пруда", emoji: "🐢", color: "#2d6a4f" },
+  notebook: { id: "notebook", label: "Блокнот", emoji: "📓", color: "#222" },
+  star_t: { id: "star_t", label: "Звезда желаний", emoji: "⭐", color: "#ffd166" },
+  bow: { id: "bow", label: "Бант", emoji: "🎀", color: "#ff8fab" },
+  fish_flag: { id: "fish_flag", label: "Коинобори", emoji: "🎏", color: "#3a86ff" },
+  tea_pot: { id: "tea_pot", label: "Чайник", emoji: "🫖", color: "#457b9d" },
+  geta: { id: "geta", label: "Гэта", emoji: "🩴", color: "#bc6c25" },
+  ink: { id: "ink", label: "Тушь", emoji: "🖋️", color: "#111" },
+  cloud_lantern: { id: "cloud_lantern", label: "Небесный фонарик", emoji: "🎈", color: "#ff8fab" },
+  peach: { id: "peach", label: "Персик", emoji: "🍑", color: "#ff8fab" },
+  drum_t: { id: "drum_t", label: "Барабан тайко", emoji: "🥁", color: "#e63946" },
+
+  // Desert
+  camel: { id: "camel", label: "Верблюд", emoji: "🐪", color: "#d4a373" },
+  carpet: { id: "carpet", label: "Ковёр-самолёт", emoji: "🪄", color: "#e63946" },
+  lamp_genie: { id: "lamp_genie", label: "Волшебная лампа", emoji: "🪔", color: "#ffd166" },
+  cactus: { id: "cactus", label: "Кактус", emoji: "🌵", color: "#2d6a4f" },
+  oasis: { id: "oasis", label: "Кувшин воды", emoji: "🍶", color: "#4cc9f0" },
+  scorpion: { id: "scorpion", label: "Скорпион", emoji: "🦂", color: "#6f4e37" },
+  coin_d: { id: "coin_d", label: "Золотая монета", emoji: "🪙", color: "#ffd166" },
+  tent_d: { id: "tent_d", label: "Шатер", emoji: "⛺", color: "#e76f51" },
+  crown_d: { id: "crown_d", label: "Корона султана", emoji: "👑", color: "#ffd166" },
+  spice: { id: "spice", label: "Мешок специй", emoji: "🧂", color: "#fb8500" },
+  falcon: { id: "falcon", label: "Сокол", emoji: "🦅", color: "#6c584c" },
+  date: { id: "date", label: "Финики", emoji: "🌴", color: "#bc6c25" },
+  flute_d: { id: "flute_d", label: "Свирель", emoji: "🎶", color: "#e9c46a" },
+  snake_d: { id: "snake_d", label: "Змея корзины", emoji: "🐍", color: "#2d6a4f" },
+  pot_d: { id: "pot_d", label: "Глиняный горшок", emoji: "🪴", color: "#bc6c25" },
+  mirror_d: { id: "mirror_d", label: "Восточное зеркало", emoji: "🪞", color: "#caf0f8" },
+  dagger: { id: "dagger", label: "Кинжал", emoji: "🗡️", color: "#adb5bd" },
+  scarf_d: { id: "scarf_d", label: "Платок", emoji: "🧣", color: "#e63946" },
+  beetle_d: { id: "beetle_d", label: "Скарабей", emoji: "🪲", color: "#ffd166" },
+  coffee_d: { id: "coffee_d", label: "Восточный кофе", emoji: "☕", color: "#6f4e37" },
+  palm: { id: "palm", label: "Пальмовый лист", emoji: "🍃", color: "#40916c" },
+  star_d: { id: "star_d", label: "Звезда пустыни", emoji: "⭐", color: "#ffd166" },
+  moon_d: { id: "moon_d", label: "Полумесяц", emoji: "🌙", color: "#e0aaff" },
+  drum_d: { id: "drum_d", label: "Дарбука", emoji: "🥁", color: "#bc6c25" },
+  sandglass: { id: "sandglass", label: "Песочные часы", emoji: "⏳", color: "#e9c46a" },
+  jewel_d: { id: "jewel_d", label: "Самоцвет", emoji: "💎", color: "#4cc9f0" },
+  basket: { id: "basket", label: "Корзина", emoji: "🧺", color: "#d4a373" },
+  incense: { id: "incense", label: "Благовония", emoji: "♨️", color: "#c77dff" },
+  boots_d: { id: "boots_d", label: "Сапоги каравана", emoji: "🥾", color: "#6f4e37" },
+  teapot_d: { id: "teapot_d", label: "Чайник с мятой", emoji: "🫖", color: "#52b788" },
+  peacock: { id: "peacock", label: "Павлин", emoji: "🦚", color: "#06d6a0" },
+  chest_d: { id: "chest_d", label: "Сундук", emoji: "🧰", color: "#bc6c25" },
+  fan_d: { id: "fan_d", label: "Веер дворца", emoji: "🪭", color: "#8338ec" },
+  olive_d: { id: "olive_d", label: "Масло", emoji: "🫒", color: "#40916c" },
+  compass_d: { id: "compass_d", label: "Компас каравана", emoji: "🧭", color: "#e9c46a" },
+  rose_d: { id: "rose_d", label: "Роза пустыни", emoji: "🌹", color: "#e63946" },
+  key_d: { id: "key_d", label: "Ключ дворца", emoji: "🔑", color: "#ffd166" },
+  grape_d: { id: "grape_d", label: "Виноград", emoji: "🍇", color: "#7b2cbf" },
+  lamp_oil: { id: "lamp_oil", label: "Масляная лампа", emoji: "💡", color: "#ffd166" },
+  lizard: { id: "lizard", label: "Ящерица", emoji: "🦎", color: "#06d6a0" },
+  turban: { id: "turban", label: "Тюрбан", emoji: "👳", color: "#fff" },
+  map_d: { id: "map_d", label: "Карта оазиса", emoji: "🗺️", color: "#e9c46a" },
+  ring_d: { id: "ring_d", label: "Печатка", emoji: "💍", color: "#ffd166" },
+  fire_d: { id: "fire_d", label: "Костёр", emoji: "🔥", color: "#ff6b35" },
+  water: { id: "water", label: "Бурдюк", emoji: "💧", color: "#4cc9f0" },
+
+  // Castle
+  knight: { id: "knight", label: "Рыцарь", emoji: "🛡️", color: "#adb5bd" },
+  crown_c: { id: "crown_c", label: "Корона короля", emoji: "👑", color: "#ffd166" },
+  dragon: { id: "dragon", label: "Дракон", emoji: "🐉", color: "#e63946" },
+  sword_c: { id: "sword_c", label: "Меч", emoji: "⚔️", color: "#ced4da" },
+  princess: { id: "princess", label: "Принцесса", emoji: "👸", color: "#ff8fab" },
+  horse_c: { id: "horse_c", label: "Боевой конь", emoji: "🐴", color: "#bc6c25" },
+  flag_c: { id: "flag_c", label: "Знамя", emoji: "🚩", color: "#3a86ff" },
+  chalice: { id: "chalice", label: "Кубок", emoji: "🏆", color: "#ffd166" },
+  owl_c: { id: "owl_c", label: "Сова башни", emoji: "🦉", color: "#6c584c" },
+  book_c: { id: "book_c", label: "Книга заклинаний", emoji: "📖", color: "#7b2cbf" },
+  key_c: { id: "key_c", label: "Ключ от ворот", emoji: "🗝️", color: "#ffd166" },
+  trumpet_c: { id: "trumpet_c", label: "Герольд", emoji: "🎺", color: "#ffd166" },
+  shield: { id: "shield", label: "Щит", emoji: "🛡️", color: "#e63946" },
+  potion: { id: "potion", label: "Зелье", emoji: "🧪", color: "#06d6a0" },
+  cat_c: { id: "cat_c", label: "Дворцовый кот", emoji: "🐈‍⬛", color: "#222" },
+  scroll: { id: "scroll", label: "Свиток", emoji: "📜", color: "#e9c46a" },
+  apple_c: { id: "apple_c", label: "Золотое яблоко", emoji: "🍎", color: "#ffd166" },
+  candle_c: { id: "candle_c", label: "Подсвечник", emoji: "🕯️", color: "#ffd166" },
+  raven: { id: "raven", label: "Ворон", emoji: "🐦‍⬛", color: "#111" },
+  bow_c: { id: "bow_c", label: "Лук", emoji: "🏹", color: "#6f4e37" },
+  gem_c: { id: "gem_c", label: "Камень трона", emoji: "💠", color: "#4cc9f0" },
+  moon_c: { id: "moon_c", label: "Луна над замком", emoji: "🌕", color: "#fee440" },
+  frog_c: { id: "frog_c", label: "Принц-лягушка", emoji: "🐸", color: "#52b788" },
+  rose_c: { id: "rose_c", label: "Заколдованная роза", emoji: "🥀", color: "#e63946" },
+  goblet: { id: "goblet", label: "Кубок на пиру", emoji: "🍷", color: "#6a040f" },
+  bell_c: { id: "bell_c", label: "Колокол башни", emoji: "🔔", color: "#ffd166" },
+  map_c: { id: "map_c", label: "Карта королевства", emoji: "🗺️", color: "#2a9d8f" },
+  boot_c: { id: "boot_c", label: "Сапог рыцаря", emoji: "👢", color: "#6f4e37" },
+  harp_c: { id: "harp_c", label: "Арфа", emoji: "🎵", color: "#ffd166" },
+  crystal_c: { id: "crystal_c", label: "Кристалл мага", emoji: "🔮", color: "#c77dff" },
+  duck_c: { id: "duck_c", label: "Утка в рву", emoji: "🦆", color: "#ffd166" },
+  ring_c: { id: "ring_c", label: "Кольцо принцессы", emoji: "💍", color: "#ffd166" },
+  pie_c: { id: "pie_c", label: "Пирог из кухни", emoji: "🥧", color: "#bc6c25" },
+  torch_c: { id: "torch_c", label: "Факел", emoji: "🔦", color: "#ff6b35" },
+  mouse: { id: "mouse", label: "Мышь в кладовой", emoji: "🐭", color: "#adb5bd" },
+  star_c: { id: "star_c", label: "Звезда знамени", emoji: "🌟", color: "#fee440" },
+  treasure_c: { id: "treasure_c", label: "Сундук казны", emoji: "🪙", color: "#ffd166" },
+  lance: { id: "lance", label: "Копьё турнира", emoji: "🗡️", color: "#ced4da" },
+  feather_c: { id: "feather_c", label: "Перо на шлеме", emoji: "🪶", color: "#e63946" },
+  mirror_c: { id: "mirror_c", label: "Волшебное зеркало", emoji: "🪞", color: "#caf0f8" },
+  wolf: { id: "wolf", label: "Волк у леса", emoji: "🐺", color: "#6c757d" },
+  cake: { id: "cake", label: "Торт пира", emoji: "🎂", color: "#ff8fab" },
+  butterfly_c: { id: "butterfly_c", label: "Бабочка сада", emoji: "🦋", color: "#8338ec" },
+  lantern_c: { id: "lantern_c", label: "Фонарь стражи", emoji: "🏮", color: "#ff6b35" },
+  unicorn: { id: "unicorn", label: "Единорог", emoji: "🦄", color: "#ff8fab" },
 };
 
 function seededPositions(seed, count, margin = 120) {
@@ -355,6 +545,34 @@ export const MAP_ITEM_POOLS = {
     "clock_n","kite","popcorn_n","spray","scooter","burger","satellite","coin_n","star_n","raccoon",
     "box","confetti_n","walkman","bird_n","keycard",
   ],
+  venice: [
+    "gondola","mask_ven","winged_lion","gelato","violin_ven","lace","bell_tower","pigeon_ven","bridge_heart","candle_ven",
+    "pasta","fan","camera_ven","canal_fish","mosaic","rose_ven","hat_gondolier","fountain_ven","piano","ring_ven",
+    "lantern_ven","cat_ven","postcard_ven","olive","wine_ven","moon_ven","suitcase_ven","pearl_ven","umbrella_ven","accordion_ven",
+    "tile","bread_ven","butterfly_ven","key_ven","vase_ven","feather_ven","boat_flag","espresso","seagull","mirror_ven",
+    "coin_ven","flower_balc","map_ven","candleabra","dog_ven",
+  ],
+  tokyo: [
+    "torii","ramen_t","sakura","sushi","shinkansen","koi","maneki","fan_t","bento","lantern_t",
+    "onigiri","umbrella_t","fox_mask","pagoda","matcha","camera_t","crane","bike_t","vending","fish_cake",
+    "sword","daruma","cloud_t","mop","taiyaki","headphone_t","kite_t","stamp","frog_t","bell_t",
+    "bao","raccoon_t","skate_t","cherry","turtle_t","notebook","star_t","bow","fish_flag","tea_pot",
+    "geta","ink","cloud_lantern","peach","drum_t",
+  ],
+  desert: [
+    "camel","carpet","lamp_genie","cactus","oasis","scorpion","coin_d","tent_d","crown_d","spice",
+    "falcon","date","flute_d","snake_d","pot_d","mirror_d","dagger","scarf_d","beetle_d","coffee_d",
+    "palm","star_d","moon_d","drum_d","sandglass","jewel_d","basket","incense","boots_d","teapot_d",
+    "peacock","chest_d","fan_d","olive_d","compass_d","rose_d","key_d","grape_d","lamp_oil","lizard",
+    "turban","map_d","ring_d","fire_d","water",
+  ],
+  castle: [
+    "knight","crown_c","dragon","sword_c","princess","horse_c","flag_c","chalice","owl_c","book_c",
+    "key_c","trumpet_c","shield","potion","cat_c","scroll","apple_c","candle_c","raven","bow_c",
+    "gem_c","moon_c","frog_c","rose_c","goblet","bell_c","map_c","boot_c","harp_c","crystal_c",
+    "duck_c","ring_c","pie_c","torch_c","mouse","star_c","treasure_c","lance","feather_c","mirror_c",
+    "wolf","cake","butterfly_c","lantern_c","unicorn",
+  ],
 };
 
 const MAP_SEEDS = {
@@ -364,6 +582,10 @@ const MAP_SEEDS = {
   underwater: 4004,
   jungle: 5005,
   neon: 6006,
+  venice: 7007,
+  tokyo: 8008,
+  desert: 9009,
+  castle: 10010,
 };
 
 /** Build map placements: all items on the map with positions */
@@ -378,18 +600,21 @@ export function getMapPlacements(mapId) {
   }));
 }
 
+const DIFF = ["легко", "норма", "сложно", "мастер"];
+
 /**
- * 3 levels per map. Each asks for many items (~15) from the pool.
+ * Several levels per map; targets partitioned across the item pool.
  */
 export function buildLevels() {
-  const maps = Object.keys(MAP_ITEM_POOLS);
   const levels = [];
-  maps.forEach((mapId, mapIndex) => {
+  MAP_ORDER.forEach((mapId, mapIndex) => {
     const pool = MAP_ITEM_POOLS[mapId];
-    const chunk = Math.floor(pool.length / 3);
-    for (let L = 0; L < 3; L++) {
+    if (!pool) return;
+    const n = LEVELS_PER_MAP;
+    const chunk = Math.floor(pool.length / n);
+    for (let L = 0; L < n; L++) {
       const start = L * chunk;
-      const end = L === 2 ? pool.length : start + chunk;
+      const end = L === n - 1 ? pool.length : start + chunk;
       const targets = pool.slice(start, end);
       levels.push({
         id: `${mapId}_${L + 1}`,
@@ -399,7 +624,7 @@ export function buildLevels() {
         title: `Уровень ${L + 1}`,
         targetCount: targets.length,
         targets,
-        difficulty: L === 0 ? "легко" : L === 1 ? "норма" : "сложно",
+        difficulty: DIFF[Math.min(L, DIFF.length - 1)],
       });
     }
   });

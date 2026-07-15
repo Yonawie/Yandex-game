@@ -45,17 +45,26 @@ for (const mapId of maps) {
     ok = false;
   }
   const mapLevels = LEVELS.filter((l) => l.mapId === mapId);
-  if (mapLevels.length !== 3) {
-    console.error("Expected 3 levels for", mapId);
-    ok = false;
-  }
   const totalTargets = mapLevels.reduce((s, l) => s + l.targets.length, 0);
   console.log(`  ${mapId}: ${pool.length} items on map, levels [${mapLevels.map((l) => l.targets.length).join(", ")}] (sum ${totalTargets})`);
 }
 
-if (LEVELS.length !== 18) {
-  console.error("Expected 18 levels, got", LEVELS.length);
+if (LEVELS.length !== 40) {
+  console.error("Expected 40 levels, got", LEVELS.length);
   ok = false;
+}
+
+const { MAP_ORDER, LEVELS_PER_MAP } = await import(pathToFileURL(new URL("../js/config.js", import.meta.url).pathname).href);
+if (maps.length !== MAP_ORDER.length) {
+  console.error("Map count mismatch", maps.length, MAP_ORDER.length);
+  ok = false;
+}
+for (const mapId of MAP_ORDER) {
+  const mapLevels = LEVELS.filter((l) => l.mapId === mapId);
+  if (mapLevels.length !== LEVELS_PER_MAP) {
+    console.error("Expected", LEVELS_PER_MAP, "levels for", mapId, "got", mapLevels.length);
+    ok = false;
+  }
 }
 
 if (!ok) process.exit(1);
