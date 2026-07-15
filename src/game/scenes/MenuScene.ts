@@ -3,7 +3,7 @@ import { COLORS, SKINS } from '@/data/balance';
 import { drawLantern } from '@/game/assets/generate';
 import { getSave, patchSave, addCoins, unlockSkin } from '@/data/save';
 import { tf, getLang } from '@/i18n';
-import { playTone, setMuted, isMuted } from '@/game/audio/sfx';
+import { playTone, setMuted, isMuted, unlockAudio, startMusic } from '@/game/audio/sfx';
 import { yandex } from '@/sdk/yandex';
 import { listModes, isModeUnlocked } from '@/content/modes';
 import { getActiveModeId, setActiveMode } from '@/content/runtimeConfig';
@@ -29,6 +29,8 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     yandex.stopGameplay();
+    unlockAudio();
+    startMusic();
     void syncRetentionClock().then(() => this.refreshRetentionHint());
     const { width, height } = this.scale;
     const save = getSave();

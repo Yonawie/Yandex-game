@@ -1,9 +1,12 @@
-/** Procedural tones — no audio files needed for v1 */
-
-type ToneKind = 'collect' | 'portal' | 'hit' | 'ui' | 'combo' | 'start';
+/** Ambient loop — lightweight, no audio files */
 
 let ctx: AudioContext | null = null;
 let muted = false;
+let musicOn = true;
+let musicTimer: number | null = null;
+let step = 0;
+
+type ToneKind = 'collect' | 'portal' | 'hit' | 'ui' | 'combo' | 'start';
 
 function ac(): AudioContext | null {
   if (muted) return null;
@@ -18,10 +21,18 @@ function ac(): AudioContext | null {
 
 export function setMuted(value: boolean): void {
   muted = value;
+  if (value) stopMusic();
+  else if (musicOn) startMusic();
 }
 
 export function isMuted(): boolean {
   return muted;
+}
+
+export function setMusicEnabled(value: boolean): void {
+  musicOn = value;
+  if (!value) stopMusic();
+  else if (!muted) startMusic();
 }
 
 function beep(freq: number, dur: number, type: OscillatorType, gain = 0.04, slide = 0): void {
@@ -31,9 +42,7 @@ function beep(freq: number, dur: number, type: OscillatorType, gain = 0.04, slid
   const g = audio.createGain();
   osc.type = type;
   osc.frequency.setValueAtTime(freq, audio.currentTime);
-  if (slide) {
-    osc.frequency.linearRampToValueAtTime(freq + slide, audio.currentTime + dur);
-  }
+  if (slide) osc.frequency.linearRampToValueAtTime(freq + slide, audio.currentTime + dur);
   g.gain.setValueAtTime(gain, audio.currentTime);
   g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + dur);
   osc.connect(g);
@@ -65,4 +74,69 @@ export function playTone(kind: ToneKind, combo = 1): void {
       beep(450, 0.12, 'sine', 0.03, 180);
       break;
   }
+}
+
+/** Soft night pad — pentatonic ambience */
+const THEME = [196, 220, 247, 294, 330, 392, 330, 294];
+
+export function startMusic(): void {
+  if (muted || !musicOn || musicTimer != null) return;
+  const audio = ac();
+  if (!audio) return;
+
+  const tick = () => {
+    if (muted || !musicOn) return;
+    const a = ac();
+    if (!a) return;
+    const freq = THEME[step % THEME.length];
+    step += 1;
+    // soft pad note
+    const osc = a.createOscillator();
+    const g = a.createGain();
+    const filter = a.createBiquadFilter();
+    osc.type = 'sine';
+    filter.type = 'lowpass';
+    filter.frequency.value = 900;
+    osc.frequency.setValueAtTime(freq, a.currentTime);
+    g.gain.setValueAtTime(0.0001, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.018, a.currentTime + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 1.4);
+    osc.connect(filter);
+    filter.connect(g);
+    g.connect(a.destination);
+    osc.start();
+    osc.stop(a.currentTime + 1.5);
+
+    // quiet fifth above
+    if (step % 2 === 0) {
+      const osc2 = a.createOscillator();
+      const g2 = a.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(freq * 1.5, a.currentTime);
+      g2.gain.setValueAtTime(0.0001, a.currentTime);
+      g2.gain.exponentialRampToValueAtTime(0.008, a.currentTime + 0.1);
+      g2.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 1.1);
+      osc2.connect(g2);
+      g2.connect(a.destination);
+      osc2.start();
+      osc2.stop(a.currentTime + 1.15);
+    }
+  };
+
+  tick();
+  musicTimer = window.setInterval(tick, 900);
+}
+
+export function stopMusic(): void {
+  if (musicTimer != null) {
+    clearInterval(musicTimer);
+    musicTimer = null;
+  }
+}
+
+/** Call once after first tap so mobile browsers allow audio */
+export function unlockAudio(): void {
+  const audio = ac();
+  if (!audio) return;
+  if (!muted && musicOn) startMusic();
 }

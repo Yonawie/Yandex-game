@@ -50,21 +50,36 @@ export class Spawner {
       (this.mode.spawnIntervalMin - this.mode.spawnIntervalStart) * clamped;
   }
 
-  tick(dt: number, lanes: number, tableOverride?: SpawnWeight[], intervalMul = 1): SpawnRequest[] {
+  tick(
+    dt: number,
+    lanes: number,
+    tableOverride?: SpawnWeight[],
+    intervalMul = 1,
+    preferHue?: HueId,
+    preferChance = 0,
+  ): SpawnRequest[] {
     const out: SpawnRequest[] = [];
     const every = Math.max(0.12, this.interval * intervalMul);
     this.acc += dt;
     while (this.acc >= every) {
       this.acc -= every;
-      out.push(this.next(lanes, tableOverride ?? this.table));
+      out.push(this.next(lanes, tableOverride ?? this.table, preferHue, preferChance));
     }
     return out;
   }
 
-  private next(lanes: number, table: SpawnWeight[]): SpawnRequest {
+  private next(
+    lanes: number,
+    table: SpawnWeight[],
+    preferHue?: HueId,
+    preferChance = 0,
+  ): SpawnRequest {
     const kind = pickWeighted(table) as SpawnRequest['kind'];
     const lane = Math.floor(Math.random() * lanes);
-    const hue = HUE_IDS[Math.floor(Math.random() * HUE_IDS.length)] as HueId;
+    let hue = HUE_IDS[Math.floor(Math.random() * HUE_IDS.length)] as HueId;
+    if (preferHue && (kind === 'firefly' || kind === 'portal') && Math.random() < preferChance) {
+      hue = preferHue;
+    }
     return { kind, lane, hue };
   }
 }

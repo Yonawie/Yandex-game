@@ -294,8 +294,32 @@ export class GameScene extends Phaser.Scene {
       t.tilePositionY -= this.scroll * scrollMul * dt * 0.9;
     });
 
-    const table = active?.def.spawnTable;
-    const requests = this.spawner.tick(dt, this.mode.lanes, table, spawnMul);
+    const table =
+      active?.def.spawnTable ??
+      (this.distance < 55
+        ? [
+            { id: 'firefly' as const, weight: 0.78 },
+            { id: 'portal' as const, weight: 0.14 },
+            { id: 'shard' as const, weight: 0.06 },
+            { id: 'void' as const, weight: 0.02 },
+          ]
+        : this.distance < 110
+          ? [
+              { id: 'firefly' as const, weight: 0.68 },
+              { id: 'portal' as const, weight: 0.14 },
+              { id: 'void' as const, weight: 0.12 },
+              { id: 'shard' as const, weight: 0.06 },
+            ]
+          : undefined);
+    const prefer = this.distance < 90 ? 0.72 : 0.35;
+    const requests = this.spawner.tick(
+      dt,
+      this.mode.lanes,
+      table,
+      spawnMul,
+      this.playerHue,
+      prefer,
+    );
     for (const req of requests) this.materialize(req);
 
     const playerY = height * this.mode.playerYRatio;
