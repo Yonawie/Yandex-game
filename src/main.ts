@@ -3,6 +3,8 @@ import Phaser from 'phaser';
 import { createGameConfig } from '@/game/config';
 import { yandex } from '@/sdk/yandex';
 import { stopMusic, startMusic, isMuted, unlockAudio } from '@/game/audio/sfx';
+import { getSave } from '@/data/save';
+import { applyRunToRetention, getSnapshot, syncRetentionClock } from '@/retention/service';
 
 const parent = 'game-root';
 const root = document.getElementById(parent);
@@ -27,6 +29,16 @@ document.addEventListener(
 );
 
 const game = new Phaser.Game(createGameConfig(parent));
+
+if (new URLSearchParams(location.search).has('qa')) {
+  (window as unknown as { __stayLitQA: unknown }).__stayLitQA = {
+    game,
+    getSave,
+    getSnapshot,
+    applyRunToRetention,
+    syncRetentionClock,
+  };
+}
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
