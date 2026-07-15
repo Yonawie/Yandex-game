@@ -4,39 +4,32 @@ Endless vertical arcade for **Яндекс Игры**.
 
 Стек: **Phaser 3 + TypeScript + Vite + Yandex Games SDK**.
 
-Полное техзадание: [`docs/TZ.md`](docs/TZ.md)
+- ТЗ: [`docs/TZ.md`](docs/TZ.md)
+- Как тестировать: [`docs/PLAY.md`](docs/PLAY.md)
 
-## Quick start
+## Проверка игры (самый простой способ)
 
 ```bash
 npm install
-npm run dev
+npm run play
 ```
 
-Сборка под Консоль Яндекс Игр:
+В терминале появится публичная ссылка — открой её в браузере или на телефоне.
+
+## Остальное
 
 ```bash
-npm run pack
-# → release/stay-lit-yandex.zip
+npm run dev     # локальный Vite
+npm run pack    # → release/stay-lit-yandex.zip в Консоль Яндекс Игр
 ```
 
 ## Архитектура контента
 
-Контент data-driven — новые сущности / режимы / ивенты без правок `GameScene`:
-
 - `src/content/entities.ts` — каталог объектов
 - `src/content/modes.ts` — Ночь / Буря
-- `src/content/events.ts` — Холодный фронт, Дождь порталов…
+- `src/content/events.ts` — рантайм-ивенты
 - `src/content/runtimeConfig.ts` — remote A-B patch
-
-## Flow
-
-`Boot → Preload → Menu ⇄ Game → Result`
-
-- `LoadingAPI.ready()` — после инициализации и генерации текстур
-- `GameplayAPI.start/stop` — вокруг рана и рекламы
-- Cloud save + ru/en + rewarded continue + fullscreen
 
 ## Управление
 
-Тап влево / вправо (или ← →) — смена нити. Собирай светлячков **своего** цвета, порталы перекрашивают огонёк, пустоты гасят.
+Тап влево / вправо — смена нити. Свои светлячки, порталы меняют цвет, пустоты гасят.
