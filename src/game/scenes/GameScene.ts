@@ -4,6 +4,7 @@ import { getEntityDef, resolveTexture } from '@/content/entities';
 import { resolveMode, getActiveModeId, loadRemoteBalancePatch } from '@/content/runtimeConfig';
 import type { EntityKind, ModeDef, RunEventDef, SpawnRequest } from '@/content/types';
 import { drawLantern, laneX, recolorDrawnLantern } from '@/game/assets/generate';
+import { placeNightScenery } from '@/game/assets/scenery';
 import { Spawner } from '@/game/systems/Spawner';
 import { EventDirector } from '@/game/systems/EventDirector';
 import { ScoreSystem } from '@/game/systems/ScoreSystem';
@@ -59,6 +60,7 @@ export class GameScene extends Phaser.Scene {
   private lastMilestone = 0;
   private lastComboTier = 0;
   private camLean = 0;
+  private parallax: Phaser.GameObjects.Image[] = [];
 
   private spawner!: Spawner;
   private eventsDir!: EventDirector;
@@ -111,70 +113,22 @@ export class GameScene extends Phaser.Scene {
 
     this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height).setDepth(0);
 
-    // warm mid-air haze + teal wash
-    this.add
-      .ellipse(width / 2, height * 0.62, width * 1.15, height * 0.32, 0xffb347, 0.09)
-      .setDepth(1)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    this.add
-      .ellipse(width * 0.35, height * 0.28, width * 0.7, height * 0.22, 0x3dcebc, 0.1)
-      .setDepth(1)
-      .setBlendMode(Phaser.BlendModes.ADD);
-
-    this.add
-      .image(width * 0.78, height * 0.16, 'moon')
-      .setAlpha(0.98)
-      .setScale(1.45)
-      .setDepth(1);
-    const nebulaA = this.add
-      .image(width * 0.22, height * 0.38, 'nebula')
-      .setAlpha(0.58)
-      .setScale(2.9)
-      .setDepth(1)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    const nebulaB = this.add
-      .image(width * 0.82, height * 0.58, 'nebula')
-      .setAlpha(0.42)
-      .setScale(3.2)
-      .setDepth(1)
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setTint(COLORS.coral);
-    this.tweens.add({
-      targets: nebulaA,
-      x: nebulaA.x + 36,
-      alpha: 0.72,
-      duration: 7000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
+    const parallax: Phaser.GameObjects.Image[] = [];
+    placeNightScenery(this, { parallaxLayers: parallax });
+    this.parallax = parallax;
+    parallax.forEach((img, i) => {
+      img.setData('parallax', 4 + i * 3);
     });
-    this.tweens.add({
-      targets: nebulaB,
-      y: nebulaB.y - 28,
-      alpha: 0.55,
-      duration: 9000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
+    // keep a few drifting sparkles for climb feel
     this.starField = [];
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 18; i++) {
       const s = this.add
         .image(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), 'star')
-        .setAlpha(Phaser.Math.FloatBetween(0.35, 0.95))
-        .setScale(Phaser.Math.FloatBetween(0.7, 2.2))
+        .setAlpha(Phaser.Math.FloatBetween(0.3, 0.85))
+        .setScale(Phaser.Math.FloatBetween(0.5, 1.2))
         .setDepth(2)
-        .setData('drift', Phaser.Math.FloatBetween(12, 40));
+        .setData('drift', Phaser.Math.FloatBetween(18, 48));
       this.starField.push(s);
-      this.tweens.add({
-        targets: s,
-        alpha: Phaser.Math.FloatBetween(0.2, 0.5),
-        duration: Phaser.Math.Between(800, 2000),
-        yoyo: true,
-        repeat: -1,
-        delay: Phaser.Math.Between(0, 1000),
-      });
     }
 
     // caretaker silhouettes wait off / invisible until height milestones
@@ -182,7 +136,7 @@ export class GameScene extends Phaser.Scene {
       const side = i % 2 === 0 ? 0.14 : 0.86;
       const img = this.add
         .image(width * side, height * (0.22 + i * 0.06), 'caretaker')
-        .setDepth(3)
+        .setDepth(4)
         .setAlpha(0)
         .setScale(1.1 + i * 0.15)
         .setFlipX(i % 2 === 1);
@@ -467,6 +421,11 @@ export class GameScene extends Phaser.Scene {
         img.y = -10;
         img.x = Phaser.Math.Between(0, width);
       }
+    });
+    this.parallax.forEach((img) => {
+      const speed = (img.getData('parallax') as number) || 6;
+      img.y += speed * dt * 0.08;
+      if (img.y > height + 100) img.y = -60;
     });
 
     const stormAmp = this.mode.id === 'storm' ? 5 : 0;
@@ -986,8 +945,8 @@ export class GameScene extends Phaser.Scene {
 
     // relight: wick from dark → flame bloom
     this.lantern.setAlpha(0.15).setScale(0.55);
-    const flame = this.lantern.getData('flame') as Phaser.GameObjects.Ellipse | undefined;
-    const outer = this.lantern.getData('outerGlow') as Phaser.GameObjects.Arc | undefined;
+    const flame = this.lantern.getData('flame') as Phaser.GameObjects.Triangle | undefined;
+    const outer = this.lantern.getData('outerGlow') as Phaser.GameObjects.Rectangle | undefined;
     flame?.setScale(0.2);
     outer?.setAlpha(0);
 

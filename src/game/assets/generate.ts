@@ -34,6 +34,12 @@ export function generateTextures(scene: Phaser.Scene): void {
   makeComboAura(scene);
   makeRainDrop(scene);
   makeRipple(scene);
+  makeRidge(scene, 'ridge-far', 0x0e2436, 0.9);
+  makeRidge(scene, 'ridge-near', 0x081820, 1);
+  makeCloudRibbon(scene);
+  makeSilkBanner(scene);
+  makeLanternString(scene);
+  makeTemple(scene);
 }
 
 function gph(scene: Phaser.Scene): Phaser.GameObjects.Graphics {
@@ -52,60 +58,67 @@ function makeGradient(scene: Phaser.Scene): void {
 }
 
 function makeNebula(scene: Phaser.Scene): void {
+  // keep key for soft tint wash, but draw as woven smoke ribbons — not round blobs
   const g = gph(scene);
-  g.fillStyle(COLORS.teal, 0.55);
-  g.fillCircle(64, 64, 52);
-  g.fillStyle(COLORS.amber, 0.32);
-  g.fillCircle(42, 78, 38);
-  g.fillStyle(COLORS.mint, 0.28);
-  g.fillCircle(88, 42, 30);
-  g.fillStyle(COLORS.coral, 0.18);
-  g.fillCircle(70, 90, 24);
+  g.fillStyle(COLORS.teal, 0.4);
+  g.fillTriangle(10, 70, 70, 20, 90, 80);
+  g.fillTriangle(40, 90, 110, 40, 120, 100);
+  g.fillStyle(COLORS.amber, 0.28);
+  g.fillTriangle(0, 100, 60, 50, 80, 110);
+  g.fillStyle(COLORS.mint, 0.22);
+  g.fillTriangle(50, 30, 120, 10, 128, 60);
+  g.fillStyle(COLORS.coral, 0.16);
+  g.fillTriangle(20, 40, 55, 0, 85, 45);
   g.generateTexture('nebula', 128, 128);
   g.destroy();
 }
 
 function makeMoon(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0xdce8f5, 0.22);
-  g.fillCircle(48, 48, 42);
-  g.fillStyle(0xf5f9ff, 0.75);
-  g.fillCircle(48, 48, 28);
-  g.fillStyle(0xffffff, 0.5);
-  g.fillCircle(42, 40, 8);
-  g.fillStyle(0xc5d4e8, 0.4);
-  g.fillCircle(38, 42, 6);
-  g.fillCircle(58, 55, 4);
-  g.fillCircle(52, 38, 3);
+  // crisp flat moon disc with crater chips — still circular subject, hard 2D edges
+  g.fillStyle(0xb8c8dc, 1);
+  g.fillCircle(48, 48, 30);
+  g.fillStyle(0xf5f9ff, 1);
+  g.fillCircle(48, 48, 26);
+  g.fillStyle(0xd0dcec, 1);
+  g.fillCircle(38, 44, 5);
+  g.fillCircle(56, 54, 3.5);
+  g.fillCircle(50, 36, 2.5);
+  g.fillStyle(0xffffff, 0.55);
+  g.fillTriangle(48, 10, 52, 22, 44, 22);
   g.generateTexture('moon', 96, 96);
   g.destroy();
 }
 
 function makeStar(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0xffffff, 1);
-  g.fillCircle(4, 4, 2.2);
-  g.fillStyle(0xffe8c2, 0.55);
-  g.fillCircle(4, 4, 3.8);
-  g.fillStyle(0xffffff, 0.25);
-  g.fillCircle(4, 4, 5);
-  g.generateTexture('star', 10, 10);
+  // 4-point sparkle
+  g.fillStyle(0xfff8ec, 1);
+  g.fillTriangle(8, 0, 10, 8, 6, 8);
+  g.fillTriangle(8, 16, 10, 8, 6, 8);
+  g.fillTriangle(0, 8, 8, 6, 8, 10);
+  g.fillTriangle(16, 8, 8, 6, 8, 10);
+  g.fillStyle(0xffb347, 0.7);
+  g.fillCircle(8, 8, 1.6);
+  g.generateTexture('star', 16, 16);
   g.destroy();
 }
 
 function makeThread(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0xa8e4f5, 0.16);
-  g.fillRoundedRect(0, 0, 28, 128, 12);
-  g.fillStyle(0xd4eef8, 0.9);
-  g.fillRoundedRect(11, 0, 6, 128, 3);
-  g.fillStyle(0xffffff, 0.55);
-  g.fillRoundedRect(12, 0, 2, 128, 1);
-  for (let y = 12; y < 128; y += 28) {
-    g.fillStyle(COLORS.amber, 0.75);
-    g.fillCircle(14, y, 4.5);
-    g.fillStyle(COLORS.amberHot, 0.95);
-    g.fillCircle(13, y - 1, 2);
+  g.fillStyle(0xa8e4f5, 0.14);
+  g.fillRect(4, 0, 20, 128);
+  g.fillStyle(0xd4eef8, 0.95);
+  g.fillRect(12, 0, 4, 128);
+  g.fillStyle(0xffffff, 0.6);
+  g.fillRect(13, 0, 1, 128);
+  for (let y = 10; y < 128; y += 26) {
+    // diamond knots
+    g.fillStyle(COLORS.amber, 0.9);
+    g.fillTriangle(14, y - 5, 19, y, 14, y + 5);
+    g.fillTriangle(14, y - 5, 9, y, 14, y + 5);
+    g.fillStyle(COLORS.amberHot, 1);
+    g.fillRect(13, y - 1, 2, 2);
   }
   g.generateTexture('thread', 28, 128);
   g.destroy();
@@ -113,10 +126,13 @@ function makeThread(scene: Phaser.Scene): void {
 
 function makeLaneGlow(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0xffb347, 0.35);
-  g.fillEllipse(40, 18, 78, 32);
-  g.fillStyle(0xfff1c9, 0.35);
-  g.fillEllipse(40, 18, 44, 16);
+  // diamond floor marker under lantern
+  g.fillStyle(0xffb347, 0.45);
+  g.fillTriangle(40, 2, 72, 18, 40, 34);
+  g.fillTriangle(40, 2, 8, 18, 40, 34);
+  g.fillStyle(0xfff1c9, 0.55);
+  g.fillTriangle(40, 8, 58, 18, 40, 28);
+  g.fillTriangle(40, 8, 22, 18, 40, 28);
   g.generateTexture('lane-glow', 80, 36);
   g.destroy();
 }
@@ -125,25 +141,158 @@ function makeFirefly(scene: Phaser.Scene, key: string, color: number): void {
   const g = gph(scene);
   const cx = 36;
   const cy = 36;
-  g.fillStyle(color, 0.28);
-  g.fillCircle(cx, cy, 34);
-  g.fillStyle(color, 0.45);
-  g.fillCircle(cx, cy, 24);
-  g.fillStyle(0xffffff, 0.45);
-  g.fillEllipse(cx - 16, cy - 2, 18, 12);
-  g.fillEllipse(cx + 16, cy - 2, 18, 12);
-  g.fillStyle(color, 0.65);
-  g.fillEllipse(cx - 16, cy - 2, 12, 8);
-  g.fillEllipse(cx + 16, cy - 2, 12, 8);
+  // soft square halo
+  g.fillStyle(color, 0.2);
+  g.fillRoundedRect(cx - 28, cy - 28, 56, 56, 14);
+  g.fillStyle(color, 0.35);
+  g.fillRoundedRect(cx - 18, cy - 18, 36, 36, 10);
+  // leaf wings — angular
+  g.fillStyle(0xffffff, 0.55);
+  g.fillTriangle(cx - 4, cy, cx - 26, cy - 10, cx - 22, cy + 8);
+  g.fillTriangle(cx + 4, cy, cx + 26, cy - 10, cx + 22, cy + 8);
+  g.fillStyle(color, 0.7);
+  g.fillTriangle(cx - 6, cy, cx - 20, cy - 6, cx - 18, cy + 5);
+  g.fillTriangle(cx + 6, cy, cx + 20, cy - 6, cx + 18, cy + 5);
+  // body diamond
   g.fillStyle(color, 1);
-  g.fillEllipse(cx, cy + 2, 16, 20);
+  g.fillTriangle(cx, cy - 12, cx + 10, cy + 4, cx - 10, cy + 4);
+  g.fillTriangle(cx, cy + 16, cx + 10, cy + 4, cx - 10, cy + 4);
   g.fillStyle(0xffffff, 0.95);
-  g.fillCircle(cx - 3, cy - 4, 5.5);
+  g.fillTriangle(cx - 2, cy - 8, cx + 4, cy - 2, cx - 6, cy - 2);
   g.fillStyle(0xffffff, 1);
-  g.fillCircle(cx, cy + 16, 3.5);
-  g.lineStyle(2.5, color, 1);
-  g.strokeCircle(cx, cy + 16, 7);
+  g.fillRect(cx - 2, cy + 14, 4, 4);
+  g.lineStyle(2, color, 1);
+  g.strokeRect(cx - 5, cy + 11, 10, 10);
   g.generateTexture(key, 72, 72);
+  g.destroy();
+}
+
+function makeRidge(scene: Phaser.Scene, key: string, fill: number, _alpha: number): void {
+  const g = gph(scene);
+  const w = 320;
+  const h = 96;
+  g.fillStyle(fill, 1);
+  g.beginPath();
+  g.moveTo(0, h);
+  g.lineTo(0, 58);
+  g.lineTo(28, 40);
+  g.lineTo(52, 52);
+  g.lineTo(80, 18);
+  g.lineTo(108, 44);
+  g.lineTo(140, 8);
+  g.lineTo(168, 36);
+  g.lineTo(198, 22);
+  g.lineTo(230, 48);
+  g.lineTo(258, 14);
+  g.lineTo(290, 40);
+  g.lineTo(320, 28);
+  g.lineTo(320, h);
+  g.closePath();
+  g.fillPath();
+  // snow / light rim
+  g.lineStyle(2, 0x3dcebc, 0.35);
+  g.beginPath();
+  g.moveTo(0, 58);
+  g.lineTo(28, 40);
+  g.lineTo(52, 52);
+  g.lineTo(80, 18);
+  g.lineTo(108, 44);
+  g.lineTo(140, 8);
+  g.lineTo(168, 36);
+  g.lineTo(198, 22);
+  g.lineTo(230, 48);
+  g.lineTo(258, 14);
+  g.lineTo(290, 40);
+  g.lineTo(320, 28);
+  g.strokePath();
+  g.generateTexture(key, w, h);
+  g.destroy();
+}
+
+function makeCloudRibbon(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.fillStyle(0x3dcebc, 0.35);
+  // layered scalloped band
+  const drawWave = (y: number, amp: number, color: number, a: number) => {
+    g.fillStyle(color, a);
+    g.beginPath();
+    g.moveTo(0, y + 20);
+    for (let x = 0; x <= 256; x += 32) {
+      g.lineTo(x + 16, y - amp);
+      g.lineTo(x + 32, y + 8);
+    }
+    g.lineTo(256, y + 36);
+    g.lineTo(0, y + 36);
+    g.closePath();
+    g.fillPath();
+  };
+  drawWave(40, 14, 0x3dcebc, 0.4);
+  drawWave(52, 10, 0xa8e4f5, 0.28);
+  drawWave(62, 8, 0xffb347, 0.18);
+  g.generateTexture('cloud-ribbon', 256, 96);
+  g.destroy();
+}
+
+function makeSilkBanner(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  // hanging vertical banner with tassel
+  g.fillStyle(0x1a3040, 1);
+  g.fillRect(10, 4, 28, 6);
+  g.fillStyle(COLORS.coral, 0.95);
+  g.fillTriangle(14, 10, 34, 10, 38, 70);
+  g.fillTriangle(14, 10, 10, 70, 38, 70);
+  g.fillStyle(COLORS.amber, 0.9);
+  g.fillRect(18, 16, 12, 40);
+  g.fillStyle(0xfff1c9, 0.7);
+  g.fillRect(20, 18, 3, 36);
+  g.fillStyle(COLORS.teal, 1);
+  g.fillTriangle(24, 72, 18, 88, 30, 88);
+  g.fillStyle(COLORS.amber, 1);
+  g.fillRect(22, 88, 4, 10);
+  g.generateTexture('silk-banner', 48, 100);
+  g.destroy();
+}
+
+function makeLanternString(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.lineStyle(2, 0xd4eef8, 0.8);
+  g.lineBetween(4, 18, 252, 18);
+  const drawMini = (x: number, color: number) => {
+    g.lineStyle(1.5, 0xd4eef8, 0.9);
+    g.lineBetween(x, 18, x, 28);
+    g.fillStyle(0x2a3a48, 1);
+    g.fillRect(x - 7, 28, 14, 4);
+    g.fillStyle(color, 1);
+    g.fillRect(x - 6, 32, 12, 14);
+    g.fillStyle(0xfff1c9, 0.85);
+    g.fillRect(x - 3, 35, 6, 8);
+    g.fillStyle(0x2a3a48, 1);
+    g.fillRect(x - 7, 46, 14, 3);
+  };
+  drawMini(40, COLORS.amber);
+  drawMini(90, COLORS.coral);
+  drawMini(140, COLORS.teal);
+  drawMini(190, COLORS.amber);
+  drawMini(230, COLORS.mint);
+  g.generateTexture('lantern-string', 256, 56);
+  g.destroy();
+}
+
+function makeTemple(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.fillStyle(0x081820, 1);
+  // stacked pagoda roofs
+  g.fillTriangle(48, 8, 8, 28, 88, 28);
+  g.fillRect(28, 28, 40, 10);
+  g.fillTriangle(48, 30, 4, 52, 92, 52);
+  g.fillRect(32, 52, 32, 12);
+  g.fillTriangle(48, 54, 12, 74, 84, 74);
+  g.fillRect(36, 74, 24, 18);
+  g.fillStyle(COLORS.amber, 0.55);
+  g.fillRect(44, 78, 8, 10);
+  g.fillStyle(0xfff1c9, 0.8);
+  g.fillRect(46, 80, 4, 6);
+  g.generateTexture('temple', 96, 96);
   g.destroy();
 }
 
@@ -233,17 +382,18 @@ function makeDangerMark(scene: Phaser.Scene): void {
 
 function makeCaretaker(scene: Phaser.Scene): void {
   const g = gph(scene);
-  // distant keeper silhouette holding a faint lantern
-  g.fillStyle(0x02060c, 0.92);
-  g.fillEllipse(48, 28, 22, 26); // hood
-  g.fillTriangle(48, 36, 28, 96, 68, 96); // cloak
-  g.fillRect(42, 70, 12, 28); // body
-  g.fillStyle(COLORS.amber, 0.55);
-  g.fillCircle(66, 58, 7);
-  g.fillStyle(0xfff0c8, 0.85);
-  g.fillCircle(66, 58, 3);
-  g.fillStyle(0x02060c, 0.9);
-  g.fillRect(60, 62, 3, 18); // pole
+  g.fillStyle(0x02060c, 0.95);
+  // angular hood + cloak
+  g.fillTriangle(48, 6, 28, 34, 68, 34);
+  g.fillRect(34, 30, 28, 16);
+  g.fillTriangle(48, 40, 18, 100, 78, 100);
+  g.fillRect(40, 72, 16, 28);
+  g.fillStyle(COLORS.amber, 0.7);
+  g.fillRect(62, 52, 10, 14);
+  g.fillStyle(0xfff0c8, 0.95);
+  g.fillRect(64, 55, 6, 8);
+  g.fillStyle(0x02060c, 0.95);
+  g.fillRect(66, 66, 3, 20);
   g.generateTexture('caretaker', 96, 110);
   g.destroy();
 }
@@ -406,22 +556,24 @@ export function drawLantern(
 ): Phaser.GameObjects.Container {
   const glowColor = HUE_HEX[hue];
 
-  const farGlow = scene.add.circle(0, 10, 58, glowColor, 0.14);
-  const outerGlow = scene.add.circle(0, 8, 44, glowColor, 0.28);
-  const midGlow = scene.add.circle(0, 10, 30, glowColor, 0.4);
+  // soft rectangular light wash — not giant ovals
+  const farGlow = scene.add.rectangle(0, 10, 70, 70, glowColor, 0.1).setOrigin(0.5);
+  const outerGlow = scene.add.rectangle(0, 8, 52, 56, glowColor, 0.2).setOrigin(0.5);
+  const midGlow = scene.add.rectangle(0, 10, 38, 42, glowColor, 0.28).setOrigin(0.5);
 
   const cap = scene.add.rectangle(0, -28, 26, 10, 0x3a4d5e, 1).setOrigin(0.5);
   const hook = scene.add.rectangle(0, -36, 4, 12, 0xc8d8e6, 1).setOrigin(0.5, 1);
-  const ring = scene.add.circle(0, -40, 5, 0x000000, 0);
+  const ring = scene.add.rectangle(0, -40, 10, 10, 0x000000, 0).setOrigin(0.5);
   ring.setStrokeStyle(2, 0xc8d8e6, 1);
 
   const frame = scene.add.rectangle(0, 4, 34, 40, 0x243544, 1).setOrigin(0.5);
   frame.setStrokeStyle(2, 0xd4e4f0, 0.85);
   const glass = scene.add.rectangle(0, 4, 26, 32, skin.glow, 0.5).setOrigin(0.5);
 
-  const flame = scene.add.ellipse(0, 6, 16, 24, glowColor, 1);
-  const flameCore = scene.add.ellipse(0, 8, 8, 14, COLORS.amberHot, 1);
-  const flameTip = scene.add.ellipse(0, -2, 6, 9, 0xfffaf0, 1);
+  // stylized triangular flame
+  const flame = scene.add.triangle(0, 4, 0, -14, 10, 14, -10, 14, glowColor, 1);
+  const flameCore = scene.add.triangle(0, 6, 0, -6, 5, 10, -5, 10, COLORS.amberHot, 1);
+  const flameTip = scene.add.triangle(0, -2, 0, -10, 3, 2, -3, 2, 0xfffaf0, 1);
 
   const base = scene.add.rectangle(0, 26, 30, 8, 0x3a4d5e, 1).setOrigin(0.5);
 
@@ -449,8 +601,8 @@ export function drawLantern(
 
   scene.tweens.add({
     targets: [flame, flameCore],
-    scaleX: 1.1,
-    scaleY: 0.9,
+    scaleX: 1.08,
+    scaleY: 0.92,
     duration: 260,
     yoyo: true,
     repeat: -1,
@@ -458,8 +610,7 @@ export function drawLantern(
   });
   scene.tweens.add({
     targets: [outerGlow, farGlow],
-    alpha: { from: 0.18, to: 0.38 },
-    scale: 1.1,
+    alpha: { from: 0.12, to: 0.28 },
     duration: 900,
     yoyo: true,
     repeat: -1,
@@ -470,13 +621,13 @@ export function drawLantern(
 
 export function recolorDrawnLantern(lantern: Phaser.GameObjects.Container, hue: HueId): void {
   const color = HUE_HEX[hue];
-  const outerGlow = lantern.getData('outerGlow') as Phaser.GameObjects.Arc | undefined;
-  const midGlow = lantern.getData('midGlow') as Phaser.GameObjects.Arc | undefined;
-  const farGlow = lantern.getData('farGlow') as Phaser.GameObjects.Arc | undefined;
-  const flame = lantern.getData('flame') as Phaser.GameObjects.Ellipse | undefined;
-  outerGlow?.setFillStyle(color, 0.28);
-  midGlow?.setFillStyle(color, 0.4);
-  farGlow?.setFillStyle(color, 0.14);
+  const outerGlow = lantern.getData('outerGlow') as Phaser.GameObjects.Rectangle | undefined;
+  const midGlow = lantern.getData('midGlow') as Phaser.GameObjects.Rectangle | undefined;
+  const farGlow = lantern.getData('farGlow') as Phaser.GameObjects.Rectangle | undefined;
+  const flame = lantern.getData('flame') as Phaser.GameObjects.Triangle | undefined;
+  outerGlow?.setFillStyle(color, 0.2);
+  midGlow?.setFillStyle(color, 0.28);
+  farGlow?.setFillStyle(color, 0.1);
   flame?.setFillStyle(color, 1);
 }
 

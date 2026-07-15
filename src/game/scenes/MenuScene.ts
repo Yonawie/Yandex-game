@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { COLORS, SKINS } from '@/data/balance';
+import { SKINS } from '@/data/balance';
 import { drawLantern } from '@/game/assets/generate';
+import { placeNightScenery } from '@/game/assets/scenery';
 import { getSave, patchSave, addCoins, unlockSkin } from '@/data/save';
 import { tf, getLang } from '@/i18n';
 import { playTone, setMuted, isMuted, unlockAudio, startMusic } from '@/game/audio/sfx';
@@ -12,7 +13,6 @@ import { syncRetentionClock, getSnapshot, markIdleLeave } from '@/retention/serv
 import { WEEKLY_SHARDS_NEEDED } from '@/content/retention';
 
 export class MenuScene extends Phaser.Scene {
-  private stars!: Phaser.GameObjects.Group;
   private skinIndex = 0;
   private modeIndex = 0;
   private lantern!: Phaser.GameObjects.Container;
@@ -44,73 +44,7 @@ export class MenuScene extends Phaser.Scene {
     this.modeIndex = Math.max(0, modes.findIndex((m) => m.id === getActiveModeId()));
 
     this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height);
-
-    // soft dawn band under the sky
-    this.add
-      .ellipse(width / 2, height * 0.72, width * 1.1, height * 0.28, 0xffb347, 0.1)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    this.add
-      .ellipse(width / 2, height * 0.55, width * 0.9, height * 0.2, 0x3dcebc, 0.08)
-      .setBlendMode(Phaser.BlendModes.ADD);
-
-    this.add.image(width * 0.78, height * 0.14, 'moon').setAlpha(0.95).setScale(1.35);
-    const nebulaL = this.add
-      .image(width * 0.2, height * 0.38, 'nebula')
-      .setAlpha(0.55)
-      .setScale(2.8)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    const nebulaR = this.add
-      .image(width * 0.82, height * 0.52, 'nebula')
-      .setAlpha(0.4)
-      .setScale(3.1)
-      .setTint(COLORS.coral)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    this.tweens.add({
-      targets: nebulaL,
-      x: nebulaL.x + 40,
-      alpha: 0.7,
-      duration: 5600,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-    this.tweens.add({
-      targets: nebulaR,
-      y: nebulaR.y - 30,
-      alpha: 0.55,
-      duration: 7200,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
-    this.stars = this.add.group();
-    for (let i = 0; i < 36; i++) {
-      const s = this.add
-        .image(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height * 0.7), 'star')
-        .setAlpha(Phaser.Math.FloatBetween(0.35, 0.95))
-        .setScale(Phaser.Math.FloatBetween(0.8, 2.1));
-      this.stars.add(s);
-      this.tweens.add({
-        targets: s,
-        alpha: Phaser.Math.FloatBetween(0.15, 0.45),
-        duration: Phaser.Math.Between(900, 2200),
-        yoyo: true,
-        repeat: -1,
-        delay: Phaser.Math.Between(0, 1200),
-      });
-    }
-
-    const aurora = this.add.circle(width * 0.3, height * 0.22, 200, COLORS.teal, 0.16);
-    this.tweens.add({
-      targets: aurora,
-      x: width * 0.7,
-      alpha: 0.24,
-      duration: 5000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+    placeNightScenery(this, {});
 
     const brand = this.add
       .text(width / 2, height * 0.14, tf('brand'), {
@@ -118,7 +52,8 @@ export class MenuScene extends Phaser.Scene {
         fontSize: '72px',
         color: '#FFF8EC',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(10);
     brand.setShadow(0, 6, '#FFB347', 16, true, true);
 
     this.add
@@ -129,7 +64,8 @@ export class MenuScene extends Phaser.Scene {
         align: 'center',
         wordWrap: { width: width * 0.8 },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(10);
 
     this.lantern = drawLantern(this, width / 2, height * 0.34, SKINS[this.skinIndex], 'amber', 1.85);
     this.tweens.add({
@@ -275,13 +211,6 @@ export class MenuScene extends Phaser.Scene {
       });
     }
 
-    this.events.on(Phaser.Scenes.Events.UPDATE, () => {
-      this.stars.getChildren().forEach((obj) => {
-        const s = obj as Phaser.GameObjects.Image;
-        s.y += 0.15 + s.scaleX * 0.1;
-        if (s.y > height) s.y = -4;
-      });
-    });
   }
 
   private refreshRetentionHint(): void {
@@ -383,7 +312,10 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private makeChip(x: number, y: number, label: string, onClick: () => void): void {
-    const bg = this.add.circle(x, y, 22, 0x1b2838, 0.9).setInteractive({ useHandCursor: true });
+    const bg = this.add
+      .rectangle(x, y, 44, 44, 0x1b2838, 0.92)
+      .setStrokeStyle(2, 0xa8e4f5, 0.35)
+      .setInteractive({ useHandCursor: true });
     this.add
       .text(x, y, label, {
         fontFamily: 'Outfit, sans-serif',

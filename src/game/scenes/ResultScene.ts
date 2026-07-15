@@ -40,15 +40,16 @@ export class ResultScene extends Phaser.Scene {
     };
 
     this.add.rectangle(width / 2, height / 2, width, height, COLORS.bgTop);
-    const glow = this.add.circle(width / 2, height * 0.22, 120, COLORS.amber, 0.12);
+    const crest = this.add.image(width / 2, height * 0.2, 'temple').setAlpha(0.55).setScale(1.4);
     this.tweens.add({
-      targets: glow,
-      scale: 1.15,
-      alpha: 0.2,
+      targets: crest,
+      y: crest.y - 8,
+      alpha: 0.75,
       duration: 1400,
       yoyo: true,
       repeat: -1,
     });
+    this.add.image(width / 2, height * 0.32, 'lantern-string').setAlpha(0.7).setDisplaySize(width * 0.7, 48);
 
     this.add
       .text(width / 2, height * 0.12, tf('gameOver'), {
