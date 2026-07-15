@@ -207,11 +207,7 @@ export class MenuScene extends Phaser.Scene {
       this.showTips();
     } else {
       void syncRetentionClock().then(() => {
-        const snap = getSnapshot();
         this.refreshRetentionHint();
-        if (snap.morningAvailable || snap.idleSparks > 0 || snap.unreadLetters.length > 0) {
-          this.time.delayedCall(450, () => this.retentionOverlay?.show());
-        }
       });
     }
   }
