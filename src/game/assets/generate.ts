@@ -1,45 +1,48 @@
 import Phaser from 'phaser';
 import { COLORS, HUE_HEX, type HueId, type SkinDef } from '@/data/balance';
 
-/** Procedural art — clear silhouettes, strong color read, tiny archive */
+function ensure(scene: Phaser.Scene, key: string, make: () => void): void {
+  if (!scene.textures.exists(key)) make();
+}
 
+/** Procedural art — fills any keys not provided by loaded illustrated PNGs */
 export function generateTextures(scene: Phaser.Scene): void {
-  makeGradient(scene);
-  makeNebula(scene);
-  makeMoon(scene);
-  makeStar(scene);
-  makeThread(scene);
-  makeLaneGlow(scene);
-  makeFirefly(scene, 'orb-amber', HUE_HEX.amber);
-  makeFirefly(scene, 'orb-teal', HUE_HEX.teal);
-  makeFirefly(scene, 'orb-coral', HUE_HEX.coral);
-  makeVoid(scene);
-  makePortal(scene, 'portal-amber', HUE_HEX.amber);
-  makePortal(scene, 'portal-teal', HUE_HEX.teal);
-  makePortal(scene, 'portal-coral', HUE_HEX.coral);
-  makeShard(scene);
-  makeParticle(scene);
-  makeSpark(scene);
-  makeUiPanel(scene);
-  makeButton(scene);
-  makeHudChip(scene);
-  makeColorBadge(scene, 'badge-amber', HUE_HEX.amber);
-  makeColorBadge(scene, 'badge-teal', HUE_HEX.teal);
-  makeColorBadge(scene, 'badge-coral', HUE_HEX.coral);
-  makeVignette(scene);
-  makeMatchRing(scene);
-  makeDangerMark(scene);
-  makeCaretaker(scene);
-  makeGhostChevron(scene);
-  makeComboAura(scene);
-  makeRainDrop(scene);
-  makeRipple(scene);
-  makeRidge(scene, 'ridge-far', 0x0e2436, 0.9);
-  makeRidge(scene, 'ridge-near', 0x081820, 1);
-  makeCloudRibbon(scene);
-  makeSilkBanner(scene);
-  makeLanternString(scene);
-  makeTemple(scene);
+  ensure(scene, 'bg-grad', () => makeGradient(scene));
+  ensure(scene, 'nebula', () => makeNebula(scene));
+  ensure(scene, 'moon', () => makeMoon(scene));
+  ensure(scene, 'star', () => makeStar(scene));
+  ensure(scene, 'thread', () => makeThread(scene));
+  ensure(scene, 'lane-glow', () => makeLaneGlow(scene));
+  ensure(scene, 'orb-amber', () => makeFirefly(scene, 'orb-amber', HUE_HEX.amber));
+  ensure(scene, 'orb-teal', () => makeFirefly(scene, 'orb-teal', HUE_HEX.teal));
+  ensure(scene, 'orb-coral', () => makeFirefly(scene, 'orb-coral', HUE_HEX.coral));
+  ensure(scene, 'void', () => makeVoid(scene));
+  ensure(scene, 'portal-amber', () => makePortal(scene, 'portal-amber', HUE_HEX.amber));
+  ensure(scene, 'portal-teal', () => makePortal(scene, 'portal-teal', HUE_HEX.teal));
+  ensure(scene, 'portal-coral', () => makePortal(scene, 'portal-coral', HUE_HEX.coral));
+  ensure(scene, 'shard', () => makeShard(scene));
+  ensure(scene, 'px', () => makeParticle(scene));
+  ensure(scene, 'spark', () => makeSpark(scene));
+  ensure(scene, 'ui-panel', () => makeUiPanel(scene));
+  ensure(scene, 'ui-btn', () => makeButton(scene));
+  ensure(scene, 'hud-chip', () => makeHudChip(scene));
+  ensure(scene, 'badge-amber', () => makeColorBadge(scene, 'badge-amber', HUE_HEX.amber));
+  ensure(scene, 'badge-teal', () => makeColorBadge(scene, 'badge-teal', HUE_HEX.teal));
+  ensure(scene, 'badge-coral', () => makeColorBadge(scene, 'badge-coral', HUE_HEX.coral));
+  ensure(scene, 'vignette', () => makeVignette(scene));
+  ensure(scene, 'match-ring', () => makeMatchRing(scene));
+  ensure(scene, 'danger-mark', () => makeDangerMark(scene));
+  ensure(scene, 'caretaker', () => makeCaretaker(scene));
+  ensure(scene, 'ghost-chevron', () => makeGhostChevron(scene));
+  ensure(scene, 'combo-aura', () => makeComboAura(scene));
+  ensure(scene, 'rain-drop', () => makeRainDrop(scene));
+  ensure(scene, 'ripple', () => makeRipple(scene));
+  ensure(scene, 'ridge-far', () => makeRidge(scene, 'ridge-far', 0x0e2436, 0.9));
+  ensure(scene, 'ridge-near', () => makeRidge(scene, 'ridge-near', 0x081820, 1));
+  ensure(scene, 'cloud-ribbon', () => makeCloudRibbon(scene));
+  ensure(scene, 'silk-banner', () => makeSilkBanner(scene));
+  ensure(scene, 'lantern-string', () => makeLanternString(scene));
+  ensure(scene, 'temple', () => makeTemple(scene));
 }
 
 function gph(scene: Phaser.Scene): Phaser.GameObjects.Graphics {

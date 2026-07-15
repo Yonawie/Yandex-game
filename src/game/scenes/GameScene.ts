@@ -4,7 +4,7 @@ import { getEntityDef, resolveTexture } from '@/content/entities';
 import { resolveMode, getActiveModeId, loadRemoteBalancePatch } from '@/content/runtimeConfig';
 import type { EntityKind, ModeDef, RunEventDef, SpawnRequest } from '@/content/types';
 import { drawLantern, laneX, recolorDrawnLantern } from '@/game/assets/generate';
-import { placeNightScenery } from '@/game/assets/scenery';
+import { placeNightScenery, addBg } from '@/game/assets/scenery';
 import { Spawner } from '@/game/systems/Spawner';
 import { EventDirector } from '@/game/systems/EventDirector';
 import { ScoreSystem } from '@/game/systems/ScoreSystem';
@@ -111,10 +111,10 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setRotation(0);
     this.cameras.main.setZoom(1);
 
-    this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height).setDepth(0);
+    addBg(this);
 
     const parallax: Phaser.GameObjects.Image[] = [];
-    placeNightScenery(this, { parallaxLayers: parallax });
+    placeNightScenery(this, { parallaxLayers: parallax, skipBg: true });
     this.parallax = parallax;
     parallax.forEach((img, i) => {
       img.setData('parallax', 4 + i * 3);

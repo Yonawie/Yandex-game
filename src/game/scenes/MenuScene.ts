@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SKINS } from '@/data/balance';
 import { drawLantern } from '@/game/assets/generate';
-import { placeNightScenery } from '@/game/assets/scenery';
+import { placeNightScenery, addBg } from '@/game/assets/scenery';
 import { getSave, patchSave, addCoins, unlockSkin } from '@/data/save';
 import { tf, getLang } from '@/i18n';
 import { playTone, setMuted, isMuted, unlockAudio, startMusic } from '@/game/audio/sfx';
@@ -43,8 +43,8 @@ export class MenuScene extends Phaser.Scene {
     this.skinIndex = Math.max(0, SKINS.findIndex((s) => s.id === save.skinId));
     this.modeIndex = Math.max(0, modes.findIndex((m) => m.id === getActiveModeId()));
 
-    this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height);
-    placeNightScenery(this, {});
+    addBg(this);
+    placeNightScenery(this, { skipBg: true });
 
     const brand = this.add
       .text(width / 2, height * 0.14, tf('brand'), {

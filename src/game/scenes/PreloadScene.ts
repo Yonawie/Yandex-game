@@ -35,15 +35,46 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   });
 }
 
+/** Illustrated art packs from public/art — then procedural fallbacks fill the rest. */
+const ART_IMAGES: [string, string][] = [
+  ['bg-sky', 'bg-sky.png'],
+  ['moon', 'art-moon.png'],
+  ['ridge-far', 'art-ridge.png'],
+  ['ridge-near', 'art-ridge.png'],
+  ['silk-banner', 'art-banner.png'],
+  ['lantern-string', 'art-lantern-string.png'],
+  ['temple', 'art-temple.png'],
+  ['orb-amber', 'art-firefly-amber.png'],
+  ['orb-teal', 'art-firefly-teal.png'],
+  ['orb-coral', 'art-firefly-coral.png'],
+  ['void', 'art-void.png'],
+  ['portal-amber', 'art-portal-amber.png'],
+  ['portal-teal', 'art-portal-teal.png'],
+  ['portal-coral', 'art-portal-coral.png'],
+  ['shard', 'art-shard.png'],
+];
+
 export class PreloadScene extends Phaser.Scene {
+  private bootStarted = false;
+
   constructor() {
     super('Preload');
+  }
+
+  preload(): void {
+    this.load.setPath('art/');
+    for (const [key, file] of ART_IMAGES) {
+      this.load.image(key, file);
+    }
   }
 
   create(): void {
     const { width, height } = this.scale;
 
     this.add.rectangle(width / 2, height / 2, width, height, COLORS.bgTop);
+    if (this.textures.exists('bg-sky')) {
+      this.add.image(width / 2, height / 2, 'bg-sky').setDisplaySize(width, height).setAlpha(0.85);
+    }
     const title = this.add
       .text(width / 2, height * 0.42, tf('brand'), {
         fontFamily: 'Fraunces, Georgia, serif',
@@ -68,7 +99,10 @@ export class PreloadScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    void this.boot(title);
+    if (!this.bootStarted) {
+      this.bootStarted = true;
+      void this.boot(title);
+    }
   }
 
   private async boot(title: Phaser.GameObjects.Text): Promise<void> {

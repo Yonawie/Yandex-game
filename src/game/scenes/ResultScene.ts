@@ -39,17 +39,21 @@ export class ResultScene extends Phaser.Scene {
       voidsPassed: 0,
     };
 
-    this.add.rectangle(width / 2, height / 2, width, height, COLORS.bgTop);
-    const crest = this.add.image(width / 2, height * 0.2, 'temple').setAlpha(0.55).setScale(1.4);
+    if (this.textures.exists('bg-sky')) {
+      this.add.image(width / 2, height / 2, 'bg-sky').setDisplaySize(width, height).setAlpha(0.9);
+    } else {
+      this.add.rectangle(width / 2, height / 2, width, height, COLORS.bgTop);
+    }
+    const crest = this.add.image(width / 2, height * 0.2, 'temple').setAlpha(0.7).setScale(1.3);
     this.tweens.add({
       targets: crest,
       y: crest.y - 8,
-      alpha: 0.75,
+      alpha: 0.9,
       duration: 1400,
       yoyo: true,
       repeat: -1,
     });
-    this.add.image(width / 2, height * 0.32, 'lantern-string').setAlpha(0.7).setDisplaySize(width * 0.7, 48);
+    this.add.image(width / 2, height * 0.32, 'lantern-string').setAlpha(0.85).setDisplaySize(width * 0.7, 52);
 
     this.add
       .text(width / 2, height * 0.12, tf('gameOver'), {
