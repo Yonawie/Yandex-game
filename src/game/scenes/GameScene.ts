@@ -111,28 +111,38 @@ export class GameScene extends Phaser.Scene {
 
     this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height).setDepth(0);
 
+    // warm mid-air haze + teal wash
+    this.add
+      .ellipse(width / 2, height * 0.62, width * 1.15, height * 0.32, 0xffb347, 0.09)
+      .setDepth(1)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.add
+      .ellipse(width * 0.35, height * 0.28, width * 0.7, height * 0.22, 0x3dcebc, 0.1)
+      .setDepth(1)
+      .setBlendMode(Phaser.BlendModes.ADD);
+
     this.add
       .image(width * 0.78, height * 0.16, 'moon')
-      .setAlpha(0.9)
-      .setScale(1.35)
+      .setAlpha(0.98)
+      .setScale(1.45)
       .setDepth(1);
     const nebulaA = this.add
       .image(width * 0.22, height * 0.38, 'nebula')
-      .setAlpha(0.4)
-      .setScale(2.6)
+      .setAlpha(0.58)
+      .setScale(2.9)
       .setDepth(1)
       .setBlendMode(Phaser.BlendModes.ADD);
     const nebulaB = this.add
       .image(width * 0.82, height * 0.58, 'nebula')
-      .setAlpha(0.28)
-      .setScale(3)
+      .setAlpha(0.42)
+      .setScale(3.2)
       .setDepth(1)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setTint(COLORS.coral);
     this.tweens.add({
       targets: nebulaA,
       x: nebulaA.x + 36,
-      alpha: 0.5,
+      alpha: 0.72,
       duration: 7000,
       yoyo: true,
       repeat: -1,
@@ -141,6 +151,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: nebulaB,
       y: nebulaB.y - 28,
+      alpha: 0.55,
       duration: 9000,
       yoyo: true,
       repeat: -1,
@@ -148,14 +159,22 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.starField = [];
-    for (let i = 0; i < 28; i++) {
+    for (let i = 0; i < 40; i++) {
       const s = this.add
         .image(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), 'star')
-        .setAlpha(Phaser.Math.FloatBetween(0.2, 0.75))
-        .setScale(Phaser.Math.FloatBetween(0.6, 1.8))
+        .setAlpha(Phaser.Math.FloatBetween(0.35, 0.95))
+        .setScale(Phaser.Math.FloatBetween(0.7, 2.2))
         .setDepth(2)
         .setData('drift', Phaser.Math.FloatBetween(12, 40));
       this.starField.push(s);
+      this.tweens.add({
+        targets: s,
+        alpha: Phaser.Math.FloatBetween(0.2, 0.5),
+        duration: Phaser.Math.Between(800, 2000),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 1000),
+      });
     }
 
     // caretaker silhouettes wait off / invisible until height milestones
@@ -235,7 +254,7 @@ export class GameScene extends Phaser.Scene {
       .image(width / 2, height / 2, 'vignette')
       .setDisplaySize(width, height)
       .setDepth(35)
-      .setAlpha(this.mode.id === 'storm' ? 0.85 : 0.7)
+      .setAlpha(this.mode.id === 'storm' ? 0.55 : 0.38)
       .setScrollFactor(0);
 
     this.trailEmitter = this.add.particles(0, 0, 'px', {
@@ -281,21 +300,21 @@ export class GameScene extends Phaser.Scene {
       .text(48, 30, `${tf('score')}: 0`, {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '24px',
-        color: '#F7F3E8',
+        color: '#FFF8EC',
       })
       .setDepth(40);
     this.comboText = this.add
       .text(48, 56, '', {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '18px',
-        color: '#F4A261',
+        color: '#FFB347',
       })
       .setDepth(40);
     this.heightText = this.add
       .text(width - 48, 30, `${tf('height')}: 0`, {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '20px',
-        color: '#9BB0C1',
+        color: '#D6E8F2',
       })
       .setOrigin(1, 0)
       .setDepth(40);
@@ -305,7 +324,7 @@ export class GameScene extends Phaser.Scene {
       .text(78, 108, tf('yourLight'), {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '16px',
-        color: '#F7F3E8',
+        color: '#FFF8EC',
       })
       .setOrigin(0, 0.5)
       .setDepth(40);
@@ -314,17 +333,17 @@ export class GameScene extends Phaser.Scene {
       .text(width / 2, height - 36, `${tf('collectHint')}  ·  ${tf('avoidHint')}`, {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '18px',
-        color: '#F7F3E8',
+        color: '#FFF8EC',
       })
       .setOrigin(0.5)
-      .setAlpha(0.9)
+      .setAlpha(0.95)
       .setDepth(40);
 
     this.storyText = this.add
       .text(width / 2, height * 0.18, '', {
         fontFamily: 'Fraunces, Georgia, serif',
         fontSize: '26px',
-        color: '#F7F3E8',
+        color: '#FFF8EC',
         align: 'center',
         wordWrap: { width: width * 0.78 },
       })
@@ -336,7 +355,7 @@ export class GameScene extends Phaser.Scene {
       .text(width / 2, height * 0.12, '', {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '20px',
-        color: '#8ECAE6',
+        color: '#A8E4F5',
       })
       .setOrigin(0.5)
       .setAlpha(0)
@@ -904,7 +923,7 @@ export class GameScene extends Phaser.Scene {
       .text(width / 2, height * 0.38, tf('gameOver'), {
         fontFamily: 'Fraunces, Georgia, serif',
         fontSize: '48px',
-        color: '#F7F3E8',
+        color: '#FFF8EC',
       })
       .setOrigin(0.5)
       .setDepth(61);
@@ -918,7 +937,7 @@ export class GameScene extends Phaser.Scene {
       .text(width / 2, height * 0.52, tf('continueAd'), {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '24px',
-        color: '#071018',
+        color: '#0C1C2E',
       })
       .setOrigin(0.5)
       .setDepth(62);
@@ -927,7 +946,7 @@ export class GameScene extends Phaser.Scene {
       .text(width / 2, height * 0.62, tf('again'), {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '20px',
-        color: '#9BB0C1',
+        color: '#D6E8F2',
       })
       .setOrigin(0.5)
       .setDepth(62)

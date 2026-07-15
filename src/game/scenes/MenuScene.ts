@@ -44,26 +44,68 @@ export class MenuScene extends Phaser.Scene {
     this.modeIndex = Math.max(0, modes.findIndex((m) => m.id === getActiveModeId()));
 
     this.add.image(width / 2, height / 2, 'bg-grad').setDisplaySize(width, height);
-    this.add.image(width * 0.78, height * 0.14, 'moon').setAlpha(0.85).setScale(1.2);
+
+    // soft dawn band under the sky
     this.add
-      .image(width * 0.2, height * 0.4, 'nebula')
-      .setAlpha(0.35)
-      .setScale(2.4)
+      .ellipse(width / 2, height * 0.72, width * 1.1, height * 0.28, 0xffb347, 0.1)
       .setBlendMode(Phaser.BlendModes.ADD);
+    this.add
+      .ellipse(width / 2, height * 0.55, width * 0.9, height * 0.2, 0x3dcebc, 0.08)
+      .setBlendMode(Phaser.BlendModes.ADD);
+
+    this.add.image(width * 0.78, height * 0.14, 'moon').setAlpha(0.95).setScale(1.35);
+    const nebulaL = this.add
+      .image(width * 0.2, height * 0.38, 'nebula')
+      .setAlpha(0.55)
+      .setScale(2.8)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    const nebulaR = this.add
+      .image(width * 0.82, height * 0.52, 'nebula')
+      .setAlpha(0.4)
+      .setScale(3.1)
+      .setTint(COLORS.coral)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({
+      targets: nebulaL,
+      x: nebulaL.x + 40,
+      alpha: 0.7,
+      duration: 5600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    this.tweens.add({
+      targets: nebulaR,
+      y: nebulaR.y - 30,
+      alpha: 0.55,
+      duration: 7200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
     this.stars = this.add.group();
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 36; i++) {
       const s = this.add
-        .image(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height), 'star')
-        .setAlpha(Phaser.Math.FloatBetween(0.2, 0.7))
-        .setScale(Phaser.Math.FloatBetween(0.7, 1.6));
+        .image(Phaser.Math.Between(0, width), Phaser.Math.Between(0, height * 0.7), 'star')
+        .setAlpha(Phaser.Math.FloatBetween(0.35, 0.95))
+        .setScale(Phaser.Math.FloatBetween(0.8, 2.1));
       this.stars.add(s);
+      this.tweens.add({
+        targets: s,
+        alpha: Phaser.Math.FloatBetween(0.15, 0.45),
+        duration: Phaser.Math.Between(900, 2200),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 1200),
+      });
     }
 
-    const aurora = this.add.circle(width * 0.3, height * 0.25, 180, COLORS.teal, 0.1);
+    const aurora = this.add.circle(width * 0.3, height * 0.22, 200, COLORS.teal, 0.16);
     this.tweens.add({
       targets: aurora,
       x: width * 0.7,
-      alpha: 0.14,
+      alpha: 0.24,
       duration: 5000,
       yoyo: true,
       repeat: -1,
@@ -73,23 +115,23 @@ export class MenuScene extends Phaser.Scene {
     const brand = this.add
       .text(width / 2, height * 0.14, tf('brand'), {
         fontFamily: 'Fraunces, Georgia, serif',
-        fontSize: '68px',
-        color: '#F7F3E8',
+        fontSize: '72px',
+        color: '#FFF8EC',
       })
       .setOrigin(0.5);
-    brand.setShadow(0, 8, '#F4A261', 18, true, true);
+    brand.setShadow(0, 6, '#FFB347', 16, true, true);
 
     this.add
       .text(width / 2, height * 0.205, tf('tagline'), {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '20px',
-        color: '#9BB0C1',
+        color: '#D6E8F2',
         align: 'center',
         wordWrap: { width: width * 0.8 },
       })
       .setOrigin(0.5);
 
-    this.lantern = drawLantern(this, width / 2, height * 0.34, SKINS[this.skinIndex], 'amber', 1.7);
+    this.lantern = drawLantern(this, width / 2, height * 0.34, SKINS[this.skinIndex], 'amber', 1.85);
     this.tweens.add({
       targets: this.lantern,
       y: this.lantern.y - 14,
@@ -103,7 +145,7 @@ export class MenuScene extends Phaser.Scene {
       .text(width / 2, height * 0.48, `${tf('best')}: ${save.bestScore}`, {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '20px',
-        color: '#F4A261',
+        color: '#FFB347',
       })
       .setOrigin(0.5);
 
@@ -111,7 +153,7 @@ export class MenuScene extends Phaser.Scene {
       .text(width / 2, height * 0.51, `${tf('coins')}: ${save.coins}`, {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '17px',
-        color: '#8ECAE6',
+        color: '#A8E4F5',
       })
       .setOrigin(0.5);
 
@@ -119,7 +161,7 @@ export class MenuScene extends Phaser.Scene {
       .text(width / 2, height * 0.545, '', {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '15px',
-        color: '#F7F3E8',
+        color: '#FFF8EC',
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
@@ -272,7 +314,7 @@ export class MenuScene extends Phaser.Scene {
         ? `${tf('mode')}: ${name}`
         : `${tf('mode')}: ${name} · ${tf('modeLocked')} ${mode.unlockHeight}`,
     );
-    this.modeText.setColor(unlocked ? '#F7F3E8' : '#9BB0C1');
+    this.modeText.setColor(unlocked ? '#FFF8EC' : '#B7C9D6');
   }
 
   private async cycleSkin(dir: number): Promise<void> {
@@ -297,7 +339,7 @@ export class MenuScene extends Phaser.Scene {
         this.scale.height * 0.34,
         skin,
         'amber',
-        1.7,
+        1.85,
       );
       this.tweens.add({
         targets: this.lantern,

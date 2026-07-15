@@ -42,31 +42,38 @@ function gph(scene: Phaser.Scene): Phaser.GameObjects.Graphics {
 
 function makeGradient(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillGradientStyle(0x050b14, 0x050b14, 0x153048, 0x153048, 1);
+  // top deep teal-night → bottom warm dawn-blue
+  g.fillGradientStyle(0x0a1828, 0x0a1828, 0x2a6a7c, 0x245868, 1);
   g.fillRect(0, 0, 8, 64);
+  g.fillStyle(0xffb347, 0.12);
+  g.fillRect(0, 48, 8, 16);
   g.generateTexture('bg-grad', 8, 64);
   g.destroy();
 }
 
 function makeNebula(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(COLORS.teal, 0.35);
-  g.fillCircle(64, 64, 50);
-  g.fillStyle(COLORS.amber, 0.18);
-  g.fillCircle(40, 80, 36);
-  g.fillStyle(0x8ecae6, 0.12);
-  g.fillCircle(90, 40, 28);
+  g.fillStyle(COLORS.teal, 0.55);
+  g.fillCircle(64, 64, 52);
+  g.fillStyle(COLORS.amber, 0.32);
+  g.fillCircle(42, 78, 38);
+  g.fillStyle(COLORS.mint, 0.28);
+  g.fillCircle(88, 42, 30);
+  g.fillStyle(COLORS.coral, 0.18);
+  g.fillCircle(70, 90, 24);
   g.generateTexture('nebula', 128, 128);
   g.destroy();
 }
 
 function makeMoon(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0xdce8f5, 0.12);
-  g.fillCircle(48, 48, 40);
-  g.fillStyle(0xf0f6ff, 0.55);
+  g.fillStyle(0xdce8f5, 0.22);
+  g.fillCircle(48, 48, 42);
+  g.fillStyle(0xf5f9ff, 0.75);
   g.fillCircle(48, 48, 28);
-  g.fillStyle(0xc5d4e8, 0.35);
+  g.fillStyle(0xffffff, 0.5);
+  g.fillCircle(42, 40, 8);
+  g.fillStyle(0xc5d4e8, 0.4);
   g.fillCircle(38, 42, 6);
   g.fillCircle(58, 55, 4);
   g.fillCircle(52, 38, 3);
@@ -77,29 +84,28 @@ function makeMoon(scene: Phaser.Scene): void {
 function makeStar(scene: Phaser.Scene): void {
   const g = gph(scene);
   g.fillStyle(0xffffff, 1);
-  g.fillCircle(3, 3, 2.5);
-  g.fillStyle(0xffffff, 0.35);
-  g.fillCircle(3, 3, 3.5);
-  g.generateTexture('star', 8, 8);
+  g.fillCircle(4, 4, 2.2);
+  g.fillStyle(0xffe8c2, 0.55);
+  g.fillCircle(4, 4, 3.8);
+  g.fillStyle(0xffffff, 0.25);
+  g.fillCircle(4, 4, 5);
+  g.generateTexture('star', 10, 10);
   g.destroy();
 }
 
 function makeThread(scene: Phaser.Scene): void {
   const g = gph(scene);
-  // soft glow column
-  g.fillStyle(0x8ecae6, 0.08);
+  g.fillStyle(0xa8e4f5, 0.16);
   g.fillRoundedRect(0, 0, 28, 128, 12);
-  // rope core
-  g.fillStyle(0xb8d4e3, 0.75);
+  g.fillStyle(0xd4eef8, 0.9);
   g.fillRoundedRect(11, 0, 6, 128, 3);
-  g.fillStyle(0xffffff, 0.35);
+  g.fillStyle(0xffffff, 0.55);
   g.fillRoundedRect(12, 0, 2, 128, 1);
-  // knots / beads
   for (let y = 12; y < 128; y += 28) {
-    g.fillStyle(0xf4a261, 0.55);
-    g.fillCircle(14, y, 4);
-    g.fillStyle(0xffe8c2, 0.7);
-    g.fillCircle(13, y - 1, 1.5);
+    g.fillStyle(COLORS.amber, 0.75);
+    g.fillCircle(14, y, 4.5);
+    g.fillStyle(COLORS.amberHot, 0.95);
+    g.fillCircle(13, y - 1, 2);
   }
   g.generateTexture('thread', 28, 128);
   g.destroy();
@@ -107,10 +113,10 @@ function makeThread(scene: Phaser.Scene): void {
 
 function makeLaneGlow(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0xf4a261, 0.22);
-  g.fillEllipse(40, 18, 70, 28);
-  g.fillStyle(0xffe8c2, 0.18);
-  g.fillEllipse(40, 18, 40, 14);
+  g.fillStyle(0xffb347, 0.35);
+  g.fillEllipse(40, 18, 78, 32);
+  g.fillStyle(0xfff1c9, 0.35);
+  g.fillEllipse(40, 18, 44, 16);
   g.generateTexture('lane-glow', 80, 36);
   g.destroy();
 }
@@ -119,28 +125,24 @@ function makeFirefly(scene: Phaser.Scene, key: string, color: number): void {
   const g = gph(scene);
   const cx = 36;
   const cy = 36;
-  // aura
-  g.fillStyle(color, 0.16);
-  g.fillCircle(cx, cy, 32);
-  g.fillStyle(color, 0.3);
-  g.fillCircle(cx, cy, 22);
-  // wings
-  g.fillStyle(0xffffff, 0.35);
+  g.fillStyle(color, 0.28);
+  g.fillCircle(cx, cy, 34);
+  g.fillStyle(color, 0.45);
+  g.fillCircle(cx, cy, 24);
+  g.fillStyle(0xffffff, 0.45);
   g.fillEllipse(cx - 16, cy - 2, 18, 12);
   g.fillEllipse(cx + 16, cy - 2, 18, 12);
-  g.fillStyle(color, 0.45);
+  g.fillStyle(color, 0.65);
   g.fillEllipse(cx - 16, cy - 2, 12, 8);
   g.fillEllipse(cx + 16, cy - 2, 12, 8);
-  // body
   g.fillStyle(color, 1);
   g.fillEllipse(cx, cy + 2, 16, 20);
-  g.fillStyle(0xffffff, 0.85);
-  g.fillCircle(cx - 3, cy - 4, 5);
-  // tiny spark marker = collectible
-  g.fillStyle(0xffffff, 0.9);
-  g.fillCircle(cx, cy + 16, 3);
-  g.lineStyle(2, color, 1);
-  g.strokeCircle(cx, cy + 16, 6);
+  g.fillStyle(0xffffff, 0.95);
+  g.fillCircle(cx - 3, cy - 4, 5.5);
+  g.fillStyle(0xffffff, 1);
+  g.fillCircle(cx, cy + 16, 3.5);
+  g.lineStyle(2.5, color, 1);
+  g.strokeCircle(cx, cy + 16, 7);
   g.generateTexture(key, 72, 72);
   g.destroy();
 }
@@ -193,16 +195,17 @@ function makeVignette(scene: Phaser.Scene): void {
   const g = gph(scene);
   g.fillStyle(0x000000, 0);
   g.fillRect(0, 0, 64, 64);
-  g.fillStyle(0x02060c, 0.55);
-  g.fillRect(0, 0, 64, 8);
-  g.fillRect(0, 56, 64, 8);
-  g.fillRect(0, 0, 8, 64);
-  g.fillRect(56, 0, 8, 64);
-  g.fillStyle(0x02060c, 0.28);
-  g.fillRect(0, 0, 64, 14);
-  g.fillRect(0, 50, 64, 14);
-  g.fillRect(0, 0, 14, 64);
-  g.fillRect(50, 0, 14, 64);
+  // softer frame — keep focus without crushing brightness
+  g.fillStyle(0x061018, 0.32);
+  g.fillRect(0, 0, 64, 6);
+  g.fillRect(0, 58, 64, 6);
+  g.fillRect(0, 0, 6, 64);
+  g.fillRect(58, 0, 6, 64);
+  g.fillStyle(0x061018, 0.16);
+  g.fillRect(0, 0, 64, 12);
+  g.fillRect(0, 52, 64, 12);
+  g.fillRect(0, 0, 12, 64);
+  g.fillRect(52, 0, 12, 64);
   g.generateTexture('vignette', 64, 64);
   g.destroy();
 }
@@ -292,19 +295,16 @@ function makePortal(scene: Phaser.Scene, key: string, color: number): void {
   const g = gph(scene);
   const cx = 44;
   const cy = 44;
-  // outer halo
-  g.fillStyle(color, 0.18);
-  g.fillCircle(cx, cy, 40);
-  // hex-ish gate via thick rings
-  g.lineStyle(8, color, 0.95);
+  g.fillStyle(color, 0.32);
+  g.fillCircle(cx, cy, 42);
+  g.lineStyle(9, color, 1);
   g.strokeCircle(cx, cy, 30);
-  g.lineStyle(4, 0xffffff, 0.55);
+  g.lineStyle(4, 0xffffff, 0.75);
   g.strokeCircle(cx, cy, 22);
-  g.fillStyle(color, 0.35);
+  g.fillStyle(color, 0.55);
   g.fillCircle(cx, cy, 16);
-  g.fillStyle(0xffffff, 0.55);
-  g.fillCircle(cx, cy, 7);
-  // diamond arrows = "change color"
+  g.fillStyle(0xffffff, 0.8);
+  g.fillCircle(cx, cy, 8);
   g.fillStyle(color, 1);
   g.fillTriangle(cx, cy - 38, cx - 8, cy - 26, cx + 8, cy - 26);
   g.fillTriangle(cx, cy + 38, cx - 8, cy + 26, cx + 8, cy + 26);
@@ -352,21 +352,23 @@ function makeSpark(scene: Phaser.Scene): void {
 
 function makeUiPanel(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0x0a1520, 0.88);
+  g.fillStyle(0x123048, 0.9);
   g.fillRoundedRect(0, 0, 64, 64, 18);
-  g.lineStyle(2, 0xf4a261, 0.25);
+  g.lineStyle(2, 0xffb347, 0.4);
   g.strokeRoundedRect(1, 1, 62, 62, 18);
+  g.fillStyle(0xffffff, 0.06);
+  g.fillRoundedRect(4, 4, 56, 18, 10);
   g.generateTexture('ui-panel', 64, 64);
   g.destroy();
 }
 
 function makeButton(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0xe76f51, 1);
+  g.fillStyle(0xff7a59, 1);
   g.fillRoundedRect(0, 8, 64, 56, 18);
   g.fillStyle(COLORS.amber, 1);
   g.fillRoundedRect(0, 0, 64, 56, 18);
-  g.fillStyle(0xffffff, 0.28);
+  g.fillStyle(0xffffff, 0.4);
   g.fillRoundedRect(6, 6, 52, 16, 10);
   g.generateTexture('ui-btn', 64, 64);
   g.destroy();
@@ -374,9 +376,9 @@ function makeButton(scene: Phaser.Scene): void {
 
 function makeHudChip(scene: Phaser.Scene): void {
   const g = gph(scene);
-  g.fillStyle(0x0a1520, 0.72);
+  g.fillStyle(0x123048, 0.78);
   g.fillRoundedRect(0, 0, 160, 40, 14);
-  g.lineStyle(1, 0xffffff, 0.1);
+  g.lineStyle(1, 0xffb347, 0.25);
   g.strokeRoundedRect(0.5, 0.5, 159, 39, 14);
   g.generateTexture('hud-chip', 160, 40);
   g.destroy();
@@ -384,11 +386,11 @@ function makeHudChip(scene: Phaser.Scene): void {
 
 function makeColorBadge(scene: Phaser.Scene, key: string, color: number): void {
   const g = gph(scene);
-  g.fillStyle(color, 0.25);
+  g.fillStyle(color, 0.4);
   g.fillCircle(18, 18, 17);
   g.fillStyle(color, 1);
   g.fillCircle(18, 18, 11);
-  g.fillStyle(0xffffff, 0.8);
+  g.fillStyle(0xffffff, 0.9);
   g.fillCircle(14, 14, 3.5);
   g.generateTexture(key, 36, 36);
   g.destroy();
@@ -404,29 +406,27 @@ export function drawLantern(
 ): Phaser.GameObjects.Container {
   const glowColor = HUE_HEX[hue];
 
-  const outerGlow = scene.add.circle(0, 8, 42, glowColor, 0.18);
-  const midGlow = scene.add.circle(0, 10, 28, glowColor, 0.28);
+  const farGlow = scene.add.circle(0, 10, 58, glowColor, 0.14);
+  const outerGlow = scene.add.circle(0, 8, 44, glowColor, 0.28);
+  const midGlow = scene.add.circle(0, 10, 30, glowColor, 0.4);
 
-  // metal cap
-  const cap = scene.add.rectangle(0, -28, 26, 10, 0x2a3540, 1).setOrigin(0.5);
-  const hook = scene.add.rectangle(0, -36, 4, 12, 0x9bb0c1, 1).setOrigin(0.5, 1);
+  const cap = scene.add.rectangle(0, -28, 26, 10, 0x3a4d5e, 1).setOrigin(0.5);
+  const hook = scene.add.rectangle(0, -36, 4, 12, 0xc8d8e6, 1).setOrigin(0.5, 1);
   const ring = scene.add.circle(0, -40, 5, 0x000000, 0);
-  ring.setStrokeStyle(2, 0x9bb0c1, 1);
+  ring.setStrokeStyle(2, 0xc8d8e6, 1);
 
-  // lantern frame
-  const frame = scene.add.rectangle(0, 4, 34, 40, 0x1b2838, 1).setOrigin(0.5);
-  frame.setStrokeStyle(2, 0x9bb0c1, 0.7);
-  const glass = scene.add.rectangle(0, 4, 26, 32, skin.glow, 0.35).setOrigin(0.5);
+  const frame = scene.add.rectangle(0, 4, 34, 40, 0x243544, 1).setOrigin(0.5);
+  frame.setStrokeStyle(2, 0xd4e4f0, 0.85);
+  const glass = scene.add.rectangle(0, 4, 26, 32, skin.glow, 0.5).setOrigin(0.5);
 
-  // flame (colorable)
-  const flame = scene.add.ellipse(0, 6, 14, 22, glowColor, 1);
-  const flameCore = scene.add.ellipse(0, 8, 7, 12, COLORS.amberHot, 1);
-  const flameTip = scene.add.ellipse(0, -2, 5, 8, 0xfff6e0, 0.95);
+  const flame = scene.add.ellipse(0, 6, 16, 24, glowColor, 1);
+  const flameCore = scene.add.ellipse(0, 8, 8, 14, COLORS.amberHot, 1);
+  const flameTip = scene.add.ellipse(0, -2, 6, 9, 0xfffaf0, 1);
 
-  // base
-  const base = scene.add.rectangle(0, 26, 30, 8, 0x2a3540, 1).setOrigin(0.5);
+  const base = scene.add.rectangle(0, 26, 30, 8, 0x3a4d5e, 1).setOrigin(0.5);
 
   const c = scene.add.container(x, y, [
+    farGlow,
     outerGlow,
     midGlow,
     hook,
@@ -441,25 +441,25 @@ export function drawLantern(
   ]);
   c.setData('outerGlow', outerGlow);
   c.setData('midGlow', midGlow);
+  c.setData('farGlow', farGlow);
   c.setData('flame', flame);
   c.setData('glass', glass);
   c.setScale(scale);
   c.setDepth(20);
 
-  // idle flicker
   scene.tweens.add({
     targets: [flame, flameCore],
-    scaleX: 1.08,
-    scaleY: 0.92,
-    duration: 280,
+    scaleX: 1.1,
+    scaleY: 0.9,
+    duration: 260,
     yoyo: true,
     repeat: -1,
     ease: 'Sine.easeInOut',
   });
   scene.tweens.add({
-    targets: outerGlow,
-    alpha: 0.28,
-    scale: 1.08,
+    targets: [outerGlow, farGlow],
+    alpha: { from: 0.18, to: 0.38 },
+    scale: 1.1,
     duration: 900,
     yoyo: true,
     repeat: -1,
@@ -472,9 +472,11 @@ export function recolorDrawnLantern(lantern: Phaser.GameObjects.Container, hue: 
   const color = HUE_HEX[hue];
   const outerGlow = lantern.getData('outerGlow') as Phaser.GameObjects.Arc | undefined;
   const midGlow = lantern.getData('midGlow') as Phaser.GameObjects.Arc | undefined;
+  const farGlow = lantern.getData('farGlow') as Phaser.GameObjects.Arc | undefined;
   const flame = lantern.getData('flame') as Phaser.GameObjects.Ellipse | undefined;
-  outerGlow?.setFillStyle(color, 0.2);
-  midGlow?.setFillStyle(color, 0.3);
+  outerGlow?.setFillStyle(color, 0.28);
+  midGlow?.setFillStyle(color, 0.4);
+  farGlow?.setFillStyle(color, 0.14);
   flame?.setFillStyle(color, 1);
 }
 

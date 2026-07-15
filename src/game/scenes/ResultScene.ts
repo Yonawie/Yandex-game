@@ -54,7 +54,7 @@ export class ResultScene extends Phaser.Scene {
       .text(width / 2, height * 0.12, tf('gameOver'), {
         fontFamily: 'Fraunces, Georgia, serif',
         fontSize: '52px',
-        color: '#F7F3E8',
+        color: '#FFF8EC',
       })
       .setOrigin(0.5);
 
@@ -63,7 +63,7 @@ export class ResultScene extends Phaser.Scene {
         .text(width / 2, height * 0.19, tf('newRecord'), {
           fontFamily: 'Outfit, sans-serif',
           fontSize: '24px',
-          color: '#F4A261',
+          color: '#FFB347',
         })
         .setOrigin(0.5);
       playTone('combo', 8);
@@ -75,7 +75,7 @@ export class ResultScene extends Phaser.Scene {
       .text(width / 2, height * 0.27, `${tf('score')}: ${score}`, {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '34px',
-        color: '#F7F3E8',
+        color: '#FFF8EC',
       })
       .setOrigin(0.5);
 
@@ -83,7 +83,7 @@ export class ResultScene extends Phaser.Scene {
       .text(width / 2, height * 0.33, `${tf('height')}: ${runHeight}`, {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '22px',
-        color: '#9BB0C1',
+        color: '#D6E8F2',
       })
       .setOrigin(0.5);
 
@@ -92,7 +92,7 @@ export class ResultScene extends Phaser.Scene {
       .text(width / 2, height * 0.4, `+${earned} ${tf('coins')}`, {
         fontFamily: 'Outfit, sans-serif',
         fontSize: '22px',
-        color: '#8ECAE6',
+        color: '#A8E4F5',
         align: 'center',
       })
       .setOrigin(0.5);
