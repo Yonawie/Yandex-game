@@ -12,6 +12,8 @@ export class Renderer {
   w = 390;
   h = 700;
   dpr = 1;
+  /** When true, Pixi WorldView owns backdrop/wall/VFX — HUD stays transparent. */
+  worldMode = true;
 
   board = { x: 0, y: 0, w: 0, h: 0, cw: 0, ch: 0 };
   hits: { id: string; x: number; y: number; w: number; h: number }[] = [];
@@ -46,14 +48,19 @@ export class Renderer {
     const { ctx, w, h, game } = this;
     this.hits = [];
     const S = game.style();
+    const world = this.worldMode;
 
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, S.bg[0]);
-    g.addColorStop(0.48, S.bg[1]);
-    g.addColorStop(1, S.bg[2]);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-    this.drawAtmosphere(t);
+    if (world) {
+      ctx.clearRect(0, 0, w, h);
+    } else {
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, S.bg[0]);
+      g.addColorStop(0.48, S.bg[1]);
+      g.addColorStop(1, S.bg[2]);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+      this.drawAtmosphere(t);
+    }
 
     if (game.phase === "menu") {
       this.drawMenu(t);
@@ -71,12 +78,17 @@ export class Renderer {
     ctx.translate(shakeX, shakeY);
 
     this.drawHud(t);
-    this.drawCeilingBeam(t);
-    this.drawWall(t);
-    this.drawCracks(t);
-    this.drawStamp(t);
-    this.drawParticles();
-    this.drawFloats();
+    if (!world) {
+      this.drawCeilingBeam(t);
+      this.drawWall(t);
+      this.drawCracks(t);
+      this.drawStamp(t);
+      this.drawParticles();
+      this.drawFloats();
+    } else {
+      // floats remain readable on HUD layer
+      this.drawFloats();
+    }
     ctx.restore();
 
     this.drawPressure(t);
@@ -84,7 +96,7 @@ export class Renderer {
     this.drawActions(t);
     this.drawMessage();
 
-    if (game.flash > 0) {
+    if (game.flash > 0 && !world) {
       ctx.save();
       ctx.globalAlpha = Math.min(0.38, game.flash);
       ctx.fillStyle = S.accentHot;
@@ -232,6 +244,11 @@ export class Renderer {
     const { ctx, w, h, game } = this;
     const S = game.style();
 
+    if (this.worldMode) {
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.fillRect(0, 0, w, h);
+    }
+
     // passive demo wall behind logo
     this.drawDemoWall(t);
 
@@ -352,6 +369,11 @@ export class Renderer {
   private drawShop(t: number) {
     const { ctx, w, h, game } = this;
     const S = game.style();
+
+    if (this.worldMode) {
+      ctx.fillStyle = "rgba(0,0,0,0.48)";
+      ctx.fillRect(0, 0, w, h);
+    }
 
     ctx.fillStyle = S.ink;
     ctx.font = `800 28px ${DISPLAY}`;

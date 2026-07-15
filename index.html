@@ -33,15 +33,35 @@
         -webkit-user-select: none;
         font-family: Manrope, system-ui, sans-serif;
       }
+      #stage {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        margin: 0 auto;
+        max-width: 480px;
+      }
+      #world,
       #game {
+        position: absolute;
+        left: 0;
+        top: 0;
         display: block;
         touch-action: none;
+      }
+      #world {
+        z-index: 0;
+      }
+      #game {
+        z-index: 1;
       }
     </style>
     <script src="./sdk.js" async></script>
   </head>
   <body>
-    <canvas id="game"></canvas>
+    <div id="stage">
+      <canvas id="world"></canvas>
+      <canvas id="game"></canvas>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

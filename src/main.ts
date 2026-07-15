@@ -3,6 +3,8 @@ import { StyleId } from "./data/styles";
 import { Sfx } from "./game/audio/sfx";
 import { Game } from "./game/Game";
 import { Renderer } from "./game/Renderer";
+import { VfxDirector } from "./game/visual/VfxDirector";
+import { WorldView } from "./game/visual/WorldView";
 
 declare global {
   interface Window {
@@ -27,9 +29,16 @@ declare global {
   }
 }
 
+const stage = document.getElementById("stage") as HTMLDivElement;
+const worldCanvas = document.getElementById("world") as HTMLCanvasElement;
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const game = new Game();
 const renderer = new Renderer(canvas, game);
+renderer.worldMode = true;
+
+const world = new WorldView(worldCanvas, game);
+let vfx: VfxDirector | null = null;
+let worldReady = false;
 
 let ysdk: Awaited<ReturnType<NonNullable<typeof window.YaGames>["init"]>> | null = null;
 let deathsSinceFs = 0;
@@ -38,8 +47,31 @@ let gameplayOn = false;
 function resize() {
   const w = Math.min(window.innerWidth, 480);
   const h = window.innerHeight;
+  stage.style.width = `${w}px`;
+  stage.style.height = `${h}px`;
+  stage.style.marginLeft = `${(window.innerWidth - w) / 2}px`;
   renderer.resize(w, h);
-  canvas.style.marginLeft = `${(window.innerWidth - w) / 2}px`;
+  if (worldReady) world.resize(w, h);
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
+}
+
+async function bootVisual() {
+  try {
+    await world.init();
+    worldReady = true;
+    vfx = new VfxDirector(world);
+    game.onStrike = (payload) => {
+      vfx?.playStrike({
+        ...payload,
+        style: game.style(),
+      });
+    };
+    resize();
+  } catch (err) {
+    console.warn("WorldView init failed, fallback to Canvas", err);
+    renderer.worldMode = false;
+  }
 }
 
 async function initYandex() {
@@ -114,6 +146,7 @@ function handleUi(id: string) {
       game.undoLast();
       break;
     case "submit":
+      Sfx.strikeButton();
       game.submit();
       break;
     case "reshuffle":
@@ -164,7 +197,6 @@ canvas.addEventListener(
   { passive: true },
 );
 
-// shop scroll via wheel
 canvas.addEventListener(
   "wheel",
   (e) => {
@@ -178,7 +210,10 @@ canvas.addEventListener(
 window.addEventListener("keydown", (e) => {
   if (game.phase === "shop" && e.key === "Escape") game.closeShop();
   if (game.phase !== "playing") return;
-  if (e.key === "Enter") game.submit();
+  if (e.key === "Enter") {
+    Sfx.strikeButton();
+    game.submit();
+  }
   if (e.key === "Backspace" || e.key === "Escape") game.undoLast();
 });
 
@@ -189,15 +224,18 @@ let last = performance.now();
 function frame(now: number) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
+  const t = now / 1000;
   game.update(dt);
   if (game.phase === "result" && gameplayOn) {
     gameplayStop();
     deathsSinceFs++;
     maybeFullscreen();
   }
-  renderer.draw(now / 1000);
+  if (worldReady) world.sync(t);
+  renderer.draw(t);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
+void bootVisual();
 void initYandex();

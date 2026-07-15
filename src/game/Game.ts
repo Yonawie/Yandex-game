@@ -140,6 +140,12 @@ export class Game {
   wallRise = 0;
   /** cell ids that current word would hit (for highlight) */
   previewIds = new Set<number>();
+  /** External cinematic VFX hook (Pixi director). */
+  onStrike: ((payload: {
+    word: string;
+    cells: { col: number; row: number; letter: string }[];
+    heavy: boolean;
+  }) => void) | null = null;
 
   style(): VisualStyle {
     return styleById(this.save.equipped);
@@ -392,14 +398,23 @@ export class Game {
         }
       }
       this.shocks.push({ x: 0.5, y: 0.45, r: 0, max: 1.85, life: 0.7 });
-      Sfx.pop();
       this.flash = 0.35;
       this.shake = 0.45;
     } else {
       this.shocks.push({ x: 0.5, y: 0.45, r: 0, max: 1.1, life: 0.4 });
-      Sfx.valid();
       this.shake = 0.22;
     }
+
+    Sfx.smash(this.style().breakLabel, doEcho);
+    this.onStrike?.({
+      word,
+      heavy: doEcho,
+      cells: [...destroySet.values()].map((t) => ({
+        col: t.col,
+        row: t.row,
+        letter: t.cell.letter,
+      })),
+    });
 
     const fallen: string[] = [];
     const mirrors: WallCell[] = [];
