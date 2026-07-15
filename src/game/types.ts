@@ -1,12 +1,10 @@
-export type MultKind = "x2" | "x3" | "pop";
-
-export type CellState = {
-  c: number;
-  r: number;
-  letter: string | null;
-  brick: boolean;
-  hiddenMult: MultKind | null;
-  activeMult: MultKind | null;
+export type WallCell = {
+  letter: string;
+  /** Minimum word length required to break this brick (0 = normal) */
+  armor: number;
+  /** When broken, spawns pressure at the top of a short column */
+  mirror: boolean;
+  id: number;
 };
 
 export type Particle = {
@@ -18,14 +16,7 @@ export type Particle = {
   max: number;
   color: string;
   size: number;
-};
-
-export type Shockwave = {
-  x: number;
-  y: number;
-  r: number;
-  max: number;
-  life: number;
+  letter?: string;
 };
 
 export type FloatText = {
@@ -34,4 +25,12 @@ export type FloatText = {
   text: string;
   life: number;
   color: string;
+};
+
+export type Shockwave = {
+  x: number;
+  y: number;
+  r: number;
+  max: number;
+  life: number;
 };

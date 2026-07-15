@@ -7,7 +7,7 @@ import archiver from "archiver";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = join(root, "dist");
 const outDir = join(root, "release");
-const out = join(outDir, "sotoslov-yandex.zip");
+const out = join(outDir, "echo-yandex.zip");
 
 await mkdir(outDir, { recursive: true });
 

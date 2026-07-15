@@ -14,51 +14,45 @@ export const LETTER_SCORE: Record<string, number> = {
 
 export const RARE_LETTERS = new Set(["Ф", "Ц", "Щ"]);
 
-export const TRAY_SIZE = 7;
+export const TRAY_SIZE = 8;
 
 export function lengthCoef(len: number): number {
   if (len >= 8) return 3;
-  if (len >= 6) return 2;
-  if (len >= 4) return 1.4;
+  if (len >= 6) return 2.2;
+  if (len >= 4) return 1.5;
   return 1;
 }
 
-/** Soft-grid board size by difficulty (cols × rows). */
-export function boardSize(diff: Difficulty): { cols: number; rows: number } {
-  switch (diff) {
-    case "easy":
-      return { cols: 7, rows: 8 };
-    case "normal":
-      return { cols: 6, rows: 7 };
-    case "hard":
-      return { cols: 5, rows: 6 };
-    case "infinity":
-      return { cols: 8, rows: 9 };
-  }
-}
+export type EchoBalance = {
+  cols: number;
+  maxH: number;
+  startRows: number;
+  /** seconds between forced wall growth (also grows after a resolved turn) */
+  growEvery: number;
+  echoWindow: number;
+  armorChance: number;
+  mirrorChance: number;
+};
 
-export function popChance(diff: Difficulty): number {
+export function balanceFor(diff: Difficulty): EchoBalance {
   switch (diff) {
     case "easy":
-      return 0.35;
+      return { cols: 6, maxH: 10, startRows: 2, growEvery: 9, echoWindow: 3.5, armorChance: 0, mirrorChance: 0 };
     case "normal":
-    case "infinity":
-      return 0.25;
+      return { cols: 7, maxH: 10, startRows: 3, growEvery: 7, echoWindow: 3, armorChance: 0.05, mirrorChance: 0 };
     case "hard":
-      return 0.15;
+      return { cols: 7, maxH: 9, startRows: 3, growEvery: 5.5, echoWindow: 2.6, armorChance: 0.12, mirrorChance: 0.06 };
+    case "infinity":
+      return { cols: 8, maxH: 11, startRows: 3, growEvery: 6.5, echoWindow: 3, armorChance: 0.18, mirrorChance: 0.1 };
   }
 }
 
 export function rareComboMult(streak: number): number {
-  if (streak >= 3) return 2.2;
-  if (streak === 2) return 1.6;
-  if (streak === 1) return 1.25;
+  if (streak >= 3) return 2.4;
+  if (streak === 2) return 1.7;
+  if (streak === 1) return 1.3;
   return 1;
 }
 
-export const INFINITY_CLEAR_BRICK_THRESHOLD = 8;
-export const INFINITY_CLEAR_OCCUPANCY = 0.15;
-export const INFINITY_MULT_STEP = 1.25;
+export const INFINITY_MULT_STEP = 1.2;
 export const INFINITY_MULT_CAP = 5;
-export const MIN_COLS = 4;
-export const MIN_ROWS = 5;

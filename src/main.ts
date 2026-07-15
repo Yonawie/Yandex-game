@@ -38,7 +38,6 @@ function resize() {
   const w = Math.min(window.innerWidth, 480);
   const h = window.innerHeight;
   renderer.resize(w, h);
-  // center canvas in body
   canvas.style.marginLeft = `${(window.innerWidth - w) / 2}px`;
 }
 
@@ -49,7 +48,7 @@ async function initYandex() {
       ysdk.features?.LoadingAPI?.ready();
     }
   } catch {
-    // offline / stub
+    /* stub */
   }
 }
 
@@ -75,14 +74,7 @@ function startDiff(d: Difficulty) {
 function onPointer(x: number, y: number) {
   Sfx.unlock();
   const id = renderer.hitTest(x, y);
-  if (id) {
-    handleUi(id);
-    return;
-  }
-  if (game.phase === "playing") {
-    const a = renderer.cellAt(x, y);
-    game.tapCell(a);
-  }
+  if (id) handleUi(id);
 }
 
 function handleUi(id: string) {
@@ -106,10 +98,9 @@ function handleUi(id: string) {
     case "undo":
       game.undoLast();
       break;
-    case "submit": {
+    case "submit":
       game.submit();
       break;
-    }
     case "reshuffle":
       game.reshuffleTray();
       break;
@@ -135,10 +126,7 @@ function showRewardedContinue() {
     ysdk.adv.showRewardedVideo({
       callbacks: {
         onRewarded: apply,
-        onClose: () => {
-          /* no reward if closed early — SDK usually still calls onRewarded only when earned */
-        },
-        onError: () => apply(), // offline stub path
+        onError: () => apply(),
       },
     });
   } else {
@@ -149,9 +137,7 @@ function showRewardedContinue() {
 function maybeFullscreen() {
   if (deathsSinceFs < 2) return;
   deathsSinceFs = 0;
-  if (ysdk?.adv?.showFullscreenAdv) {
-    ysdk.adv.showFullscreenAdv({ callbacks: {} });
-  }
+  ysdk?.adv?.showFullscreenAdv?.({ callbacks: {} });
 }
 
 canvas.addEventListener(
@@ -177,7 +163,6 @@ function frame(now: number) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   game.update(dt);
-  // detect result transition mid-frame (full board)
   if (game.phase === "result" && gameplayOn) {
     gameplayStop();
     deathsSinceFs++;
