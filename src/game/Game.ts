@@ -140,7 +140,7 @@ export class Game {
   wallRise = 0;
   /** cell ids that current word would hit (for highlight) */
   previewIds = new Set<number>();
-  /** External cinematic VFX hook (Pixi director). */
+  /** Strike VFX hook (Phaser juice / particles). */
   onStrike: ((payload: {
     word: string;
     cells: { col: number; row: number; letter: string }[];

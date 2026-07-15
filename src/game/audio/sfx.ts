@@ -1,8 +1,4 @@
-import { Howler } from "howler";
-
 type Voice = OscillatorType;
-
-Howler.volume(0.88);
 
 function ctx(): AudioContext | null {
   try {
@@ -176,7 +172,6 @@ export const Sfx = {
   unlock() {
     const c = ctx();
     if (c?.state === "suspended") void c.resume();
-    Howler.mute(false);
   },
   place() {
     layeredHit({

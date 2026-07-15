@@ -1,55 +1,43 @@
-import gsap from "gsap";
-
-export type JuicePose = {
-  x: number;
-  y: number;
-  scale: number;
-  rot: number;
-};
-
 /**
  * Камера сока: hit-stop, punch-zoom, shake.
- * Применяется CSS-transform к #stage.
+ * Без GSAP — Phaser tweens / собственный decay.
  */
 export class JuiceCamera {
-  pose: JuicePose = { x: 0, y: 0, scale: 1, rot: 0 };
+  pose = { x: 0, y: 0, scale: 1, rot: 0 };
   hitStop = 0;
   private shakeAmp = 0;
+  private punchVel = 0;
   private target: HTMLElement | null = null;
-  private punchTween: gsap.core.Tween | null = null;
+  /** Optional Phaser camera mirror */
+  private phaserCam: {
+    setZoom: (z: number) => void;
+    setScroll: (x: number, y: number) => void;
+    setRotation: (r: number) => void;
+  } | null = null;
 
   attach(el: HTMLElement) {
     this.target = el;
   }
 
-  /** Заморозка мира на ms (сек). */
+  attachPhaser(_cam: typeof this.phaserCam) {
+    // Camera zoom fights Scale.FIT — juice stays on CSS #game transform.
+    this.phaserCam = null;
+  }
+
   freeze(seconds = 0.055) {
     this.hitStop = Math.max(this.hitStop, seconds);
   }
 
-  punch(scale = 1.045, dur = 0.18) {
-    this.punchTween?.kill();
+  punch(scale = 1.045, _dur = 0.18) {
     this.pose.scale = scale;
-    this.punchTween = gsap.to(this.pose, {
-      scale: 1,
-      duration: dur,
-      ease: "power3.out",
-      onUpdate: () => this.apply(),
-    });
+    this.punchVel = (scale - 1) * 6;
     this.apply();
   }
 
-  shake(amp = 10, seconds = 0.22) {
+  shake(amp = 10, _seconds = 0.22) {
     this.shakeAmp = Math.max(this.shakeAmp, amp);
-    gsap.to(this, {
-      shakeAmp: 0,
-      duration: seconds,
-      ease: "power2.out",
-      onUpdate: () => this.apply(),
-    });
   }
 
-  /** Полный пакет удара. */
   strike(heavy = false) {
     this.freeze(heavy ? 0.07 : 0.05);
     this.punch(heavy ? 1.06 : 1.04, heavy ? 0.22 : 0.16);
@@ -57,32 +45,51 @@ export class JuiceCamera {
   }
 
   update(dt: number) {
-    if (this.hitStop > 0) {
-      this.hitStop = Math.max(0, this.hitStop - dt);
+    if (this.hitStop > 0) this.hitStop = Math.max(0, this.hitStop - dt);
+
+    if (this.pose.scale > 1.001) {
+      this.pose.scale = Math.max(1, this.pose.scale - this.punchVel * dt);
+      this.punchVel += (this.pose.scale - 1) * 18 * dt;
+    } else {
+      this.pose.scale = 1;
+      this.punchVel = 0;
     }
+
     if (this.shakeAmp > 0.2) {
+      this.shakeAmp = Math.max(0, this.shakeAmp - dt * 42);
       this.pose.x = (Math.random() - 0.5) * this.shakeAmp;
       this.pose.y = (Math.random() - 0.5) * this.shakeAmp * 0.85;
       this.pose.rot = (Math.random() - 0.5) * 0.012 * this.shakeAmp;
       this.apply();
-    } else if (this.pose.x !== 0 || this.pose.y !== 0) {
+    } else if (this.pose.x !== 0 || this.pose.y !== 0 || this.pose.scale !== 1) {
       this.pose.x = 0;
       this.pose.y = 0;
       this.pose.rot = 0;
       this.apply();
+    } else {
+      this.apply();
     }
   }
 
-  /** true пока мир на паузе сока */
   get frozen() {
     return this.hitStop > 0;
   }
 
   private apply() {
-    if (!this.target) return;
     const { x, y, scale, rot } = this.pose;
-    this.target.style.transform = `translate(${x}px, ${y}px) rotate(${rot}rad) scale(${scale})`;
-    this.target.style.transformOrigin = "50% 45%";
+    if (this.target) {
+      this.target.style.transform = `translate(${x}px, ${y}px) rotate(${rot}rad) scale(${scale})`;
+      this.target.style.transformOrigin = "50% 45%";
+    }
+    if (this.phaserCam) {
+      try {
+        this.phaserCam.setZoom(scale);
+        this.phaserCam.setScroll(-x * 0.5, -y * 0.5);
+        this.phaserCam.setRotation(rot);
+      } catch {
+        /* scene torn down */
+      }
+    }
   }
 }
 

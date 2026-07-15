@@ -1,0 +1,84 @@
+export type Locale = "ru" | "en";
+
+type Dict = Record<string, string>;
+
+const ru: Dict = {
+  brand: "Эхо",
+  brandHero: "ЭХО",
+  tagline: "Ломай стену словом",
+  play: "ИГРАТЬ",
+  easy: "Лёгкий",
+  hard: "Сложный",
+  infinity: "∞ Бесконечность",
+  styles: "Стили мира",
+  strike: "УДАР",
+  undo: "↶",
+  reshuffle: "↻",
+  again: "Ещё раз",
+  continue: "Продолжить",
+  toMenu: "В меню",
+  shopTitle: "Стили",
+  close: "Закрыть",
+  record: "рекорд",
+  shards: "осколки",
+  premiumRibbon: "ЯНДЕКС СТЕК · PHASER",
+  amberLine: "янтарь · коралл · удар",
+  gameOver: "Стена придавила",
+  score: "Счёт",
+};
+
+const en: Dict = {
+  brand: "Echo",
+  brandHero: "ECHO",
+  tagline: "Break the wall with a word",
+  play: "PLAY",
+  easy: "Easy",
+  hard: "Hard",
+  infinity: "∞ Endless",
+  styles: "World styles",
+  strike: "STRIKE",
+  undo: "↶",
+  reshuffle: "↻",
+  again: "Again",
+  continue: "Continue",
+  toMenu: "Menu",
+  shopTitle: "Styles",
+  close: "Close",
+  record: "best",
+  shards: "shards",
+  premiumRibbon: "YANDEX STACK · PHASER",
+  amberLine: "amber · coral · strike",
+  gameOver: "The wall crushed you",
+  score: "Score",
+};
+
+const tables: Record<Locale, Dict> = { ru, en };
+
+let locale: Locale = "ru";
+
+export function detectLocale(): Locale {
+  try {
+    const lang = (navigator.language || "ru").toLowerCase();
+    // Yandex Games default RU; English only when explicitly en*
+    return lang.startsWith("en") ? "en" : "ru";
+  } catch {
+    return "ru";
+  }
+}
+
+export function setLocale(next: Locale) {
+  locale = next;
+}
+
+export function getLocale(): Locale {
+  return locale;
+}
+
+export function t(key: string): string {
+  const table = tables[locale] ?? ru;
+  return table[key] ?? ru[key] ?? key;
+}
+
+export function initI18n() {
+  setLocale(detectLocale());
+}

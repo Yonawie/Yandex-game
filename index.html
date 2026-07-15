@@ -6,12 +6,12 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#0A1C24" />
+    <meta name="theme-color" content="#0A0610" />
     <meta
       name="description"
-      content="Эхо Premium v4 — ломай стену букв словом. Видимый апгрейд."
+      content="Эхо — ломай стену букв словом. Яндекс Игры · Phaser 3."
     />
-    <title>Эхо · Premium v4</title>
+    <title>Эхо</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,44 +27,28 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: radial-gradient(ellipse at 50% 0%, #6a1838 0%, #1a1028 40%, #050e12 100%);
+        background: radial-gradient(ellipse at 50% 0%, #2a1830 0%, #0a0610 55%, #050608 100%);
         touch-action: none;
         user-select: none;
         -webkit-user-select: none;
         font-family: Manrope, system-ui, sans-serif;
       }
-      #stage {
-        position: relative;
+      #game {
         width: 100%;
         height: 100%;
-        margin: 0 auto;
         max-width: 480px;
-        will-change: transform;
+        margin: 0 auto;
+        overflow: hidden;
         box-shadow: 0 0 80px rgba(0, 0, 0, 0.55);
       }
-      #world,
-      #game {
-        position: absolute;
-        left: 0;
-        top: 0;
+      #game canvas {
         display: block;
-        touch-action: none;
-      }
-      #world {
-        z-index: 2;
-        pointer-events: none;
-      }
-      #game {
-        z-index: 1;
       }
     </style>
     <script src="./sdk.js" async></script>
   </head>
   <body>
-    <div id="stage">
-      <canvas id="world"></canvas>
-      <canvas id="game"></canvas>
-    </div>
-    <script type="module" src="/src/main.ts?v=premium4"></script>
+    <div id="game"></div>
+    <script type="module" src="/src/main.ts?v=phaser1"></script>
   </body>
 </html>

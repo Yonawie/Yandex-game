@@ -1,5 +1,6 @@
 import { RARE_LETTERS, rareComboMult } from "../data/balance";
 import { STYLES } from "../data/styles";
+import { t as tr } from "../i18n";
 import { Game } from "./Game";
 import { paintColorGrade } from "./visual/ColorGrade";
 import { CubeKind, MaterialFactory } from "./visual/MaterialFactory";
@@ -287,7 +288,7 @@ export class Renderer {
     ctx.font = `800 13px ${FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("ВИДИМЫЙ АПГРЕЙД · PREMIUM v4", w / 2, 17);
+    ctx.fillText(tr("premiumRibbon"), w / 2, 17);
     ctx.textBaseline = "alphabetic";
 
     // huge brand wordmark
@@ -297,15 +298,16 @@ export class Renderer {
     ctx.font = `900 ${Math.min(100, w * 0.3)}px ${DISPLAY}`;
     ctx.shadowColor = S.rare;
     ctx.shadowBlur = 40;
-    ctx.fillText("ЭХО", w / 2, h * 0.16);
+    ctx.fillText(tr("brandHero"), w / 2, h * 0.16);
     ctx.shadowBlur = 0;
     ctx.fillStyle = S.accent;
     ctx.font = `700 14px ${FONT}`;
-    ctx.fillText("янтарь · коралл · удар", w / 2, h * 0.16 + 26);
+    ctx.fillText(tr("amberLine"), w / 2, h * 0.16 + 26);
     ctx.restore();
 
-    // giant logo cubes (MaterialFactory v3 tiles)
-    const logo = ["Э", "Х", "О"];
+    // giant logo cubes (MaterialFactory tiles)
+    const logo = tr("brandHero").slice(0, 3).split("");
+    while (logo.length < 3) logo.push("·");
     const cw = Math.min(86, w * 0.22);
     const gap = 16;
     const total = logo.length * cw + (logo.length - 1) * gap;
@@ -325,7 +327,7 @@ export class Renderer {
     ctx.fillStyle = S.accentHot;
     ctx.font = `600 16px ${FONT}`;
     ctx.textAlign = "center";
-    ctx.fillText("Ломай стену словом", w / 2, y0 + cw + 38);
+    ctx.fillText(tr("tagline"), w / 2, y0 + cw + 38);
 
     // shards counter
     ctx.save();
@@ -339,15 +341,15 @@ export class Renderer {
     ctx.stroke();
     ctx.fillStyle = S.accentHot;
     ctx.font = `800 14px ${FONT}`;
-    ctx.fillText(`◆ ${game.save.coins}  ·  рекорд ${game.save.best}`, w / 2, py + 23);
+    ctx.fillText(`◆ ${game.save.coins}  ·  ${tr("record")} ${game.save.best}`, w / 2, py + 23);
     ctx.restore();
 
     const btns = [
-      { id: "play-normal", label: "ИГРАТЬ", primary: true },
-      { id: "play-easy", label: "Лёгкий", primary: false },
-      { id: "play-hard", label: "Сложный", primary: false },
-      { id: "play-infinity", label: "∞ Бесконечность", primary: true },
-      { id: "open-shop", label: "Стили мира", primary: false },
+      { id: "play-normal", label: tr("play"), primary: true },
+      { id: "play-easy", label: tr("easy"), primary: false },
+      { id: "play-hard", label: tr("hard"), primary: false },
+      { id: "play-infinity", label: tr("infinity"), primary: true },
+      { id: "open-shop", label: tr("styles"), primary: false },
     ];
     btns.forEach((b, i) => {
       const bw = Math.min(320, w * 0.86);
@@ -371,10 +373,10 @@ export class Renderer {
     ctx.fillStyle = S.ink;
     ctx.font = `800 28px ${DISPLAY}`;
     ctx.textAlign = "center";
-    ctx.fillText("Стили", w / 2, 48);
+    ctx.fillText(tr("shopTitle"), w / 2, 48);
     ctx.fillStyle = S.accentHot;
     ctx.font = `700 13px ${FONT}`;
-    ctx.fillText(`◆ ${game.save.coins} осколков`, w / 2, 70);
+    ctx.fillText(`◆ ${game.save.coins} ${tr("shards")}`, w / 2, 70);
 
     const rowH = 148;
     const startY = 88;
@@ -487,9 +489,9 @@ export class Renderer {
       game.difficulty === "infinity"
         ? `∞ ×${game.infinityMult.toFixed(2)}`
         : game.difficulty === "easy"
-          ? "Лёгкий"
+          ? tr("easy")
           : game.difficulty === "hard"
-            ? "Сложный"
+            ? tr("hard")
             : "Норма";
     ctx.fillStyle = S.accent;
     ctx.font = `700 12px ${FONT}`;
@@ -1073,7 +1075,7 @@ export class Renderer {
     ctx.font = `800 20px ${DISPLAY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("УДАР", sx - (sw - strikeW) / 2 + sw / 2, drawY + sh / 2 + 1);
+    ctx.fillText(tr("strike"), sx - (sw - strikeW) / 2 + sw / 2, drawY + sh / 2 + 1);
     ctx.restore();
 
     this.mechBtn(sx + strikeW + gap, y + 4, side, 44, "↻", "reshuffle", false);
@@ -1130,12 +1132,12 @@ export class Renderer {
     ctx.font = `600 12px ${FONT}`;
     ctx.fillText(`баланс ◆ ${game.save.coins}`, w / 2, h * 0.34 + 94);
 
-    this.mechBtn((w - 250) / 2, h * 0.52, 250, 48, "Ещё раз", "again", true);
+    this.mechBtn((w - 250) / 2, h * 0.52, 250, 48, tr("again"), "again", true);
     if (!game.continueUsed) {
       this.mechBtn((w - 250) / 2, h * 0.52 + 56, 250, 46, "Реклама · срезать верх", "continue", false);
     }
-    this.mechBtn((w - 250) / 2, h * 0.52 + 112, 250, 46, "Стили", "open-shop", false);
-    this.mechBtn((w - 250) / 2, h * 0.52 + 168, 250, 46, "В меню", "to-menu", false);
+    this.mechBtn((w - 250) / 2, h * 0.52 + 112, 250, 46, tr("shopTitle"), "open-shop", false);
+    this.mechBtn((w - 250) / 2, h * 0.52 + 168, 250, 46, tr("toMenu"), "to-menu", false);
   }
 
   private mechBtn(
