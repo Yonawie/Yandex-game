@@ -62,7 +62,7 @@ export class RetentionOverlay {
 
     const title = scene.add
       .text(width / 2, height * 0.14, tf('retention'), {
-        fontFamily: 'Fraunces, Georgia, serif',
+        fontFamily: 'Literata, Georgia, serif',
         fontSize: '34px',
         color: '#FFF8EC',
       })
@@ -71,7 +71,7 @@ export class RetentionOverlay {
 
     this.body = scene.add
       .text(width / 2, height * 0.2, '', {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '16px',
         color: '#C9DDE8',
         align: 'center',
@@ -82,7 +82,7 @@ export class RetentionOverlay {
 
     this.feedback = scene.add
       .text(width / 2, height * 0.4, '', {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '17px',
         color: '#FFB347',
         align: 'center',
@@ -187,7 +187,7 @@ export class RetentionOverlay {
       const g = scene.add.graphics();
       const label = scene.add
         .text(x, y, action.label(), {
-          fontFamily: 'Outfit, sans-serif',
+          fontFamily: 'Manrope, sans-serif',
           fontSize: '18px',
           color: '#0C1C2E',
           fontStyle: '600',
@@ -230,7 +230,7 @@ export class RetentionOverlay {
     closeG.strokeRoundedRect(width / 2 - closeW / 2, closeY - closeH / 2, closeW, closeH, 14);
     const close = scene.add
       .text(width / 2, closeY, tf('close'), {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '20px',
         color: '#E8F0F5',
       })

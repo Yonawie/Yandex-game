@@ -69,7 +69,7 @@ export class VfxDirector {
     const { width, height } = this.scene.scale;
     const t = this.scene.add
       .text(width / 2, height * 0.42, label, {
-        fontFamily: 'Fraunces, Georgia, serif',
+        fontFamily: 'Literata, Georgia, serif',
         fontSize: '56px',
         color,
         fontStyle: '700',

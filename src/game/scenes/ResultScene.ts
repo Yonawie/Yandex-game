@@ -44,7 +44,7 @@ export class ResultScene extends Phaser.Scene {
 
     const title = this.add
       .text(width / 2, height * 0.14, tf('gameOver'), {
-        fontFamily: 'Fraunces, Georgia, serif',
+        fontFamily: 'Literata, Georgia, serif',
         fontSize: '56px',
         color: '#FFF8EC',
       })
@@ -55,7 +55,7 @@ export class ResultScene extends Phaser.Scene {
     if (isRecord) {
       this.add
         .text(width / 2, height * 0.21, tf('newRecord'), {
-          fontFamily: 'Outfit, sans-serif',
+          fontFamily: 'Manrope, sans-serif',
           fontSize: '22px',
           color: '#FFB347',
         })
@@ -68,7 +68,7 @@ export class ResultScene extends Phaser.Scene {
 
     this.add
       .text(width / 2, height * 0.3, `${tf('score')}`, {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '16px',
         color: '#9BB0C1',
       })
@@ -77,7 +77,7 @@ export class ResultScene extends Phaser.Scene {
 
     this.add
       .text(width / 2, height * 0.36, `${score}`, {
-        fontFamily: 'Fraunces, Georgia, serif',
+        fontFamily: 'Literata, Georgia, serif',
         fontSize: '64px',
         color: '#FFF8EC',
       })
@@ -86,7 +86,7 @@ export class ResultScene extends Phaser.Scene {
 
     this.add
       .text(width / 2, height * 0.44, `${tf('height')}  ${runHeight}`, {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '20px',
         color: '#D6E8F2',
       })
@@ -96,7 +96,7 @@ export class ResultScene extends Phaser.Scene {
     const earned = Math.max(3, Math.floor(score / 12) + Math.floor(runHeight / 40));
     const info = this.add
       .text(width / 2, height * 0.52, `+${earned} ${tf('coins')}`, {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '18px',
         color: '#A8E4F5',
         align: 'center',
@@ -162,7 +162,7 @@ export class ResultScene extends Phaser.Scene {
   private makeGhostButton(x: number, y: number, label: string, onClick: () => void): void {
     const t = this.add
       .text(x, y, label, {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '20px',
         color: '#9BB0C1',
       })

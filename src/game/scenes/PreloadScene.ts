@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { generateTextures } from '@/game/assets/generate';
+import { promoteAtlasFrames } from '@/game/assets/atlas';
 import { yandex } from '@/sdk/yandex';
 import { setLang, tf } from '@/i18n';
 import { hydrateSave, setRemoteWriter, loadLocalSave } from '@/data/save';
@@ -35,68 +36,55 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   });
 }
 
-/**
- * Illustrated art from public/art — only clean keyed sprites.
- * Scenery extras (ridge/temple/lantern-string) stay procedural: bg-sky already paints them.
- */
-const ART_IMAGES: [string, string][] = [
-  ['bg-sky', 'bg-sky.png'],
-  ['silk-banner', 'art-banner.png'],
-  ['orb-amber', 'art-firefly-amber.png'],
-  ['orb-teal', 'art-firefly-teal.png'],
-  ['orb-coral', 'art-firefly-coral.png'],
-  ['void', 'art-void.png'],
-  ['portal-amber', 'art-portal-amber.png'],
-  ['portal-teal', 'art-portal-teal.png'],
-  ['portal-coral', 'art-portal-coral.png'],
-  ['shard', 'art-shard.png'],
-];
-
 export class PreloadScene extends Phaser.Scene {
   private bootStarted = false;
+  private bar!: Phaser.GameObjects.Rectangle;
 
   constructor() {
     super('Preload');
   }
 
   preload(): void {
-    this.load.setPath('art/');
-    for (const [key, file] of ART_IMAGES) {
-      this.load.image(key, file);
-    }
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, COLORS.bgTop);
+    const barBg = this.add.rectangle(width / 2, height * 0.55, 280, 10, 0x1b2838).setOrigin(0.5);
+    this.bar = this.add.rectangle(barBg.x - 140, barBg.y, 4, 10, COLORS.amber).setOrigin(0, 0.5);
+
+    this.load.on('progress', (value: number) => {
+      if (this.bar) this.bar.width = 4 + 276 * value;
+    });
+
+    // One atlas for entities + UI props (TexturePacker-style)
+    this.load.atlas('world', 'atlases/world.png', 'atlases/world.json');
+    // Hero sky — WebP
+    this.load.image('bg-sky', 'backgrounds/bg-sky.webp');
   }
 
   create(): void {
     const { width, height } = this.scale;
 
-    this.add.rectangle(width / 2, height / 2, width, height, COLORS.bgTop);
     if (this.textures.exists('bg-sky')) {
       this.add.image(width / 2, height / 2, 'bg-sky').setDisplaySize(width, height).setAlpha(0.85);
     }
+
+    promoteAtlasFrames(this, 'world');
+
     const title = this.add
       .text(width / 2, height * 0.42, tf('brand'), {
-        fontFamily: 'Fraunces, Georgia, serif',
+        fontFamily: 'Literata, Georgia, serif',
         fontSize: '58px',
         color: '#FFF8EC',
       })
       .setOrigin(0.5);
     title.setShadow(0, 4, '#FFB347', 14, true, true);
-    const barBg = this.add.rectangle(width / 2, height * 0.55, 280, 10, 0x1b2838).setOrigin(0.5);
-    const bar = this.add.rectangle(barBg.x - 140, barBg.y, 4, 10, COLORS.amber).setOrigin(0, 0.5);
+
     this.add
       .text(width / 2, height * 0.62, tf('loading'), {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '22px',
         color: '#9BB0C1',
       })
       .setOrigin(0.5);
-
-    this.tweens.add({
-      targets: bar,
-      width: 280,
-      duration: 600,
-      ease: 'Sine.easeInOut',
-    });
 
     if (!this.bootStarted) {
       this.bootStarted = true;

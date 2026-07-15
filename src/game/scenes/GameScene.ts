@@ -253,41 +253,41 @@ export class GameScene extends Phaser.Scene {
       this.stormRain.setDepth(6);
     }
 
-    this.add.image(28, 42, 'hud-chip').setOrigin(0, 0.5).setDisplaySize(210, 44).setDepth(39).setAlpha(0.9);
+    this.add.image(28, 56, 'hud-chip').setOrigin(0, 0.5).setDisplaySize(210, 44).setDepth(39).setAlpha(0.9);
     this.add
-      .image(width - 28, 42, 'hud-chip')
+      .image(width - 28, 56, 'hud-chip')
       .setOrigin(1, 0.5)
       .setDisplaySize(170, 44)
       .setDepth(39)
       .setAlpha(0.9);
 
     this.scoreText = this.add
-      .text(48, 30, `${tf('score')}: 0`, {
-        fontFamily: 'Outfit, sans-serif',
+      .text(48, 44, `${tf('score')}: 0`, {
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '24px',
         color: '#FFF8EC',
       })
       .setDepth(40);
     this.comboText = this.add
-      .text(48, 56, '', {
-        fontFamily: 'Outfit, sans-serif',
+      .text(48, 70, '', {
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '18px',
         color: '#FFB347',
       })
       .setDepth(40);
     this.heightText = this.add
-      .text(width - 48, 30, `${tf('height')}: 0`, {
-        fontFamily: 'Outfit, sans-serif',
+      .text(width - 48, 44, `${tf('height')}: 0`, {
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '20px',
         color: '#D6E8F2',
       })
       .setOrigin(1, 0)
       .setDepth(40);
 
-    this.colorBadge = this.add.image(56, 108, 'badge-amber').setDepth(40).setScale(1.15);
+    this.colorBadge = this.add.image(56, 122, 'badge-amber').setDepth(40).setScale(1.15);
     this.add
-      .text(78, 108, tf('yourLight'), {
-        fontFamily: 'Outfit, sans-serif',
+      .text(78, 122, tf('yourLight'), {
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '16px',
         color: '#FFF8EC',
       })
@@ -295,8 +295,8 @@ export class GameScene extends Phaser.Scene {
       .setDepth(40);
 
     this.add
-      .text(width / 2, height - 36, `${tf('collectHint')}  ·  ${tf('avoidHint')}`, {
-        fontFamily: 'Outfit, sans-serif',
+      .text(width / 2, height - 48, `${tf('collectHint')}  ·  ${tf('avoidHint')}`, {
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '18px',
         color: '#FFF8EC',
       })
@@ -306,7 +306,7 @@ export class GameScene extends Phaser.Scene {
 
     this.storyText = this.add
       .text(width / 2, height * 0.18, '', {
-        fontFamily: 'Fraunces, Georgia, serif',
+        fontFamily: 'Literata, Georgia, serif',
         fontSize: '26px',
         color: '#FFF8EC',
         align: 'center',
@@ -318,7 +318,7 @@ export class GameScene extends Phaser.Scene {
 
     this.eventText = this.add
       .text(width / 2, height * 0.12, '', {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '20px',
         color: '#A8E4F5',
       })
@@ -340,7 +340,7 @@ export class GameScene extends Phaser.Scene {
       .setFlipX(true);
     this.ghostHint = this.add
       .text(width / 2, height * 0.48, tf('ghostHint'), {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '20px',
         color: '#F7F3E8',
       })
@@ -780,7 +780,7 @@ export class GameScene extends Phaser.Scene {
     const hex = `#${color.toString(16).padStart(6, '0')}`;
     const t = this.add
       .text(x, y, label, {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '22px',
         color: hex,
         fontStyle: '700',
@@ -896,7 +896,7 @@ export class GameScene extends Phaser.Scene {
     const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.55).setDepth(60);
     const title = this.add
       .text(width / 2, height * 0.38, tf('gameOver'), {
-        fontFamily: 'Fraunces, Georgia, serif',
+        fontFamily: 'Literata, Georgia, serif',
         fontSize: '48px',
         color: '#FFF8EC',
       })
@@ -910,7 +910,7 @@ export class GameScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     const adText = this.add
       .text(width / 2, height * 0.52, tf('continueAd'), {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '24px',
         color: '#0C1C2E',
       })
@@ -919,7 +919,7 @@ export class GameScene extends Phaser.Scene {
 
     const skip = this.add
       .text(width / 2, height * 0.62, tf('again'), {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '20px',
         color: '#D6E8F2',
       })

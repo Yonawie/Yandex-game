@@ -192,13 +192,15 @@ Figma → Rive → canvas runtime (только меню, не геймплей)
 
 | Пачка | Объём |
 |---|---|
-| 1 atlas мира / entities | ~1–2 MB WebP/PNG trim |
-| 1 atlas UI | кнопки, иконки, штамп |
-| 1 atlas VFX | 6–12 кадров crack/spark/dust |
-| Фоны | 1 hero + 2–3 parallax (или один painted sky) |
-| SFX | 8–12 коротких / или synth-WebAudio |
-| Шрифты | 1 display + 1 UI, **self-hosted WOFF2** |
+| 1 atlas мира / entities | `public/atlases/world.png` (~150KB) |
+| 1 atlas UI | встроен в world / procedural HUD |
+| VFX | procedural ripple/shred/spark |
+| Фон | `backgrounds/bg-sky.webp` (~24KB) |
+| SFX | synth-WebAudio layered |
+| Шрифты | Literata + Manrope WOFF2 (self-hosted, Cyrillic) |
 | Store | icon 512, cover 16:9, 3–5 shots |
+
+Сборка атласа: `npm run atlas` (вход: `assets/source/art`).
 
 Правило: **сначала 1 премиум-скин неотразимым**, потом масштабируй.
 
@@ -206,16 +208,16 @@ Figma → Rive → canvas runtime (только меню, не геймплей)
 
 ## 8) Качество (чек перед модерацией)
 
-- [ ] 1 viewport = 1 композиция  
-- [ ] Бренд читается без навбара  
-- [ ] Action-зона не забита HUD  
-- [ ] Есть 1 фирменный beat (stamp / удар)  
-- [ ] Первая загрузка лёгкая  
-- [ ] 60 fps на mid Android  
-- [ ] Safe-area: палец не закрывает удар  
-- [ ] `ready()` один раз, gameplay sync корректен  
+- [x] 1 viewport = 1 композиция  
+- [x] Бренд читается без навбара  
+- [x] Action-зона не забита HUD (safe-area сдвиг)  
+- [x] Есть 1 фирменный beat (stamp / удар)  
+- [x] Первая загрузка лёгкая (atlas + webp sky)  
+- [ ] 60 fps на mid Android (проверь на стенде)  
+- [x] Safe-area: палец не закрывает удар / HUD от нотча  
+- [x] `ready()` один раз, gameplay sync корректен  
 - [ ] Лидерборд + реклама проверены на стенде  
-- [ ] Zip собирается одной командой (`npm run pack`)
+- [x] Zip собирается одной командой (`npm run pack`)
 
 Публикация: [`PUBLISH.md`](./PUBLISH.md).
 

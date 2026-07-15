@@ -6,13 +6,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "atlas": "node scripts/build-atlas.mjs",
+    "build": "npm run atlas && tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "play": "node scripts/play.mjs",
     "pack": "npm run build && node scripts/pack-yandex.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource/literata": "^5.2.8",
+    "@fontsource/manrope": "^5.2.8",
     "phaser": "^3.87.0"
   },
   "devDependencies": {

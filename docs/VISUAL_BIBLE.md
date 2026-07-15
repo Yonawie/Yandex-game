@@ -72,8 +72,9 @@
 - [x] Бренд читается без navbar  
 - [x] Есть фирменный beat (combo stamp)  
 - [x] Juice 8/8 на collect path  
-- [ ] Atlas pack / WebP budget  
-- [ ] Self-hosted WOFF2 (сейчас Google Fonts)  
+- [x] Atlas pack (`public/atlases/world.*` + `npm run atlas`)  
+- [x] WebP hero sky (`public/backgrounds/bg-sky.webp`)  
+- [x] Self-hosted WOFF2 (Literata + Manrope, Cyrillic)  
 - [ ] Skin меняет VFX+SFX pack целиком  
 
 ---
@@ -91,6 +92,14 @@ src/visual/
 src/game/assets/
   generate.ts   # procedural + shred
   scenery.ts    # parallax planes
+  atlas.ts      # promote atlas frames → texture keys
+public/
+  atlases/      # world.png + world.json
+  backgrounds/  # bg-sky.webp
+assets/source/art/  # source PNGs for atlas rebuild
 src/game/audio/sfx.ts
 docs/VISUAL_BIBLE.md
+docs/YANDEX_STACK.md
 ```
+
+Fonts: **Literata** (display) + **Manrope** (UI) — self-hosted, Cyrillic+Latin.

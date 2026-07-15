@@ -49,7 +49,7 @@ export class MenuScene extends Phaser.Scene {
     // ——— Hero column ———
     const brand = this.add
       .text(width / 2, height * 0.12, tf('brand'), {
-        fontFamily: 'Fraunces, Georgia, serif',
+        fontFamily: 'Literata, Georgia, serif',
         fontSize: '70px',
         color: '#FFF8EC',
       })
@@ -59,7 +59,7 @@ export class MenuScene extends Phaser.Scene {
 
     this.add
       .text(width / 2, height * 0.175, tf('tagline'), {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '18px',
         color: '#C9DDE8',
         align: 'center',
@@ -82,7 +82,7 @@ export class MenuScene extends Phaser.Scene {
     // compact stats under lantern
     this.add
       .text(width / 2, height * 0.46, `${tf('best')}  ${save.bestScore}`, {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '20px',
         color: '#FFB347',
       })
@@ -91,7 +91,7 @@ export class MenuScene extends Phaser.Scene {
 
     this.coinsText = this.add
       .text(width / 2, height * 0.49, `${tf('coins')}  ${save.coins}`, {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '16px',
         color: '#A8E4F5',
       })
@@ -100,7 +100,7 @@ export class MenuScene extends Phaser.Scene {
 
     this.retentionHint = this.add
       .text(width / 2, height * 0.525, '', {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '14px',
         color: '#E8F0F5',
       })
@@ -116,7 +116,7 @@ export class MenuScene extends Phaser.Scene {
     // mode
     this.modeText = this.add
       .text(width / 2, height * 0.575, '', {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '16px',
         color: '#FFF8EC',
       })
@@ -142,7 +142,7 @@ export class MenuScene extends Phaser.Scene {
     // skin
     this.skinName = this.add
       .text(width / 2, height * 0.77, '', {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '17px',
         color: '#FFF8EC',
       })
@@ -150,7 +150,7 @@ export class MenuScene extends Phaser.Scene {
       .setDepth(20);
     this.skinHint = this.add
       .text(width / 2, height * 0.8, '', {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '14px',
         color: '#9BB0C1',
       })
@@ -163,7 +163,7 @@ export class MenuScene extends Phaser.Scene {
     // retention hub — ghost text, not a huge chip over the art
     const hub = this.add
       .text(width / 2, height * 0.875, tf('retention'), {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '18px',
         color: '#FFB347',
       })
@@ -179,7 +179,7 @@ export class MenuScene extends Phaser.Scene {
     const soundLabel = save.sound ? tf('soundOn') : tf('soundOff');
     const soundBtn = this.add
       .text(width / 2, height * 0.93, soundLabel, {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '15px',
         color: '#9BB0C1',
       })
@@ -308,7 +308,7 @@ export class MenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     this.add
       .text(x, y, label, {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '24px',
         color: '#FFF8EC',
       })
@@ -335,7 +335,7 @@ export class MenuScene extends Phaser.Scene {
         height / 2 - 50,
         `${tf('tipTap')}\n\n${tf('tipColor')}\n\n${tf('tipPortal')}`,
         {
-          fontFamily: 'Outfit, sans-serif',
+          fontFamily: 'Manrope, sans-serif',
           fontSize: '22px',
           color: '#F7F3E8',
           align: 'center',
@@ -360,7 +360,7 @@ export class MenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     const ok = this.add
       .text(okX, okY, tf('gotIt'), {
-        fontFamily: 'Outfit, sans-serif',
+        fontFamily: 'Manrope, sans-serif',
         fontSize: '26px',
         color: '#0C1C2E',
         fontStyle: '700',

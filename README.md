@@ -12,6 +12,13 @@ Endless vertical arcade for **Яндекс Игры**.
 - Публикация: [`docs/PUBLISH.md`](docs/PUBLISH.md)
 - Витрина: [`store/STORE.md`](store/STORE.md)
 
+## Ассеты
+
+```bash
+npm run atlas   # assets/source/art → public/atlases + backgrounds/bg-sky.webp
+npm run pack    # atlas + build + zip
+```
+
 ## Проверка игры (самый простой способ)
 
 ```bash

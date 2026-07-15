@@ -40,7 +40,7 @@ export function makeAmberButton(
 
   const text = scene.add
     .text(x, y, label, {
-      fontFamily: 'Outfit, sans-serif',
+      fontFamily: 'Manrope, sans-serif',
       fontSize: opts.fontSize ?? '30px',
       color: '#0C1C2E',
       fontStyle: '700',
