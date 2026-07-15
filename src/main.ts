@@ -34,7 +34,7 @@ const worldCanvas = document.getElementById("world") as HTMLCanvasElement;
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const game = new Game();
 const renderer = new Renderer(canvas, game);
-renderer.worldMode = true;
+renderer.worldMode = false;
 
 const world = new WorldView(worldCanvas, game);
 let vfx: VfxDirector | null = null;

@@ -1,6 +1,7 @@
 import { RARE_LETTERS, rareComboMult } from "../data/balance";
 import { STYLES } from "../data/styles";
 import { Game } from "./Game";
+import { CubeKind, MaterialFactory } from "./visual/MaterialFactory";
 
 const FONT = "Manrope, system-ui, sans-serif";
 const DISPLAY = `Unbounded, ${FONT}`;
@@ -12,8 +13,8 @@ export class Renderer {
   w = 390;
   h = 700;
   dpr = 1;
-  /** When true, Pixi WorldView owns backdrop/wall/VFX — HUD stays transparent. */
-  worldMode = true;
+  /** Pixi overlays VFX; Canvas always draws the full scene (visible upgrade). */
+  worldMode = false;
 
   board = { x: 0, y: 0, w: 0, h: 0, cw: 0, ch: 0 };
   hits: { id: string; x: number; y: number; w: number; h: number }[] = [];
@@ -48,19 +49,15 @@ export class Renderer {
     const { ctx, w, h, game } = this;
     this.hits = [];
     const S = game.style();
-    const world = this.worldMode;
 
-    if (world) {
-      ctx.clearRect(0, 0, w, h);
-    } else {
-      const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, S.bg[0]);
-      g.addColorStop(0.48, S.bg[1]);
-      g.addColorStop(1, S.bg[2]);
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-      this.drawAtmosphere(t);
-    }
+    // Always paint full scene on Canvas — materials must be visible even if Pixi fails.
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, S.bg[0]);
+    g.addColorStop(0.4, S.bg[1]);
+    g.addColorStop(1, S.bg[2]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    this.drawAtmosphere(t);
 
     if (game.phase === "menu") {
       this.drawMenu(t);
@@ -71,24 +68,19 @@ export class Renderer {
       return;
     }
 
-    const shakeAmp = game.shake + game.strikePulse * 0.35;
-    const shakeX = shakeAmp > 0 ? (Math.random() - 0.5) * 14 * shakeAmp : 0;
-    const shakeY = shakeAmp > 0 ? (Math.random() - 0.5) * 10 * shakeAmp : 0;
+    const shakeAmp = game.shake + game.strikePulse * 0.45;
+    const shakeX = shakeAmp > 0 ? (Math.random() - 0.5) * 16 * shakeAmp : 0;
+    const shakeY = shakeAmp > 0 ? (Math.random() - 0.5) * 12 * shakeAmp : 0;
     ctx.save();
     ctx.translate(shakeX, shakeY);
 
     this.drawHud(t);
-    if (!world) {
-      this.drawCeilingBeam(t);
-      this.drawWall(t);
-      this.drawCracks(t);
-      this.drawStamp(t);
-      this.drawParticles();
-      this.drawFloats();
-    } else {
-      // floats remain readable on HUD layer
-      this.drawFloats();
-    }
+    this.drawCeilingBeam(t);
+    this.drawWall(t);
+    this.drawCracks(t);
+    this.drawStamp(t);
+    this.drawParticles();
+    this.drawFloats();
     ctx.restore();
 
     this.drawPressure(t);
@@ -96,9 +88,18 @@ export class Renderer {
     this.drawActions(t);
     this.drawMessage();
 
-    if (game.flash > 0 && !world) {
+    // cinematic vignette
+    ctx.save();
+    const vig = ctx.createRadialGradient(w / 2, h * 0.42, h * 0.2, w / 2, h * 0.5, h * 0.75);
+    vig.addColorStop(0, "transparent");
+    vig.addColorStop(1, "rgba(0,0,0,0.45)");
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+
+    if (game.flash > 0) {
       ctx.save();
-      ctx.globalAlpha = Math.min(0.38, game.flash);
+      ctx.globalAlpha = Math.min(0.45, game.flash);
       ctx.fillStyle = S.accentHot;
       ctx.fillRect(0, 0, w, h);
       ctx.restore();
@@ -111,13 +112,37 @@ export class Renderer {
     const { ctx, w, h, game } = this;
     const S = game.style();
     ctx.save();
-    // soft volumetric light from above the wall
-    const loft = ctx.createRadialGradient(w / 2, h * 0.08, 10, w / 2, h * 0.2, w * 0.7);
-    loft.addColorStop(0, `${S.accent}18`);
+
+    // layered parallax bands — obvious scene depth
+    for (let i = 0; i < 4; i++) {
+      const y = h * (0.08 + i * 0.14) + Math.sin(t * (0.4 + i * 0.12) + i) * (6 + i * 2);
+      const band = ctx.createLinearGradient(0, y, 0, y + h * 0.2);
+      band.addColorStop(0, "transparent");
+      band.addColorStop(0.5, i % 2 ? `${S.accent}22` : `${S.rare}18`);
+      band.addColorStop(1, "transparent");
+      ctx.fillStyle = band;
+      ctx.fillRect(0, y, w, h * 0.2);
+    }
+
+    // volumetric loft light
+    const loft = ctx.createRadialGradient(w / 2, h * 0.05, 8, w / 2, h * 0.28, w * 0.85);
+    loft.addColorStop(0, `${S.accentHot}33`);
+    loft.addColorStop(0.45, `${S.accent}14`);
     loft.addColorStop(1, "transparent");
     ctx.fillStyle = loft;
-    ctx.fillRect(0, 0, w, h * 0.55);
+    ctx.fillRect(0, 0, w, h * 0.6);
 
+    // drifting motes
+    for (let i = 0; i < 28; i++) {
+      const x = ((i * 97 + t * (12 + (i % 5))) % (w + 40)) - 20;
+      const y = ((i * 53 + t * (8 + (i % 3))) % (h * 0.7));
+      ctx.globalAlpha = 0.12 + (i % 5) * 0.03;
+      ctx.fillStyle = i % 2 ? S.accentHot : S.particle[i % 3];
+      ctx.beginPath();
+      ctx.arc(x, y, 1.5 + (i % 3), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
     switch (S.pattern) {
       case "stars":
         for (let i = 0; i < 48; i++) {
@@ -760,81 +785,38 @@ export class Renderer {
     ctx.save();
     ctx.globalAlpha = alpha;
 
-    // drop shadow
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    this.roundRect(x + 2, y + 3, bw, bh, 7, "rgba(0,0,0,0.35)", true);
+    let kind: CubeKind = "normal";
+    if (armor > 0) kind = "armor";
+    else if (mirror) kind = "mirror";
+    else if (preview) kind = "preview";
+    else if (RARE_LETTERS.has(letter)) kind = "rare";
 
-    const fill = armor > 0 ? S.muted : mirror ? S.accent : preview ? S.brickHi : S.brick;
-    const deep = armor > 0 ? "#4a4a4a" : S.brickDeep;
-
-    // depth body
-    this.roundRect(x, y, bw, bh, 7, deep, true);
-    // top face
-    this.roundRect(x + 1.5, y + 1.5, bw - 3, bh - 4.5, 6, fill, true);
-
-    // bevel highlight
-    ctx.globalAlpha = alpha * 0.35;
-    const hi = ctx.createLinearGradient(x, y, x, y + bh * 0.45);
-    hi.addColorStop(0, "#ffffff");
-    hi.addColorStop(1, "transparent");
-    ctx.fillStyle = hi;
-    this.pathRound(x + 3, y + 2, bw * 0.55, Math.max(4, bh * 0.22), 4);
-    ctx.fill();
-    ctx.globalAlpha = alpha;
-
-    // style accents
-    if (S.id === "railway") {
-      ctx.fillStyle = S.accent;
-      for (const [px, py] of [
-        [6, 6],
-        [bw - 6, 6],
-        [6, bh - 6],
-        [bw - 6, bh - 6],
-      ] as const) {
-        ctx.beginPath();
-        ctx.arc(x + px, y + py, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else if (S.id === "volcano") {
-      ctx.strokeStyle = `${S.rare}66`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x + 4, y + bh * 0.6);
-      ctx.lineTo(x + bw * 0.4, y + bh * 0.35);
-      ctx.lineTo(x + bw - 5, y + bh * 0.7);
-      ctx.stroke();
-    } else if (S.id === "ink") {
-      ctx.strokeStyle = `${S.rare}88`;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(x + bw - 8, y + 8, 3, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // letter ~70% of cube
-    const fs = Math.min(bw, bh) * 0.7;
-    ctx.fillStyle = S.letter;
-    ctx.font = `800 ${fs}px ${FONT}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(letter, x + bw / 2, y + bh / 2 + 1);
+    // Material atlas sprite — главный видимый апгрейд кубиков
+    const tile = MaterialFactory.getCanvas(S, kind, letter);
+    ctx.drawImage(tile, x - 1, y - 1, bw + 2, bh + 2);
 
     if (armor > 0) {
       ctx.fillStyle = S.ink;
       ctx.font = `800 ${Math.min(bw, bh) * 0.18}px ${FONT}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
       ctx.fillText(`${armor}+`, x + bw / 2, y + bh * 0.18);
     } else if (mirror) {
       ctx.fillStyle = S.ink;
       ctx.font = `800 ${Math.min(bw, bh) * 0.2}px ${FONT}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
       ctx.fillText("◐", x + bw / 2, y + bh * 0.18);
     }
 
-    if (RARE_LETTERS.has(letter)) {
-      ctx.strokeStyle = S.rare;
-      ctx.lineWidth = 1.8;
-      ctx.globalAlpha = alpha * 0.85;
-      this.pathRound(x + 1, y + 1, bw - 2, bh - 2, 6);
+    if (preview) {
+      ctx.strokeStyle = S.accentHot;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = S.accent;
+      ctx.shadowBlur = 12;
+      this.pathRound(x - 2, y - 2, bw + 4, bh + 4, 8);
       ctx.stroke();
+      ctx.shadowBlur = 0;
     }
     ctx.restore();
   }
@@ -845,47 +827,53 @@ export class Renderer {
     const S = game.style();
     const maxLife = 1.15;
     const life = game.stampT;
-    const enter = Math.min(1, (maxLife - life) / 0.12);
-    const fade = Math.min(1, life / 0.35);
-    const scale = 0.85 + enter * 0.35 + (1 - fade) * 0.08;
+    const enter = Math.min(1, (maxLife - life) / 0.1);
+    const fade = Math.min(1, life / 0.4);
+    const scale = 0.7 + enter * 0.55;
 
     ctx.save();
-    ctx.translate(w / 2, board.y + board.h * 0.4);
-    ctx.scale(scale, scale * 1.05);
-    ctx.rotate((-4 + Math.sin(life * 20) * 0.6) * (Math.PI / 180));
-    ctx.globalAlpha = Math.min(0.72, fade * 0.85);
+    ctx.translate(w / 2, board.y + board.h * 0.42);
+    ctx.rotate((-6 + Math.sin(life * 18) * 1.2) * (Math.PI / 180));
+    ctx.scale(scale, scale * 1.08);
+    ctx.globalAlpha = Math.min(0.92, fade);
 
-    // material imprint body
-    ctx.fillStyle = S.brickDeep;
-    ctx.font = `900 ${Math.min(92, w * 0.22)}px ${DISPLAY}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.shadowColor = S.accent;
-    ctx.shadowBlur = 28;
-    ctx.fillText(game.stamp, 2, 3);
-    ctx.shadowBlur = 0;
-    const g = ctx.createLinearGradient(0, -40, 0, 40);
+    // material slab behind glyph
+    const tw = Math.min(w * 0.92, 26 * game.stamp.length + 80);
+    const th = Math.min(110, h * 0.14);
+    const g = ctx.createLinearGradient(-tw / 2, -th / 2, tw / 2, th / 2);
     g.addColorStop(0, S.brickHi);
     g.addColorStop(0.45, S.brick);
     g.addColorStop(1, S.brickDeep);
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    this.roundRect(-tw / 2 + 6, -th / 2 + 8, tw, th, 12, "rgba(0,0,0,0.35)", true);
     ctx.fillStyle = g;
-    ctx.fillText(game.stamp, 0, 0);
-
-    // stamp edge cut
-    ctx.globalAlpha = Math.min(0.35, fade * 0.4);
+    this.pathRound(-tw / 2, -th / 2, tw, th, 12);
+    ctx.fill();
     ctx.strokeStyle = S.accentHot;
     ctx.lineWidth = 2;
-    ctx.strokeText(game.stamp, 0, 0);
+    ctx.globalAlpha = Math.min(0.55, fade);
+    this.pathRound(-tw / 2, -th / 2, tw, th, 12);
+    ctx.stroke();
+
+    ctx.globalAlpha = Math.min(0.95, fade);
+    ctx.fillStyle = S.letter;
+    ctx.font = `900 ${Math.min(78, w * 0.2)}px ${DISPLAY}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = S.accent;
+    ctx.shadowBlur = 24;
+    ctx.fillText(game.stamp, 0, 2);
+    ctx.shadowBlur = 0;
     ctx.restore();
 
-    // shock ring tied to stamp
-    if (life > 0.6) {
+    // expanding shock ring
+    if (life > 0.55) {
       ctx.save();
-      ctx.globalAlpha = (life - 0.6) * 0.5;
+      ctx.globalAlpha = (life - 0.55) * 0.7;
       ctx.strokeStyle = S.accentHot;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(w / 2, board.y + board.h * 0.4, (1.15 - life) * h * 0.55 + 40, 0, Math.PI * 2);
+      ctx.arc(w / 2, board.y + board.h * 0.42, (1.15 - life) * h * 0.7 + 60, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -1039,30 +1027,24 @@ export class Renderer {
         ctx.translate(x + size / 2, y + bob + size / 2);
         ctx.scale(sc, sc);
         ctx.translate(-(x + size / 2), -(y + bob + size / 2));
-        // volumetric tile
+        // volumetric tile from material atlas
         ctx.fillStyle = "rgba(0,0,0,0.35)";
         this.roundRect(x + 2, y + bob + 3, size, size, 10, "rgba(0,0,0,0.35)", true);
-        const fill = sel ? S.trayGlow : S.brick;
-        this.roundRect(x, y + bob, size, size, 10, S.brickDeep, true);
-        this.roundRect(x + 2, y + bob + 2, size - 4, size - 5, 8, fill, true);
+        const kind: CubeKind = RARE_LETTERS.has(ch) ? "rare" : sel ? "preview" : "normal";
+        const tile = MaterialFactory.getCanvas(S, kind, ch);
+        ctx.drawImage(tile, x, y + bob, size, size);
         if (sel) {
           ctx.strokeStyle = S.accentHot;
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 2.5;
+          ctx.shadowColor = S.accent;
+          ctx.shadowBlur = 10;
           this.pathRound(x, y + bob, size, size, 10);
           ctx.stroke();
-        }
-        ctx.fillStyle = RARE_LETTERS.has(ch) ? S.rare : sel ? S.bg[0] : S.letter;
-        if (RARE_LETTERS.has(ch) && !sel) {
-          // rare materials of current style
-          ctx.fillStyle = S.rare;
-        }
-        ctx.font = `800 ${size * 0.55}px ${FONT}`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(ch, x + size / 2, y + bob + size / 2 + 1);
-        if (sel) {
+          ctx.shadowBlur = 0;
           ctx.fillStyle = S.bg[0];
           ctx.font = `800 10px ${FONT}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
           ctx.fillText(String(selIdx + 1), x + size - 10, y + bob + 12);
         }
       }
