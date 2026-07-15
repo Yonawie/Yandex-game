@@ -445,7 +445,7 @@ export class Game {
     this.floats.push({
       x: 0.5,
       y: 0.32,
-      text: doEcho ? `ЭХО +${gain}` : `+${gain}`,
+      text: doEcho ? `Эхо +${gain}` : `+${gain}`,
       life: 1.25,
       color: doEcho ? this.style().rare : this.style().accentHot,
     });

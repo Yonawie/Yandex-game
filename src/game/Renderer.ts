@@ -271,7 +271,7 @@ export class Renderer {
     ctx.textAlign = "center";
     ctx.shadowColor = `${S.rare}55`;
     ctx.shadowBlur = 18;
-    ctx.fillText("ЭХО", w / 2, h * 0.385);
+    ctx.fillText("Эхо", w / 2, h * 0.385);
     ctx.shadowBlur = 0;
 
     ctx.fillStyle = S.muted;
@@ -618,7 +618,7 @@ export class Renderer {
     const ratio = game.usingEcho()
       ? game.echoT / game.echoWindow
       : Math.max(0, game.growCD / game.growEvery);
-    const label = game.usingEcho() ? "ЭХО — УСПЕЙ ВТОРОЙ УДАР" : "РОСТ СТЕНЫ";
+    const label = game.usingEcho() ? "Эхо — успей второй удар" : "Рост стены";
     const col = game.usingEcho() ? S.rare : S.accent;
     this.roundRect(board.x, board.y + board.h + 10, board.w, 16, 8, "rgba(0,0,0,0.4)", true);
     this.roundRect(board.x, board.y + board.h + 10, Math.max(6, board.w * ratio), 16, 8, col, true);

@@ -1,4 +1,4 @@
-# ТЗ: «ЭХО» / Echo
+# ТЗ: «Эхо» / Echo
 
 > Версия 2.0 · HTML5 · Яндекс Игры · TypeScript + Vite + Canvas
 
