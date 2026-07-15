@@ -2,6 +2,9 @@ import { RARE_LETTERS, rareComboMult } from "../data/balance";
 import { STYLES } from "../data/styles";
 import { Game } from "./Game";
 
+const FONT = "Manrope, system-ui, sans-serif";
+const DISPLAY = `Unbounded, ${FONT}`;
+
 export class Renderer {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
@@ -29,12 +32,12 @@ export class Renderer {
     this.canvas.style.height = `${cssH}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-    const bw = cssW * 0.9;
-    const bh = cssH * 0.44;
+    const bw = cssW * 0.92;
+    const bh = cssH * 0.46;
     this.board.w = bw;
     this.board.h = bh;
     this.board.x = (cssW - bw) / 2;
-    this.board.y = cssH * 0.125;
+    this.board.y = cssH * 0.118;
     this.board.cw = bw / Math.max(1, this.game.cols);
     this.board.ch = bh / Math.max(1, this.game.maxH);
   }
@@ -46,11 +49,11 @@ export class Renderer {
 
     const g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, S.bg[0]);
-    g.addColorStop(0.45, S.bg[1]);
+    g.addColorStop(0.48, S.bg[1]);
     g.addColorStop(1, S.bg[2]);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
-    this.drawPattern(t);
+    this.drawAtmosphere(t);
 
     if (game.phase === "menu") {
       this.drawMenu(t);
@@ -61,26 +64,29 @@ export class Renderer {
       return;
     }
 
-    const shakeX = game.shake > 0 ? (Math.random() - 0.5) * 10 * game.shake : 0;
-    const shakeY = game.shake > 0 ? (Math.random() - 0.5) * 8 * game.shake : 0;
+    const shakeAmp = game.shake + game.strikePulse * 0.35;
+    const shakeX = shakeAmp > 0 ? (Math.random() - 0.5) * 14 * shakeAmp : 0;
+    const shakeY = shakeAmp > 0 ? (Math.random() - 0.5) * 10 * shakeAmp : 0;
     ctx.save();
     ctx.translate(shakeX, shakeY);
+
     this.drawHud(t);
-    this.drawWallFrame(t);
+    this.drawCeilingBeam(t);
     this.drawWall(t);
+    this.drawCracks(t);
     this.drawStamp(t);
     this.drawParticles();
     this.drawFloats();
     ctx.restore();
 
-    this.drawPressure();
+    this.drawPressure(t);
     this.drawTray(t);
-    this.drawActions();
+    this.drawActions(t);
     this.drawMessage();
 
     if (game.flash > 0) {
       ctx.save();
-      ctx.globalAlpha = Math.min(0.42, game.flash);
+      ctx.globalAlpha = Math.min(0.38, game.flash);
       ctx.fillStyle = S.accentHot;
       ctx.fillRect(0, 0, w, h);
       ctx.restore();
@@ -89,42 +95,49 @@ export class Renderer {
     if (game.phase === "result") this.drawResult();
   }
 
-  private drawPattern(t: number) {
+  private drawAtmosphere(t: number) {
     const { ctx, w, h, game } = this;
     const S = game.style();
     ctx.save();
+    // soft volumetric light from above the wall
+    const loft = ctx.createRadialGradient(w / 2, h * 0.08, 10, w / 2, h * 0.2, w * 0.7);
+    loft.addColorStop(0, `${S.accent}18`);
+    loft.addColorStop(1, "transparent");
+    ctx.fillStyle = loft;
+    ctx.fillRect(0, 0, w, h * 0.55);
+
     switch (S.pattern) {
       case "stars":
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < 48; i++) {
           const x = ((i * 97) % w) + Math.sin(t + i) * 2;
           const y = ((i * 53) % h);
-          ctx.globalAlpha = 0.15 + ((i * 13) % 10) / 40;
+          ctx.globalAlpha = 0.12 + ((i * 13) % 10) / 45;
           ctx.fillStyle = S.accentHot;
           ctx.beginPath();
-          ctx.arc(x, y, 1.2 + (i % 3) * 0.6, 0, Math.PI * 2);
+          ctx.arc(x, y, 1.1 + (i % 3) * 0.5, 0, Math.PI * 2);
           ctx.fill();
         }
         break;
       case "rails":
-        ctx.globalAlpha = 0.08;
+        ctx.globalAlpha = 0.06;
         ctx.strokeStyle = S.accent;
         ctx.lineWidth = 2;
-        for (let i = 0; i < 8; i++) {
-          const y = h * 0.2 + i * 55 + Math.sin(t + i) * 2;
+        for (let i = 0; i < 7; i++) {
+          const y = h * 0.22 + i * 58 + Math.sin(t + i) * 2;
           ctx.beginPath();
           ctx.moveTo(0, y);
-          ctx.lineTo(w, y + 12);
+          ctx.lineTo(w, y + 10);
           ctx.stroke();
         }
         break;
       case "waves":
         for (let i = 0; i < 5; i++) {
-          ctx.globalAlpha = 0.1;
+          ctx.globalAlpha = 0.09;
           ctx.strokeStyle = S.accent;
           ctx.lineWidth = 2;
           ctx.beginPath();
           for (let x = 0; x <= w; x += 8) {
-            const y = h * 0.25 + i * 70 + Math.sin(x * 0.02 + t * 1.5 + i) * 10;
+            const y = h * 0.28 + i * 68 + Math.sin(x * 0.02 + t * 1.4 + i) * 9;
             if (x === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
           }
@@ -132,24 +145,17 @@ export class Renderer {
         }
         break;
       case "ink":
-        ctx.globalAlpha = 0.07;
+        ctx.globalAlpha = 0.06;
         ctx.fillStyle = S.rare;
         ctx.beginPath();
-        ctx.ellipse(w * 0.78, h * 0.18, 40, 28, t * 0.1, 0, Math.PI * 2);
+        ctx.ellipse(w * 0.78, h * 0.16, 42, 28, t * 0.08, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = S.accent;
-        ctx.globalAlpha = 0.05;
-        for (let i = 0; i < 6; i++) {
-          ctx.beginPath();
-          ctx.arc(w * 0.2 + i * 30, h * 0.7 + Math.sin(t + i) * 8, 18, 0, Math.PI * 2);
-          ctx.fill();
-        }
         break;
       case "embers":
-        for (let i = 0; i < 24; i++) {
-          const x = ((i * 67 + t * 20) % w);
-          const y = h - ((i * 41 + t * 40) % h);
-          ctx.globalAlpha = 0.12 + (i % 5) * 0.03;
+        for (let i = 0; i < 28; i++) {
+          const x = (i * 67 + t * 18) % w;
+          const y = h - ((i * 41 + t * 36) % h);
+          ctx.globalAlpha = 0.1 + (i % 5) * 0.025;
           ctx.fillStyle = S.particle[i % 3];
           ctx.beginPath();
           ctx.arc(x, y, 2 + (i % 3), 0, Math.PI * 2);
@@ -157,84 +163,66 @@ export class Renderer {
         }
         break;
       case "sugar":
-        for (let i = 0; i < 18; i++) {
-          ctx.globalAlpha = 0.1;
+        for (let i = 0; i < 16; i++) {
+          ctx.globalAlpha = 0.08;
           ctx.fillStyle = S.particle[i % 3];
-          const x = (i * 71) % w;
-          const y = (i * 89 + Math.sin(t + i) * 10) % h;
           ctx.beginPath();
-          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.arc((i * 71) % w, (i * 89 + Math.sin(t + i) * 8) % h, 5, 0, Math.PI * 2);
           ctx.fill();
         }
         break;
       case "frost":
-        ctx.globalAlpha = 0.08;
+        ctx.globalAlpha = 0.07;
         ctx.strokeStyle = S.accentHot;
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 14; i++) {
           const x = (i * 53) % w;
           const y = (i * 79) % h;
           ctx.beginPath();
           ctx.moveTo(x, y);
-          ctx.lineTo(x + 12, y + 4);
-          ctx.lineTo(x + 4, y + 14);
+          ctx.lineTo(x + 11, y + 3);
+          ctx.lineTo(x + 3, y + 13);
           ctx.stroke();
         }
         break;
       case "pages":
-        ctx.globalAlpha = 0.06;
+        ctx.globalAlpha = 0.05;
         ctx.fillStyle = S.accentHot;
-        for (let i = 0; i < 7; i++) {
-          const x = w * 0.15 + i * 28;
-          const y = h * 0.55 + Math.sin(t + i) * 6;
-          ctx.fillRect(x, y, 18, 26);
+        for (let i = 0; i < 6; i++) {
+          ctx.fillRect(w * 0.18 + i * 30, h * 0.58 + Math.sin(t + i) * 5, 16, 24);
         }
         break;
       case "sand":
-        ctx.globalAlpha = 0.08;
+        ctx.globalAlpha = 0.07;
         ctx.fillStyle = S.accent;
-        for (let i = 0; i < 30; i++) {
-          ctx.fillRect(((i * 47) % w), ((i * 31 + t * 8) % h), 2, 2);
+        for (let i = 0; i < 36; i++) {
+          ctx.fillRect((i * 47) % w, (i * 31 + t * 7) % h, 2, 2);
         }
         break;
       case "rain":
-        ctx.globalAlpha = 0.12;
+        ctx.globalAlpha = 0.1;
         ctx.strokeStyle = S.accent;
         ctx.lineWidth = 1;
-        for (let i = 0; i < 35; i++) {
-          const x = ((i * 37 + t * 80) % (w + 20)) - 10;
-          const y = ((i * 59 + t * 140) % (h + 20)) - 10;
+        for (let i = 0; i < 40; i++) {
+          const x = ((i * 37 + t * 70) % (w + 20)) - 10;
+          const y = ((i * 59 + t * 120) % (h + 20)) - 10;
           ctx.beginPath();
           ctx.moveTo(x, y);
-          ctx.lineTo(x - 3, y + 12);
+          ctx.lineTo(x - 2, y + 11);
           ctx.stroke();
         }
-        // neon signs glow
-        ctx.globalAlpha = 0.12;
-        ctx.fillStyle = S.rare;
-        ctx.fillRect(0, h * 0.3, w, 3);
-        ctx.fillStyle = S.particle[1];
-        ctx.fillRect(0, h * 0.62, w, 2);
         break;
       default:
-        for (let i = 0; i < 6; i++) {
-          const x = (Math.sin(t * 0.25 + i * 1.3) * 0.5 + 0.5) * w;
-          const y = h * (0.1 + i * 0.12) + Math.cos(t * 0.35 + i) * 18;
-          const rg = ctx.createRadialGradient(x, y, 0, x, y, 110);
-          rg.addColorStop(0, i % 2 ? `${S.rare}22` : `${S.accent}24`);
+        for (let i = 0; i < 5; i++) {
+          const x = (Math.sin(t * 0.22 + i * 1.4) * 0.5 + 0.5) * w;
+          const y = h * (0.12 + i * 0.11) + Math.cos(t * 0.3 + i) * 14;
+          const rg = ctx.createRadialGradient(x, y, 0, x, y, 100);
+          rg.addColorStop(0, i % 2 ? `${S.rare}18` : `${S.accent}1c`);
           rg.addColorStop(1, "transparent");
           ctx.fillStyle = rg;
           ctx.beginPath();
-          ctx.arc(x, y, 110, 0, Math.PI * 2);
+          ctx.arc(x, y, 100, 0, Math.PI * 2);
           ctx.fill();
         }
-        // premium gold rim light
-        ctx.globalAlpha = 0.12;
-        const rim = ctx.createLinearGradient(0, 0, w, 0);
-        rim.addColorStop(0, "transparent");
-        rim.addColorStop(0.5, S.brickHi);
-        rim.addColorStop(1, "transparent");
-        ctx.fillStyle = rim;
-        ctx.fillRect(0, 0, w, 3);
         break;
     }
     ctx.restore();
@@ -244,87 +232,144 @@ export class Renderer {
     const { ctx, w, h, game } = this;
     const S = game.style();
 
-    ctx.save();
-    const pulse = 0.88 + Math.sin(t * 2.2) * 0.12;
-    ctx.globalAlpha = 0.4 * pulse;
-    const rg = ctx.createRadialGradient(w / 2, h * 0.24, 8, w / 2, h * 0.24, 180);
-    rg.addColorStop(0, S.rare);
-    rg.addColorStop(0.4, S.accent);
-    rg.addColorStop(1, "transparent");
-    ctx.fillStyle = rg;
-    ctx.beginPath();
-    ctx.arc(w / 2, h * 0.24, 180, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    // passive demo wall behind logo
+    this.drawDemoWall(t);
 
-    const demo = "ЭХОСЛОВ".split("");
-    const cw = 36;
-    demo.forEach((ch, i) => {
-      const x = w / 2 - (demo.length * (cw + 5)) / 2 + i * (cw + 5);
-      const y = h * 0.2 + Math.sin(t * 3 + i * 0.7) * 5;
-      this.brick(x, y, cw, cw, ch, 0, false, i >= 4, 1);
+    // brand cubes "ЭХО" with crack / rebuild cycle
+    const logo = ["Э", "Х", "О"];
+    const cw = Math.min(54, w * 0.14);
+    const gap = 10;
+    const total = logo.length * cw + (logo.length - 1) * gap;
+    const x0 = (w - total) / 2;
+    const y0 = h * 0.16;
+    const cycle = (t % 9) / 9;
+    const crackI = Math.floor(t / 3) % 3;
+    logo.forEach((ch, i) => {
+      const x = x0 + i * (cw + gap);
+      const phase = crackI === i ? cycle * 3 - Math.floor(cycle * 3) : 0;
+      // phase within this letter's 3s window when it's cracking
+      let local = 0;
+      if (crackI === i) {
+        const seg = t % 3;
+        local = seg / 3;
+      }
+      const shatter = local > 0.35 && local < 0.72;
+      const rebuild = local >= 0.72;
+      const y = y0 + Math.sin(t * 2.4 + i) * 3;
+      if (shatter) {
+        ctx.save();
+        ctx.globalAlpha = 0.35 + (1 - (local - 0.35) / 0.37) * 0.4;
+        this.drawBevelCube(x, y, cw, cw, ch, {
+          armor: 0,
+          mirror: false,
+          preview: false,
+          alpha: 0.55,
+          breath: 0,
+        });
+        // shards
+        for (let s = 0; s < 5; s++) {
+          const a = s * 1.3 + t * 4;
+          ctx.fillStyle = S.particle[s % 3];
+          ctx.globalAlpha = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(x + cw / 2, y + cw / 2);
+          ctx.lineTo(x + cw / 2 + Math.cos(a) * 28, y + cw / 2 + Math.sin(a) * 22);
+          ctx.lineTo(x + cw / 2 + Math.cos(a + 0.5) * 18, y + cw / 2 + Math.sin(a + 0.5) * 16);
+          ctx.fill();
+        }
+        ctx.restore();
+      } else {
+        const alpha = rebuild ? 0.55 + (local - 0.72) / 0.28 * 0.45 : 1;
+        this.drawBevelCube(x, y, cw, cw, ch, {
+          armor: 0,
+          mirror: false,
+          preview: false,
+          alpha,
+          breath: Math.sin(t * 3 + i) * 0.8,
+        });
+        if (local > 0.15 && local < 0.35) this.drawCrackLines(x, y, cw, cw, local);
+      }
+      void phase;
     });
 
-    // premium brand
-    ctx.fillStyle = S.ink;
-    ctx.font = `800 ${Math.min(70, w * 0.2)}px Manrope, system-ui`;
+    ctx.fillStyle = S.muted;
+    ctx.font = `500 13px ${FONT}`;
     ctx.textAlign = "center";
-    ctx.shadowColor = `${S.rare}55`;
-    ctx.shadowBlur = 18;
-    ctx.fillText("Эхо", w / 2, h * 0.385);
-    ctx.shadowBlur = 0;
+    ctx.fillText("Ломай стену словом", w / 2, h * 0.16 + cw + 36);
 
-    ctx.fillStyle = S.muted;
-    ctx.font = `500 13px Manrope, system-ui`;
-    ctx.fillText("Ломай стену словом · собирай стили", w / 2, h * 0.385 + 26);
-
-    this.roundRect(w / 2 - 70, h * 0.385 + 40, 140, 28, 12, S.panel, true);
     ctx.fillStyle = S.accentHot;
-    ctx.font = `700 12px Manrope, system-ui`;
-    ctx.fillText(`◆ ${game.save.coins} осколков`, w / 2, h * 0.385 + 55);
+    ctx.font = `700 13px ${FONT}`;
+    ctx.fillText(`◆ ${game.save.coins}`, w / 2, h * 0.16 + cw + 58);
     ctx.fillStyle = S.muted;
-    ctx.font = `600 11px Manrope, system-ui`;
-    ctx.fillText(`рекорд ${game.save.best}`, w / 2, h * 0.385 + 78);
+    ctx.font = `600 11px ${FONT}`;
+    ctx.fillText(`рекорд ${game.save.best}`, w / 2, h * 0.16 + cw + 76);
 
     const btns = [
       { id: "play-normal", label: "Играть · Норма", primary: true },
       { id: "play-easy", label: "Лёгкий", primary: false },
       { id: "play-hard", label: "Сложный", primary: false },
       { id: "play-infinity", label: "∞ Бесконечность", primary: true },
-      { id: "open-shop", label: "✦ Стили", primary: false },
+      { id: "open-shop", label: "Стили", primary: false },
     ];
     btns.forEach((b, i) => {
-      const bw = Math.min(290, w * 0.8);
-      this.roundBtn((w - bw) / 2, h * 0.52 + i * 50, bw, 44, b.label, b.id, b.primary);
+      const bw = Math.min(300, w * 0.82);
+      this.mechBtn((w - bw) / 2, h * 0.5 + i * 48, bw, 42, b.label, b.id, b.primary);
     });
   }
 
-  private drawShop(_t: number) {
+  private drawDemoWall(t: number) {
+    const { ctx, w, h, game } = this;
+    const S = game.style();
+    const cols = 7;
+    const rows = 4;
+    const size = Math.min(28, w * 0.07);
+    const gap = 3;
+    const totalW = cols * size + (cols - 1) * gap;
+    const x0 = (w - totalW) / 2;
+    const yBase = h * 0.34;
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        const pulse = Math.sin(t * 1.2 + c * 0.4 + r * 0.5);
+        if (pulse > 0.82) continue; // vanish occasionally
+        const letters = "СТЕНАЭХО";
+        const ch = letters[(c + r * 3) % letters.length];
+        const x = x0 + c * (size + gap);
+        const y = yBase - r * (size + gap) + Math.sin(t * 0.8 + c) * 1.5;
+        this.roundRect(x, y, size, size, 5, S.brickDeep, true);
+        this.roundRect(x + 1.5, y + 1.5, size - 3, size - 4, 4, S.brick, true);
+        ctx.fillStyle = S.letter;
+        ctx.font = `800 ${size * 0.55}px ${FONT}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(ch, x + size / 2, y + size / 2 + 0.5);
+      }
+    }
+    ctx.restore();
+  }
+
+  private drawShop(t: number) {
     const { ctx, w, h, game } = this;
     const S = game.style();
 
-    this.roundRect(14, 18, w - 28, h - 36, 22, S.panel, true);
-    ctx.strokeStyle = S.accent;
-    ctx.lineWidth = 1.5;
-    this.roundRect(14, 18, w - 28, h - 36, 22, undefined, false);
-
     ctx.fillStyle = S.ink;
-    ctx.font = `800 26px Manrope, system-ui`;
+    ctx.font = `800 28px ${DISPLAY}`;
     ctx.textAlign = "center";
-    ctx.fillText("Стили", w / 2, 56);
+    ctx.fillText("Стили", w / 2, 48);
     ctx.fillStyle = S.accentHot;
-    ctx.font = `700 13px Manrope, system-ui`;
-    ctx.fillText(`◆ ${game.save.coins}`, w / 2, 78);
+    ctx.font = `700 13px ${FONT}`;
+    ctx.fillText(`◆ ${game.save.coins} осколков`, w / 2, 70);
 
-    const rowH = 78;
-    const startY = 100;
-    const viewH = h - 190;
+    const rowH = 148;
+    const startY = 88;
+    const viewH = h - 170;
     const maxScroll = Math.max(0, STYLES.length * rowH - viewH);
     game.shopScroll = Math.max(0, Math.min(maxScroll, game.shopScroll));
 
     ctx.save();
     ctx.beginPath();
-    ctx.rect(20, startY, w - 40, viewH);
+    ctx.rect(12, startY, w - 24, viewH);
     ctx.clip();
 
     STYLES.forEach((st, i) => {
@@ -332,59 +377,97 @@ export class Renderer {
       if (y + rowH < startY || y > startY + viewH) return;
       const owned = game.save.owned.includes(st.id);
       const eq = game.save.equipped === st.id;
-      this.roundRect(24, y, w - 48, 70, 16, eq ? `${st.accent}33` : "rgba(0,0,0,0.22)", true);
 
-      // swatch cubes
-      [st.brick, st.accent, st.rare].forEach((c, si) => {
-        ctx.fillStyle = c;
-        this.roundRect(36 + si * 22, y + 18, 18, 18, 5, c, true);
+      // large atmospheric card — soft fill, no glass
+      const card = ctx.createLinearGradient(24, y, 24, y + 136);
+      card.addColorStop(0, st.bg[0]);
+      card.addColorStop(1, st.bg[2]);
+      ctx.fillStyle = card;
+      this.pathRound(18, y, w - 36, 136, 18);
+      ctx.fill();
+      if (eq) {
+        ctx.strokeStyle = st.accentHot;
+        ctx.lineWidth = 1.5;
+        this.pathRound(18, y, w - 36, 136, 18);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = st.ink;
+      ctx.font = `800 20px ${DISPLAY}`;
+      ctx.textAlign = "left";
+      ctx.fillText(st.name, 34, y + 32);
+      ctx.fillStyle = st.muted;
+      ctx.font = `500 12px ${FONT}`;
+      ctx.fillText(st.tagline, 34, y + 52);
+
+      // material preview cubes
+      ["А", "Р", "К"].forEach((ch, si) => {
+        const bx = 34 + si * 36;
+        const by = y + 68;
+        ctx.fillStyle = st.brickDeep;
+        this.roundRect(bx, by, 30, 30, 6, st.brickDeep, true);
+        ctx.fillStyle = [st.brick, st.brickHi, st.accent][si];
+        this.roundRect(bx + 2, by + 2, 26, 24, 5, [st.brick, st.brickHi, st.accent][si], true);
+        ctx.fillStyle = st.letter;
+        ctx.font = `800 14px ${FONT}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(ch, bx + 15, by + 16);
       });
 
-      ctx.fillStyle = S.ink;
-      ctx.font = `800 15px Manrope, system-ui`;
-      ctx.textAlign = "left";
-      ctx.fillText(st.name, 110, y + 28);
-      ctx.fillStyle = S.muted;
-      ctx.font = `500 11px Manrope, system-ui`;
-      ctx.fillText(st.tagline, 110, y + 46);
+      // three color dots
+      [st.brick, st.accent, st.rare].forEach((c, si) => {
+        ctx.fillStyle = c;
+        ctx.beginPath();
+        ctx.arc(w - 52 - si * 18, y + 40, 6, 0, Math.PI * 2);
+        ctx.fill();
+      });
 
-      const label = eq ? "Надет" : owned ? "Надеть" : `◆ ${st.price}`;
-      const btnW = 88;
-      const bx = w - 48 - btnW - 8;
-      const by = y + 18;
-      this.hits.push({ id: `style-${st.id}`, x: bx, y: by, w: btnW, h: 34 });
-      this.roundRect(bx, by, btnW, 34, 12, eq ? st.rare : owned ? st.accent : st.brickDeep, true);
-      ctx.fillStyle = st.id === "ink" || st.id === "candy" ? "#1a1a1a" : "#0B1C24";
-      if (st.id === "noir" || st.id === "volcano" || st.id === "library" || st.id === "desert" || st.id === "railway") {
-        ctx.fillStyle = st.ink;
-      }
-      ctx.font = `800 12px Manrope, system-ui`;
+      // destruction hint
+      ctx.fillStyle = st.muted;
+      ctx.font = `600 10px ${FONT}`;
+      ctx.textAlign = "left";
+      ctx.fillText(`разрушение · ${st.breakLabel}`, 34, y + 118);
+
+      const label = eq ? "Экипирован" : owned ? "Экипировать" : `◆ ${st.price}`;
+      const btnW = 118;
+      const bx = w - 36 - btnW - 12;
+      const by = y + 86;
+      this.hits.push({ id: `style-${st.id}`, x: bx, y: by, w: btnW, h: 36 });
+      this.roundRect(bx, by, btnW, 36, 10, eq ? st.rare : owned ? st.accent : st.brickDeep, true);
+      ctx.fillStyle = st.ink;
+      if (st.id === "candy" || st.id === "ink") ctx.fillStyle = "#1a1020";
+      if (st.id === "cosmos") ctx.fillStyle = "#0B1020";
+      ctx.font = `800 12px ${FONT}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(label, bx + btnW / 2, by + 17);
+      ctx.fillText(label, bx + btnW / 2, by + 18);
     });
     ctx.restore();
+    void t;
 
-    this.roundBtn(24, h - 70, (w - 56) / 2, 42, "▲", "shop-up", false);
-    this.roundBtn(32 + (w - 56) / 2, h - 70, (w - 56) / 2, 42, "Закрыть", "close-shop", true);
+    this.mechBtn(24, h - 62, (w - 56) / 2, 40, "▲", "shop-up", false);
+    this.mechBtn(32 + (w - 56) / 2, h - 62, (w - 56) / 2, 40, "Закрыть", "close-shop", true);
   }
 
   private drawHud(t: number) {
     const { ctx, w, game } = this;
     const S = game.style();
-    this.roundRect(12, 10, 110, 46, 14, S.panel, true);
+
+    // left — score embedded in space, no card
     ctx.textAlign = "left";
     ctx.fillStyle = S.ink;
-    ctx.font = `800 22px Manrope, system-ui`;
-    ctx.fillText(`${game.score}`, 24, 38);
+    ctx.font = `800 28px ${DISPLAY}`;
+    ctx.shadowColor = "rgba(0,0,0,0.45)";
+    ctx.shadowBlur = 10;
+    ctx.fillText(`${game.score}`, 22, 36);
+    ctx.shadowBlur = 0;
     ctx.fillStyle = S.muted;
-    ctx.font = `600 10px Manrope, system-ui`;
-    ctx.fillText("ОЧКИ", 24, 50);
+    ctx.font = `600 10px ${FONT}`;
+    ctx.fillText("ОЧКИ", 22, 52);
 
-    this.roundRect(w - 122, 10, 110, 46, 14, S.panel, true);
+    // right — mode / shards / chain
     ctx.textAlign = "right";
-    ctx.fillStyle = S.accent;
-    ctx.font = `700 12px Manrope, system-ui`;
     const mode =
       game.difficulty === "infinity"
         ? `∞ ×${game.infinityMult.toFixed(2)}`
@@ -393,87 +476,194 @@ export class Renderer {
           : game.difficulty === "hard"
             ? "Сложный"
             : "Норма";
-    ctx.fillText(mode, w - 24, 32);
+    ctx.fillStyle = S.accent;
+    ctx.font = `700 12px ${FONT}`;
+    ctx.fillText(mode, w - 22, 28);
     ctx.fillStyle = game.chain > 1 ? S.rare : S.muted;
-    ctx.fillText(game.chain > 1 ? `цепь ×${game.chain}` : `◆ ${game.save.coins}`, w - 24, 48);
+    ctx.font = `600 11px ${FONT}`;
+    ctx.fillText(game.chain > 1 ? `Эхо ×${game.chain}` : `◆ ${game.save.coins}`, w - 22, 46);
 
+    // center rare mineral gems
     const streak = game.rareStreak;
     ["Ф", "Ц", "Щ"].forEach((g, i) => {
       const on = streak > i;
-      const x = w / 2 + (i - 1) * 34 - 14;
-      const y = 14;
-      const pulse = on ? 1 + Math.sin(t * 8 + i) * 0.06 : 1;
-      this.roundRect(x, y, 28 * pulse, 28 * pulse, 9, on ? `${S.rare}55` : S.panel, true);
-      ctx.fillStyle = on ? S.rare : S.muted;
-      ctx.font = `800 13px Unbounded, Manrope, system-ui`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.globalAlpha = on ? 1 : 0.45;
-      ctx.fillText(g, x + 14, y + 15);
-      ctx.globalAlpha = 1;
+      const x = w / 2 + (i - 1) * 38;
+      const y = 30;
+      const pulse = on ? 1 + Math.sin(t * 7 + i) * 0.07 : 1;
+      this.drawGem(x, y, 15 * pulse, g, on, t + i);
     });
     if (streak > 0) {
       ctx.fillStyle = S.rare;
-      ctx.font = `700 10px Manrope, system-ui`;
+      ctx.font = `700 10px ${FONT}`;
       ctx.textAlign = "center";
-      ctx.fillText(`×${rareComboMult(streak).toFixed(2)}`, w / 2, 54);
+      ctx.fillText(`×${rareComboMult(streak).toFixed(2)}`, w / 2, 56);
     }
   }
 
-  private drawWallFrame(t: number) {
+  private drawGem(cx: number, cy: number, r: number, letter: string, on: boolean, t: number) {
+    const { ctx, game } = this;
+    const S = game.style();
+    ctx.save();
+    if (on) {
+      const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, r * 2.2);
+      glow.addColorStop(0, `${S.rare}66`);
+      glow.addColorStop(1, "transparent");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // faceted mineral
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx + r * 0.85, cy - r * 0.2);
+    ctx.lineTo(cx + r * 0.55, cy + r * 0.85);
+    ctx.lineTo(cx - r * 0.55, cy + r * 0.85);
+    ctx.lineTo(cx - r * 0.85, cy - r * 0.2);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+    g.addColorStop(0, on ? S.rare : S.muted);
+    g.addColorStop(0.5, on ? S.accentHot : `${S.muted}88`);
+    g.addColorStop(1, on ? S.brickDeep : S.brickDeep);
+    ctx.fillStyle = g;
+    ctx.globalAlpha = on ? 1 : 0.4;
+    ctx.fill();
+    if (on) {
+      ctx.strokeStyle = S.accentHot;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.5 + Math.sin(t * 6) * 0.2;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = on ? 1 : 0.45;
+    ctx.fillStyle = S.ink;
+    ctx.font = `800 ${r * 0.85}px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(letter, cx, cy + 1);
+    ctx.restore();
+  }
+
+  private drawCeilingBeam(t: number) {
     const { ctx, board, game } = this;
     const S = game.style();
-    this.roundRect(board.x - 8, board.y - 12, board.w + 16, board.h + 20, 18, S.panel, true);
-    ctx.strokeStyle = `${S.accent}66`;
-    ctx.lineWidth = 1.5;
-    this.roundRect(board.x - 8, board.y - 12, board.w + 16, board.h + 20, 18, undefined, false);
+    const near = game.maxStackH() >= game.maxH - 2;
+    const critical = game.maxStackH() >= game.maxH - 1;
+    const by = board.y - 2;
+    const bh = 14;
 
-    // gold trim for premium echo style
-    if (S.id === "echo") {
-      ctx.strokeStyle = `${S.brickHi}44`;
-      ctx.lineWidth = 1;
-      this.roundRect(board.x - 4, board.y - 8, board.w + 8, board.h + 12, 14, undefined, false);
+    // heavy metal beam
+    const metal = ctx.createLinearGradient(board.x, by, board.x, by + bh);
+    metal.addColorStop(0, "#6a7078");
+    metal.addColorStop(0.35, "#2e3338");
+    metal.addColorStop(0.7, "#1a1e22");
+    metal.addColorStop(1, "#0c0e10");
+    ctx.fillStyle = metal;
+    this.pathRound(board.x - 4, by, board.w + 8, bh, 3);
+    ctx.fill();
+
+    // rivets
+    ctx.fillStyle = "#8a9098";
+    for (let i = 0; i < 8; i++) {
+      const rx = board.x + 10 + i * ((board.w - 20) / 7);
+      ctx.beginPath();
+      ctx.arc(rx, by + bh / 2, 2.2, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    const nearDeath = game.maxStackH() >= game.maxH - 2;
+    // energy vein
+    const pulse = near ? 0.55 + Math.sin(t * (critical ? 10 : 5)) * 0.45 : 0.25;
     ctx.save();
-    ctx.globalAlpha = nearDeath ? 0.55 + Math.sin(t * 4) * 0.15 : 0.35;
+    ctx.globalAlpha = pulse;
     ctx.strokeStyle = S.danger;
-    ctx.lineWidth = nearDeath ? 3 : 2;
-    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = critical ? 3.5 : 2.2;
+    ctx.shadowColor = S.danger;
+    ctx.shadowBlur = near ? 12 : 4;
     ctx.beginPath();
-    ctx.moveTo(board.x, board.y + 6);
-    ctx.lineTo(board.x + board.w, board.y + 6);
+    ctx.moveTo(board.x + 8, by + bh / 2);
+    ctx.lineTo(board.x + board.w - 8, by + bh / 2);
     ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+
+    if (near) {
+      for (let i = 0; i < 6; i++) {
+        const sx = board.x + 20 + ((i * 73 + t * 40) % (board.w - 40));
+        ctx.globalAlpha = 0.4 + Math.random() * 0.4;
+        ctx.fillStyle = S.accentHot;
+        ctx.fillRect(sx, by + 2 + Math.random() * 8, 1.5, 3 + Math.random() * 4);
+      }
+    }
     ctx.restore();
 
-    ctx.fillStyle = nearDeath ? S.danger : S.muted;
-    ctx.font = `700 11px Manrope, system-ui`;
-    ctx.textAlign = "left";
-    ctx.fillText(nearDeath ? "⚠ ПОТОЛОК" : "потолок", board.x, board.y - 2);
+    ctx.fillStyle = near ? S.danger : `${S.muted}99`;
+    ctx.font = `700 ${near ? 12 : 10}px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.globalAlpha = near ? 0.7 + Math.sin(t * 4) * 0.3 : 0.45;
+    ctx.fillText(near ? "⚠ ПОТОЛОК" : "потолок", board.x + board.w / 2, by - 6);
+    ctx.globalAlpha = 1;
   }
 
   private drawWall(t: number) {
     const { ctx, game, board } = this;
     const S = game.style();
+    const rise = game.wallRise * 6;
+    const breathGlobal = Math.sin(t * 1.6) * 1.2;
+
+    // soft contact shadow under wall mass
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    const shade = ctx.createRadialGradient(
+      board.x + board.w / 2,
+      board.y + board.h + 8,
+      10,
+      board.x + board.w / 2,
+      board.y + board.h + 8,
+      board.w * 0.45,
+    );
+    shade.addColorStop(0, "#000");
+    shade.addColorStop(1, "transparent");
+    ctx.fillStyle = shade;
+    ctx.fillRect(board.x, board.y + board.h - 20, board.w, 40);
+    ctx.restore();
+
+    // pre-strike light wash
+    if (game.strikePulse > 0) {
+      ctx.save();
+      ctx.globalAlpha = game.strikePulse * 0.35;
+      const wash = ctx.createLinearGradient(board.x, board.y, board.x + board.w, board.y);
+      wash.addColorStop(0, "transparent");
+      wash.addColorStop(0.5, S.accentHot);
+      wash.addColorStop(1, "transparent");
+      ctx.fillStyle = wash;
+      ctx.fillRect(board.x, board.y, board.w, board.h);
+      ctx.restore();
+    }
+
     for (let c = 0; c < game.cols; c++) {
       const stack = game.stacks[c];
       for (let r = 0; r < stack.length; r++) {
         const cell = stack[r];
-        const x = board.x + c * board.cw + 4;
-        const y = board.y + board.h - (r + 1) * board.ch + 4;
-        const bw = board.cw - 8;
-        const bh = board.ch - 8;
+        const breath = Math.sin(t * 2.1 + c * 0.55 + r * 0.35) * 1.1 + breathGlobal * 0.3;
+        const gap = 5;
+        const bw = board.cw - gap;
+        const bh = board.ch - gap;
+        const x = board.x + c * board.cw + gap / 2;
+        const y = board.y + board.h - (r + 1) * board.ch + gap / 2 - rise + breath;
         const preview = game.previewIds.has(cell.id);
         const danger = r >= game.maxH - 3;
-        this.brick(x, y, bw, bh, cell.letter, cell.armor, cell.mirror, preview, danger ? 1 : 0.96);
+        this.drawBevelCube(x, y, bw, bh, cell.letter, {
+          armor: cell.armor,
+          mirror: cell.mirror,
+          preview,
+          alpha: danger ? 1 : 0.98,
+          breath,
+        });
         if (preview) {
           ctx.save();
-          ctx.globalAlpha = 0.55 + Math.sin(t * 10) * 0.2;
+          ctx.globalAlpha = 0.45 + Math.sin(t * 9) * 0.2;
           ctx.strokeStyle = S.accentHot;
-          ctx.lineWidth = 2.5;
-          this.roundRect(x - 1, y - 1, bw + 2, bh + 2, 9, undefined, false);
+          ctx.lineWidth = 2;
+          this.pathRound(x - 1, y - 1, bw + 2, bh + 2, 7);
+          ctx.stroke();
           ctx.restore();
         }
       }
@@ -481,14 +671,14 @@ export class Renderer {
 
     for (const s of game.shocks) {
       ctx.save();
-      ctx.globalAlpha = Math.max(0, s.life);
+      ctx.globalAlpha = Math.max(0, s.life) * 0.85;
       ctx.strokeStyle = S.accentHot;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(
         board.x + board.w * s.x,
         board.y + board.h * (1 - s.y),
-        s.r * Math.min(board.w, board.h) * 0.45,
+        s.r * Math.min(board.w, board.h) * 0.48,
         0,
         Math.PI * 2,
       );
@@ -497,79 +687,186 @@ export class Renderer {
     }
   }
 
-  private drawStamp(t: number) {
-    const { ctx, w, board, game } = this;
-    if (game.stampT <= 0 || !game.stamp) return;
+  private drawCracks(_t: number) {
+    const { game, board } = this;
+    for (const c of game.cracks) {
+      const gap = 5;
+      const bw = board.cw - gap;
+      const bh = board.ch - gap;
+      const x = board.x + c.col * board.cw + gap / 2;
+      const y = board.y + board.h - (c.row + 1) * board.ch + gap / 2;
+      const p = 1 - c.life / 0.32;
+      this.drawCrackLines(x, y, bw, bh, Math.min(1, p + 0.2));
+    }
+  }
+
+  private drawCrackLines(x: number, y: number, bw: number, bh: number, p: number) {
+    const { ctx, game } = this;
     const S = game.style();
-    const p = Math.min(1, game.stampT / 0.4);
-    const scale = 1.15 - (1 - Math.min(1, game.stampT)) * 0.2;
     ctx.save();
-    ctx.globalAlpha = Math.min(0.55, game.stampT * 1.1);
-    ctx.translate(w / 2, board.y + board.h * 0.42);
-    ctx.scale(scale + Math.sin(t * 20) * 0.01, scale);
-    ctx.fillStyle = S.rare;
-    ctx.font = `900 ${Math.min(64, w * 0.16)}px Unbounded, Manrope, system-ui`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.shadowColor = S.accent;
-    ctx.shadowBlur = 20 * p;
-    ctx.fillText(game.stamp, 0, 0);
+    ctx.globalAlpha = 0.75;
+    ctx.strokeStyle = S.ink;
+    ctx.lineWidth = 1.4;
+    const cx = x + bw / 2;
+    const cy = y + bh / 2;
+    const len = Math.min(bw, bh) * 0.42 * p;
+    ctx.beginPath();
+    ctx.moveTo(cx - len, cy - len * 0.3);
+    ctx.lineTo(cx + len * 0.2, cy + len * 0.15);
+    ctx.lineTo(cx + len, cy - len * 0.5);
+    ctx.moveTo(cx + len * 0.1, cy - len);
+    ctx.lineTo(cx - len * 0.15, cy + len * 0.8);
+    ctx.stroke();
+    ctx.strokeStyle = S.accentHot;
+    ctx.globalAlpha = 0.35 * p;
+    ctx.lineWidth = 2;
+    ctx.stroke();
     ctx.restore();
   }
 
-  private brick(
+  private drawBevelCube(
     x: number,
     y: number,
     bw: number,
     bh: number,
     letter: string,
-    armor: number,
-    mirror: boolean,
-    preview: boolean,
-    alpha: number,
+    opts: { armor: number; mirror: boolean; preview: boolean; alpha: number; breath: number },
   ) {
     const { ctx, game } = this;
     const S = game.style();
+    const { armor, mirror, preview, alpha } = opts;
     ctx.save();
     ctx.globalAlpha = alpha;
+
+    // drop shadow
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    this.roundRect(x + 2, y + 3, bw, bh, 7, "rgba(0,0,0,0.35)", true);
+
     const fill = armor > 0 ? S.muted : mirror ? S.accent : preview ? S.brickHi : S.brick;
-    const deep = armor > 0 ? "#555" : mirror ? S.brickDeep : S.brickDeep;
-    this.roundRect(x, y, bw, bh, 9, deep, true);
-    this.roundRect(x + 2, y + 2, bw - 4, bh - 5, 7, fill, true);
-    // rivets for railway
+    const deep = armor > 0 ? "#4a4a4a" : S.brickDeep;
+
+    // depth body
+    this.roundRect(x, y, bw, bh, 7, deep, true);
+    // top face
+    this.roundRect(x + 1.5, y + 1.5, bw - 3, bh - 4.5, 6, fill, true);
+
+    // bevel highlight
+    ctx.globalAlpha = alpha * 0.35;
+    const hi = ctx.createLinearGradient(x, y, x, y + bh * 0.45);
+    hi.addColorStop(0, "#ffffff");
+    hi.addColorStop(1, "transparent");
+    ctx.fillStyle = hi;
+    this.pathRound(x + 3, y + 2, bw * 0.55, Math.max(4, bh * 0.22), 4);
+    ctx.fill();
+    ctx.globalAlpha = alpha;
+
+    // style accents
     if (S.id === "railway") {
       ctx.fillStyle = S.accent;
+      for (const [px, py] of [
+        [6, 6],
+        [bw - 6, 6],
+        [6, bh - 6],
+        [bw - 6, bh - 6],
+      ] as const) {
+        ctx.beginPath();
+        ctx.arc(x + px, y + py, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (S.id === "volcano") {
+      ctx.strokeStyle = `${S.rare}66`;
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(x + 6, y + 6, 2, 0, Math.PI * 2);
-      ctx.arc(x + bw - 6, y + 6, 2, 0, Math.PI * 2);
-      ctx.arc(x + 6, y + bh - 6, 2, 0, Math.PI * 2);
-      ctx.arc(x + bw - 6, y + bh - 6, 2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(x + 4, y + bh * 0.6);
+      ctx.lineTo(x + bw * 0.4, y + bh * 0.35);
+      ctx.lineTo(x + bw - 5, y + bh * 0.7);
+      ctx.stroke();
+    } else if (S.id === "ink") {
+      ctx.strokeStyle = `${S.rare}88`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x + bw - 8, y + 8, 3, 0, Math.PI * 2);
+      ctx.stroke();
     }
-    ctx.globalAlpha = alpha * 0.4;
-    ctx.fillStyle = "#fff";
-    this.roundRect(x + 4, y + 3, bw * 0.45, Math.max(3, bh * 0.18), 4, "#fff", true);
-    ctx.globalAlpha = alpha;
+
+    // letter ~70% of cube
+    const fs = Math.min(bw, bh) * 0.7;
     ctx.fillStyle = S.letter;
-    ctx.font = `800 ${Math.min(bw, bh) * 0.5}px Unbounded, Manrope, system-ui`;
+    ctx.font = `800 ${fs}px ${FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(letter, x + bw / 2, y + bh / 2 + 1);
+
     if (armor > 0) {
       ctx.fillStyle = S.ink;
-      ctx.font = `800 ${Math.min(bw, bh) * 0.2}px Manrope, system-ui`;
-      ctx.fillText(`${armor}+`, x + bw / 2, y + bh * 0.2);
+      ctx.font = `800 ${Math.min(bw, bh) * 0.18}px ${FONT}`;
+      ctx.fillText(`${armor}+`, x + bw / 2, y + bh * 0.18);
     } else if (mirror) {
       ctx.fillStyle = S.ink;
-      ctx.font = `800 ${Math.min(bw, bh) * 0.22}px Manrope, system-ui`;
-      ctx.fillText("◐", x + bw / 2, y + bh * 0.2);
+      ctx.font = `800 ${Math.min(bw, bh) * 0.2}px ${FONT}`;
+      ctx.fillText("◐", x + bw / 2, y + bh * 0.18);
     }
+
     if (RARE_LETTERS.has(letter)) {
       ctx.strokeStyle = S.rare;
-      ctx.lineWidth = 2;
-      this.roundRect(x + 1, y + 1, bw - 2, bh - 2, 8, undefined, false);
+      ctx.lineWidth = 1.8;
+      ctx.globalAlpha = alpha * 0.85;
+      this.pathRound(x + 1, y + 1, bw - 2, bh - 2, 6);
+      ctx.stroke();
     }
     ctx.restore();
+  }
+
+  private drawStamp(_t: number) {
+    const { ctx, w, h, board, game } = this;
+    if (game.stampT <= 0 || !game.stamp) return;
+    const S = game.style();
+    const maxLife = 1.15;
+    const life = game.stampT;
+    const enter = Math.min(1, (maxLife - life) / 0.12);
+    const fade = Math.min(1, life / 0.35);
+    const scale = 0.85 + enter * 0.35 + (1 - fade) * 0.08;
+
+    ctx.save();
+    ctx.translate(w / 2, board.y + board.h * 0.4);
+    ctx.scale(scale, scale * 1.05);
+    ctx.rotate((-4 + Math.sin(life * 20) * 0.6) * (Math.PI / 180));
+    ctx.globalAlpha = Math.min(0.72, fade * 0.85);
+
+    // material imprint body
+    ctx.fillStyle = S.brickDeep;
+    ctx.font = `900 ${Math.min(92, w * 0.22)}px ${DISPLAY}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = S.accent;
+    ctx.shadowBlur = 28;
+    ctx.fillText(game.stamp, 2, 3);
+    ctx.shadowBlur = 0;
+    const g = ctx.createLinearGradient(0, -40, 0, 40);
+    g.addColorStop(0, S.brickHi);
+    g.addColorStop(0.45, S.brick);
+    g.addColorStop(1, S.brickDeep);
+    ctx.fillStyle = g;
+    ctx.fillText(game.stamp, 0, 0);
+
+    // stamp edge cut
+    ctx.globalAlpha = Math.min(0.35, fade * 0.4);
+    ctx.strokeStyle = S.accentHot;
+    ctx.lineWidth = 2;
+    ctx.strokeText(game.stamp, 0, 0);
+    ctx.restore();
+
+    // shock ring tied to stamp
+    if (life > 0.6) {
+      ctx.save();
+      ctx.globalAlpha = (life - 0.6) * 0.5;
+      ctx.strokeStyle = S.accentHot;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(w / 2, board.y + board.h * 0.4, (1.15 - life) * h * 0.55 + 40, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   private drawParticles() {
@@ -578,18 +875,42 @@ export class Renderer {
     for (const p of game.particles) {
       const x = board.x + p.x * board.w;
       const y = board.y + p.y * board.h;
+      const a = Math.max(0, p.life / p.max);
       ctx.save();
-      ctx.globalAlpha = Math.max(0, p.life / p.max);
-      if (p.letter) {
-        ctx.fillStyle = S.accentHot;
-        ctx.font = `800 18px Unbounded, Manrope, system-ui`;
+      ctx.globalAlpha = a;
+      ctx.translate(x, y);
+      if (p.rot) ctx.rotate(p.rot);
+
+      if (p.kind === "glyph" && p.letter) {
+        ctx.fillStyle = S.letter;
+        ctx.font = `800 20px ${FONT}`;
         ctx.textAlign = "center";
-        ctx.fillText(p.letter, x, y);
-      } else {
-        // Map old generic particle colors to style when drawing is already handled
-    ctx.fillStyle = p.color;
+        ctx.textBaseline = "middle";
+        ctx.fillText(p.letter, 0, 0);
+      } else if (p.kind === "shard") {
+        const s = Math.max(3, p.size * board.w * 1.1);
+        ctx.fillStyle = p.color;
         ctx.beginPath();
-        ctx.arc(x, y, Math.max(2, p.size * board.w), 0, Math.PI * 2);
+        ctx.moveTo(0, -s);
+        ctx.lineTo(s * 0.7, s * 0.4);
+        ctx.lineTo(-s * 0.55, s * 0.55);
+        ctx.closePath();
+        ctx.fill();
+      } else if (p.kind === "glow") {
+        const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(4, p.size * board.w));
+        rg.addColorStop(0, p.color);
+        rg.addColorStop(1, "transparent");
+        ctx.fillStyle = rg;
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.max(4, p.size * board.w), 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.kind === "spark") {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-1, -Math.max(3, p.size * board.w), 2, Math.max(6, p.size * board.w * 2));
+      } else {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.max(1.5, p.size * board.w * 0.7), 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
@@ -602,31 +923,44 @@ export class Renderer {
       ctx.save();
       ctx.globalAlpha = Math.max(0, f.life);
       ctx.fillStyle = f.color;
-      ctx.font = `800 26px Manrope, system-ui`;
+      ctx.font = `800 24px ${FONT}`;
       ctx.textAlign = "center";
-      ctx.shadowColor = "rgba(0,0,0,0.45)";
+      ctx.shadowColor = "rgba(0,0,0,0.4)";
       ctx.shadowBlur = 8;
       ctx.fillText(f.text, board.x + f.x * board.w, board.y + f.y * board.h);
       ctx.restore();
     }
   }
 
-  private drawPressure() {
+  private drawPressure(t: number) {
     const { ctx, game, board } = this;
     if (game.phase !== "playing") return;
     const S = game.style();
-    const ratio = game.usingEcho()
-      ? game.echoT / game.echoWindow
-      : Math.max(0, game.growCD / game.growEvery);
-    const label = game.usingEcho() ? "Эхо — успей второй удар" : "Рост стены";
-    const col = game.usingEcho() ? S.rare : S.accent;
-    this.roundRect(board.x, board.y + board.h + 10, board.w, 16, 8, "rgba(0,0,0,0.4)", true);
-    this.roundRect(board.x, board.y + board.h + 10, Math.max(6, board.w * ratio), 16, 8, col, true);
-    ctx.fillStyle = S.ink;
-    ctx.font = `700 10px Manrope, system-ui`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, board.x + board.w / 2, board.y + board.h + 18);
+    const echo = game.usingEcho();
+    const ratio = echo ? game.echoT / game.echoWindow : Math.max(0, game.growCD / game.growEvery);
+    const y = board.y + board.h + 8;
+    const hBar = 4;
+
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    this.roundRect(board.x, y, board.w, hBar, 2, "rgba(0,0,0,0.45)", true);
+
+    if (echo) {
+      // light wave
+      const wave = ctx.createLinearGradient(board.x, y, board.x + board.w, y);
+      const shift = (t * 0.8) % 1;
+      wave.addColorStop(Math.max(0, shift - 0.15), "transparent");
+      wave.addColorStop(shift, S.rare);
+      wave.addColorStop(Math.min(1, shift + 0.15), "transparent");
+      ctx.fillStyle = wave;
+      this.roundRect(board.x, y, board.w * ratio, hBar, 2, S.rare, true);
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = wave;
+      ctx.fillRect(board.x, y, board.w * ratio, hBar);
+      ctx.globalAlpha = 1;
+    } else {
+      const col = ratio < 0.25 ? S.danger : S.accent;
+      this.roundRect(board.x, y, Math.max(2, board.w * ratio), hBar, 2, col, true);
+    }
   }
 
   private drawTray(t: number) {
@@ -634,31 +968,41 @@ export class Renderer {
     const S = game.style();
     const tray = game.activeTray();
     const n = tray.length;
-    const gap = 6;
-    const size = Math.min(44, (w - 24 - gap * Math.max(0, n - 1)) / Math.max(1, n));
+    const gap = 10;
+    const size = Math.min(48, (w - 36 - gap * Math.max(0, n - 1)) / Math.max(1, n));
     const total = n * size + (n - 1) * gap;
     const x0 = (w - total) / 2;
-    const y = h - 156;
+    const y = h - 168;
 
-    this.roundRect(16, y - 58, w - 32, 42, 14, S.panel, true);
+    // current word — large, free in air
     const word = game.currentWord();
     ctx.textAlign = "center";
     if (word) {
+      const strong = word.length >= 5 || game.previewIds.size >= 3;
+      const vib = strong ? Math.sin(t * 28) * 1.2 : 0;
+      ctx.save();
+      ctx.translate(w / 2 + vib, y - 42);
+      if (strong) {
+        ctx.shadowColor = S.accent;
+        ctx.shadowBlur = 16;
+      }
       ctx.fillStyle = S.accentHot;
-      ctx.font = `800 22px Unbounded, Manrope, system-ui`;
-      ctx.fillText(word, w / 2, y - 32);
+      ctx.font = `800 ${Math.min(40, w * 0.1)}px ${DISPLAY}`;
+      ctx.fillText(word, 0, 0);
+      ctx.shadowBlur = 0;
+      ctx.restore();
       const hits = game.previewIds.size;
       ctx.fillStyle = hits ? S.rare : S.muted;
-      ctx.font = `600 11px Manrope, system-ui`;
-      ctx.fillText(hits ? `выбьет ${hits} ▦` : "нет букв стены", w / 2, y - 14);
+      ctx.font = `600 11px ${FONT}`;
+      ctx.fillText(hits ? `выбьет ${hits}` : "нет букв стены", w / 2, y - 18);
     } else if (game.hint) {
       ctx.fillStyle = S.muted;
-      ctx.font = `600 13px Manrope, system-ui`;
-      ctx.fillText(`можно: ${game.hint}`, w / 2, y - 28);
+      ctx.font = `600 13px ${FONT}`;
+      ctx.fillText(`можно: ${game.hint}`, w / 2, y - 34);
     } else {
-      ctx.fillStyle = S.muted;
-      ctx.font = `600 13px Manrope, system-ui`;
-      ctx.fillText(game.usingEcho() ? "эхо-трей" : "собери слово", w / 2, y - 28);
+      ctx.fillStyle = `${S.muted}aa`;
+      ctx.font = `600 13px ${FONT}`;
+      ctx.fillText(game.usingEcho() ? "эхо-трей" : "собери слово", w / 2, y - 34);
     }
 
     tray.forEach((ch, i) => {
@@ -666,45 +1010,88 @@ export class Renderer {
       const selIdx = game.pick.indexOf(i);
       const sel = selIdx >= 0;
       const empty = ch === "";
-      const bob = sel ? Math.sin(t * 10 + i) * 2 : 0;
+      const bob = sel ? -4 + Math.sin(t * 11 + i) * 2 : 0;
+      const sc = sel ? 1.08 : 1;
       this.hits.push({ id: `tray-${i}`, x, y: y + bob, w: size, h: size });
       ctx.save();
       if (empty) {
-        ctx.globalAlpha = 0.2;
-        this.roundRect(x, y, size, size, 12, `${S.accent}22`, true);
+        ctx.globalAlpha = 0.18;
+        this.roundRect(x, y, size, size, 10, `${S.accent}33`, true);
       } else {
-        const fill = sel ? S.trayGlow : S.panel;
-        this.roundRect(x, y + bob, size, size, 12, fill, true);
-        ctx.strokeStyle = sel ? S.accentHot : S.accent;
-        ctx.lineWidth = sel ? 2.6 : 1.2;
-        this.roundRect(x, y + bob, size, size, 12, undefined, false);
-        ctx.fillStyle = RARE_LETTERS.has(ch) ? S.rare : sel ? S.bg[0] : S.ink;
-        ctx.font = `800 ${size * 0.5}px Unbounded, Manrope, system-ui`;
+        ctx.translate(x + size / 2, y + bob + size / 2);
+        ctx.scale(sc, sc);
+        ctx.translate(-(x + size / 2), -(y + bob + size / 2));
+        // volumetric tile
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        this.roundRect(x + 2, y + bob + 3, size, size, 10, "rgba(0,0,0,0.35)", true);
+        const fill = sel ? S.trayGlow : S.brick;
+        this.roundRect(x, y + bob, size, size, 10, S.brickDeep, true);
+        this.roundRect(x + 2, y + bob + 2, size - 4, size - 5, 8, fill, true);
+        if (sel) {
+          ctx.strokeStyle = S.accentHot;
+          ctx.lineWidth = 2;
+          this.pathRound(x, y + bob, size, size, 10);
+          ctx.stroke();
+        }
+        ctx.fillStyle = RARE_LETTERS.has(ch) ? S.rare : sel ? S.bg[0] : S.letter;
+        if (RARE_LETTERS.has(ch) && !sel) {
+          // rare materials of current style
+          ctx.fillStyle = S.rare;
+        }
+        ctx.font = `800 ${size * 0.55}px ${FONT}`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(ch, x + size / 2, y + bob + size / 2 + 1);
         if (sel) {
           ctx.fillStyle = S.bg[0];
-          ctx.font = `800 10px Manrope, system-ui`;
-          ctx.fillText(String(selIdx + 1), x + size - 9, y + bob + 11);
+          ctx.font = `800 10px ${FONT}`;
+          ctx.fillText(String(selIdx + 1), x + size - 10, y + bob + 12);
         }
       }
       ctx.restore();
     });
   }
 
-  private drawActions() {
-    const { w, h } = this;
-    const y = h - 78;
-    const bw = Math.min(86, w * 0.22);
+  private drawActions(t: number) {
+    const { w, h, game } = this;
+    const S = game.style();
+    const y = h - 88;
+    const side = Math.min(52, w * 0.13);
+    const strikeW = Math.min(168, w * 0.42);
     const gap = 8;
-    const total = bw * 4 + gap * 3;
+    const total = side * 3 + strikeW + gap * 3;
     const x0 = (w - total) / 2;
-    this.roundBtn(x0, y, bw, 44, "↩", "undo", false);
-    this.roundBtn(x0 + bw + gap, y, bw, 44, "!", "hint", false);
-    this.roundBtn(x0 + (bw + gap) * 2, y, bw, 44, "УДАР", "submit", true);
-    this.roundBtn(x0 + (bw + gap) * 3, y, bw, 44, "Сброс", "reshuffle", false);
-    this.roundBtn(10, h - 78, 40, 44, "☰", "to-menu", false);
+
+    this.mechBtn(x0, y + 4, side, 44, "↩", "undo", false);
+    this.mechBtn(x0 + side + gap, y + 4, side, 44, "!", "hint", false);
+
+    // massive УДАР
+    const sx = x0 + (side + gap) * 2;
+    const pulse = 1 + Math.sin(t * 3) * 0.015 + game.strikePulse * 0.04;
+    const sw = strikeW * pulse;
+    const sh = 52;
+    this.hits.push({ id: "submit", x: sx - (sw - strikeW) / 2, y, w: sw, h: sh });
+    const { ctx } = this;
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    this.roundRect(sx - (sw - strikeW) / 2 + 3, y + 5, sw, sh, 12, "rgba(0,0,0,0.4)", true);
+    const g = ctx.createLinearGradient(sx, y, sx, y + sh);
+    g.addColorStop(0, S.brickHi);
+    g.addColorStop(0.4, S.accent);
+    g.addColorStop(1, S.brickDeep);
+    ctx.fillStyle = g;
+    this.pathRound(sx - (sw - strikeW) / 2, y, sw, sh, 12);
+    ctx.fill();
+    ctx.fillStyle = S.ink;
+    if (S.id === "candy" || S.id === "ink") ctx.fillStyle = "#1a1020";
+    ctx.font = `800 20px ${DISPLAY}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("УДАР", sx - (sw - strikeW) / 2 + sw / 2, y + sh / 2 + 1);
+    ctx.restore();
+
+    this.mechBtn(sx + strikeW + gap, y + 4, side, 44, "↻", "reshuffle", false);
+    this.mechBtn(10, y + 4, 36, 44, "☰", "to-menu", false);
   }
 
   private drawMessage() {
@@ -712,54 +1099,60 @@ export class Renderer {
     if (game.messageT <= 0 || !game.message) return;
     const S = game.style();
     ctx.save();
-    ctx.globalAlpha = Math.min(1, game.messageT);
-    const tw = Math.min(w - 24, 370);
-    this.roundRect((w - tw) / 2, h * 0.575, tw, 38, 12, S.panel, true);
+    ctx.globalAlpha = Math.min(1, game.messageT) * 0.92;
     ctx.fillStyle = S.ink;
-    ctx.font = `600 12px Manrope, system-ui`;
+    ctx.font = `600 12px ${FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(game.message, w / 2, h * 0.575 + 19);
+    ctx.shadowColor = "rgba(0,0,0,0.55)";
+    ctx.shadowBlur = 8;
+    ctx.fillText(game.message, w / 2, h * 0.56);
     ctx.restore();
   }
 
   private drawResult() {
     const { ctx, w, h, game } = this;
     const S = game.style();
-    ctx.fillStyle = "rgba(0,0,0,0.72)";
+    ctx.fillStyle = "rgba(0,0,0,0.68)";
     ctx.fillRect(0, 0, w, h);
-    this.roundRect(24, h * 0.2, w - 48, h * 0.56, 22, S.panel, true);
-    ctx.strokeStyle = S.accent;
-    ctx.lineWidth = 1.5;
-    this.roundRect(24, h * 0.2, w - 48, h * 0.56, 22, undefined, false);
+
+    // atmospheric vignette of style, no medals/confetti
+    const vg = ctx.createRadialGradient(w / 2, h * 0.35, 20, w / 2, h * 0.4, w * 0.55);
+    vg.addColorStop(0, `${S.accent}22`);
+    vg.addColorStop(1, "transparent");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, w, h);
 
     ctx.fillStyle = S.ink;
-    ctx.font = `800 28px Manrope, system-ui`;
+    ctx.font = `800 32px ${DISPLAY}`;
     ctx.textAlign = "center";
-    ctx.fillText("Потолок!", w / 2, h * 0.28);
-    ctx.fillStyle = S.accentHot;
-    ctx.font = `800 52px Manrope, system-ui`;
-    ctx.fillText(`${game.score}`, w / 2, h * 0.38);
-    ctx.fillStyle = S.muted;
-    ctx.font = `500 14px Manrope, system-ui`;
-    ctx.fillText(
-      `лучшее · ${game.bestWord || "—"} · сбито ${game.wallsBroken}`,
-      w / 2,
-      h * 0.38 + 26,
-    );
-    ctx.fillStyle = S.rare;
-    ctx.font = `700 14px Manrope, system-ui`;
-    ctx.fillText(`+${game.lastCoinGain} осколков · всего ◆ ${game.save.coins}`, w / 2, h * 0.38 + 48);
+    ctx.fillText("ПОТОЛОК!", w / 2, h * 0.24);
 
-    this.roundBtn((w - 240) / 2, h * 0.48, 240, 46, "Ещё раз", "again", true);
+    ctx.fillStyle = S.accentHot;
+    ctx.font = `800 56px ${DISPLAY}`;
+    ctx.fillText(`${game.score}`, w / 2, h * 0.34);
+
+    ctx.fillStyle = S.muted;
+    ctx.font = `500 14px ${FONT}`;
+    ctx.fillText(`лучшее · ${game.bestWord || "—"}`, w / 2, h * 0.34 + 28);
+    ctx.fillText(`разрушено ${game.wallsBroken}`, w / 2, h * 0.34 + 48);
+
+    ctx.fillStyle = S.rare;
+    ctx.font = `700 14px ${FONT}`;
+    ctx.fillText(`+${game.lastCoinGain} осколков`, w / 2, h * 0.34 + 74);
+    ctx.fillStyle = S.muted;
+    ctx.font = `600 12px ${FONT}`;
+    ctx.fillText(`баланс ◆ ${game.save.coins}`, w / 2, h * 0.34 + 94);
+
+    this.mechBtn((w - 250) / 2, h * 0.52, 250, 48, "Ещё раз", "again", true);
     if (!game.continueUsed) {
-      this.roundBtn((w - 240) / 2, h * 0.48 + 54, 240, 46, "Реклама · срезать верх", "continue", false);
+      this.mechBtn((w - 250) / 2, h * 0.52 + 56, 250, 46, "Реклама · срезать верх", "continue", false);
     }
-    this.roundBtn((w - 240) / 2, h * 0.48 + 108, 240, 46, "✦ Стили", "open-shop", false);
-    this.roundBtn((w - 240) / 2, h * 0.48 + 162, 240, 46, "В меню", "to-menu", false);
+    this.mechBtn((w - 250) / 2, h * 0.52 + 112, 250, 46, "Стили", "open-shop", false);
+    this.mechBtn((w - 250) / 2, h * 0.52 + 168, 250, 46, "В меню", "to-menu", false);
   }
 
-  private roundBtn(
+  private mechBtn(
     x: number,
     y: number,
     bw: number,
@@ -771,17 +1164,43 @@ export class Renderer {
     const { ctx, game } = this;
     const S = game.style();
     this.hits.push({ id, x, y, w: bw, h: bh });
-    this.roundRect(x, y, bw, bh, 14, primary ? S.trayGlow : S.panel, true);
-    ctx.strokeStyle = primary ? S.accentHot : S.accent;
-    ctx.lineWidth = 1.5;
-    this.roundRect(x, y, bw, bh, 14, undefined, false);
-    ctx.fillStyle = primary ? S.bg[0] : S.ink;
-    // readability for light styles
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    this.roundRect(x + 2, y + 3, bw, bh, 11, "rgba(0,0,0,0.3)", true);
+    if (primary) {
+      const g = ctx.createLinearGradient(x, y, x, y + bh);
+      g.addColorStop(0, S.brickHi);
+      g.addColorStop(0.45, S.accent);
+      g.addColorStop(1, S.brickDeep);
+      ctx.fillStyle = g;
+      this.pathRound(x, y, bw, bh, 11);
+      ctx.fill();
+    } else {
+      this.roundRect(x, y, bw, bh, 11, `${S.bg[1]}ee`, true);
+      ctx.strokeStyle = `${S.accent}66`;
+      ctx.lineWidth = 1;
+      this.pathRound(x, y, bw, bh, 11);
+      ctx.stroke();
+    }
+    ctx.fillStyle = primary ? S.ink : S.ink;
     if (primary && (S.id === "candy" || S.id === "ink")) ctx.fillStyle = "#1a1020";
-    ctx.font = `800 14px Manrope, system-ui`;
+    ctx.font = `800 ${bw < 60 ? 16 : 14}px ${FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(label, x + bw / 2, y + bh / 2 + 1);
+    ctx.restore();
+  }
+
+  private pathRound(x: number, y: number, w: number, h: number, r: number) {
+    const { ctx } = this;
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
   }
 
   private roundRect(
@@ -794,14 +1213,7 @@ export class Renderer {
     doFill = true,
   ) {
     const { ctx } = this;
-    const rr = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + rr, y);
-    ctx.arcTo(x + w, y, x + w, y + h, rr);
-    ctx.arcTo(x + w, y + h, x, y + h, rr);
-    ctx.arcTo(x, y + h, x, y, rr);
-    ctx.arcTo(x, y, x + w, y, rr);
-    ctx.closePath();
+    this.pathRound(x, y, w, h, r);
     if (doFill && fill) {
       ctx.fillStyle = fill;
       ctx.fill();

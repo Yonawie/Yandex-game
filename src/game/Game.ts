@@ -24,7 +24,7 @@ import {
 } from "../data/save";
 import { StyleId, VisualStyle, styleById } from "../data/styles";
 import { Sfx } from "./audio/sfx";
-import type { FloatText, Particle, Shockwave, WallCell } from "./types";
+import type { CrackFX, FloatText, Particle, Shockwave, WallCell } from "./types";
 
 export type GamePhase = "menu" | "shop" | "playing" | "result";
 
@@ -118,10 +118,13 @@ export class Game {
   particles: Particle[] = [];
   shocks: Shockwave[] = [];
   floats: FloatText[] = [];
+  cracks: CrackFX[] = [];
   flash = 0;
   message = "";
   messageT = 0;
   shake = 0;
+  strikePulse = 0;
+  wallRise = 0;
   /** cell ids that current word would hit (for highlight) */
   previewIds = new Set<number>();
 
@@ -190,8 +193,11 @@ export class Game {
     this.particles = [];
     this.shocks = [];
     this.floats = [];
+    this.cracks = [];
     this.flash = 0;
     this.shake = 0;
+    this.strikePulse = 0;
+    this.wallRise = 0;
 
     this.stacks = Array.from({ length: this.cols }, () => []);
     for (let r = 0; r < this.startRows; r++) this.growWall(false);
@@ -401,23 +407,28 @@ export class Game {
           destroySet.set(cell.id, { col: nc, row: nr, cell });
         }
       }
-      this.shocks.push({ x: 0.5, y: 0.45, r: 0, max: 1.6, life: 0.6 });
+      this.shocks.push({ x: 0.5, y: 0.45, r: 0, max: 1.85, life: 0.7 });
       Sfx.pop();
-      this.flash = 0.4;
-      this.shake = 0.4;
+      this.flash = 0.35;
+      this.shake = 0.45;
     } else {
+      this.shocks.push({ x: 0.5, y: 0.45, r: 0, max: 1.1, life: 0.4 });
       Sfx.valid();
+      this.shake = 0.22;
     }
 
     const fallen: string[] = [];
     const mirrors: WallCell[] = [];
+    for (const t of destroySet.values()) {
+      this.cracks.push({ col: t.col, row: t.row, life: 0.32, letter: t.cell.letter });
+    }
     for (let c = 0; c < this.cols; c++) {
       const kept: WallCell[] = [];
       for (let r = 0; r < this.stacks[c].length; r++) {
         const cell = this.stacks[c][r];
         if (destroySet.has(cell.id)) {
           fallen.push(cell.letter);
-          this.spawnFall(c, r, cell.letter);
+          this.spawnFall(c, r, cell.letter, doEcho);
           if (cell.mirror) mirrors.push(cell);
         } else kept.push(cell);
       }
@@ -444,13 +455,14 @@ export class Game {
 
     this.floats.push({
       x: 0.5,
-      y: 0.32,
+      y: 0.28,
       text: doEcho ? `Эхо +${gain}` : `+${gain}`,
       life: 1.25,
       color: doEcho ? this.style().rare : this.style().accentHot,
     });
     this.stamp = word;
-    this.stampT = doEcho ? 0.85 : 0.55;
+    this.stampT = doEcho ? 1.15 : 0.88;
+    this.strikePulse = doEcho ? 0.42 : 0.32;
 
     this.consumePicks();
 
@@ -550,25 +562,46 @@ export class Game {
       if (this.stacks[c].length >= this.maxH) continue;
       this.stacks[c].push(makeCell(weightedLetter(), this.armorChance, this.mirrorChance));
     }
+    this.wallRise = 0.35;
     if (fromPressure) this.tip("Стена растёт…");
   }
 
-  private spawnFall(col: number, row: number, letter: string) {
+  private spawnFall(col: number, row: number, letter: string, heavy = false) {
     const x = (col + 0.5) / this.cols;
     const y = 1 - (row + 0.5) / this.maxH;
-    const cols = this.style().particle;
-    for (let i = 0; i < 8; i++) {
+    const st = this.style();
+    const cols = st.particle;
+    const n = heavy ? 22 : 14;
+    for (let i = 0; i < n; i++) {
       const ang = Math.random() * Math.PI * 2;
+      const sp = 0.28 + Math.random() * (heavy ? 0.65 : 0.45);
+      const shard = i > 0 && i < (heavy ? 12 : 8);
       this.particles.push({
         x,
         y,
-        vx: Math.cos(ang) * (0.2 + Math.random() * 0.35),
-        vy: -0.25 - Math.random() * 0.45,
-        life: 0.55 + Math.random() * 0.45,
-        max: 1,
+        vx: Math.cos(ang) * sp,
+        vy: -0.22 - Math.random() * 0.55,
+        life: 0.55 + Math.random() * 0.6,
+        max: 1.15,
         color: cols[i % 3],
-        size: 0.018 + Math.random() * 0.025,
+        size: shard ? 0.02 + Math.random() * 0.035 : 0.012 + Math.random() * 0.022,
         letter: i === 0 ? letter : undefined,
+        kind: i === 0 ? "glyph" : shard ? "shard" : i % 3 === 0 ? "spark" : "dust",
+        rot: Math.random() * Math.PI,
+        spin: (Math.random() - 0.5) * 14,
+      });
+    }
+    for (let i = 0; i < 6; i++) {
+      this.particles.push({
+        x: x + (Math.random() - 0.5) * 0.1,
+        y: y + (Math.random() - 0.5) * 0.08,
+        vx: (Math.random() - 0.5) * 0.06,
+        vy: -0.03 - Math.random() * 0.04,
+        life: 0.75 + Math.random() * 0.55,
+        max: 1.3,
+        color: i % 2 ? st.accent : cols[2],
+        size: 0.045 + Math.random() * 0.04,
+        kind: "glow",
       });
     }
   }
@@ -631,12 +664,16 @@ export class Game {
     if (this.flash > 0) this.flash -= dt;
     if (this.shake > 0) this.shake -= dt;
     if (this.stampT > 0) this.stampT -= dt;
+    if (this.strikePulse > 0) this.strikePulse -= dt;
+    if (this.wallRise > 0) this.wallRise -= dt;
 
     for (const p of this.particles) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += dt * 0.95;
+      p.vy += dt * (p.kind === "dust" || p.kind === "glow" ? 0.12 : 0.95);
+      if (p.spin) p.rot = (p.rot ?? 0) + p.spin * dt;
       p.life -= dt;
+      p.vx *= 1 - dt * 0.25;
     }
     this.particles = this.particles.filter((p) => p.life > 0);
     for (const s of this.shocks) {
@@ -644,6 +681,8 @@ export class Game {
       s.life -= dt;
     }
     this.shocks = this.shocks.filter((s) => s.life > 0);
+    for (const c of this.cracks) c.life -= dt;
+    this.cracks = this.cracks.filter((c) => c.life > 0);
     for (const f of this.floats) {
       f.y -= dt * 0.14;
       f.life -= dt;

@@ -17,6 +17,9 @@ export type Particle = {
   color: string;
   size: number;
   letter?: string;
+  kind?: "shard" | "dust" | "spark" | "glyph" | "glow";
+  rot?: number;
+  spin?: number;
 };
 
 export type FloatText = {
@@ -33,4 +36,11 @@ export type Shockwave = {
   r: number;
   max: number;
   life: number;
+};
+
+export type CrackFX = {
+  col: number;
+  row: number;
+  life: number;
+  letter: string;
 };
