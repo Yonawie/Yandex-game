@@ -18,12 +18,14 @@ import { getSave } from '@/data/save';
  */
 export class RetentionOverlay {
   private root: Phaser.GameObjects.Container;
-  private body!: Phaser.GameObjects.Text;
-  private snap!: RetentionSnapshot;
+  private body: Phaser.GameObjects.Text;
+  private snap: RetentionSnapshot;
   private onChanged: () => void;
+  private actionLabels: { text: Phaser.GameObjects.Text; relabel: () => string }[] = [];
 
   constructor(scene: Phaser.Scene, onChanged: () => void) {
     this.onChanged = onChanged;
+    this.snap = getSnapshot();
     const { width, height } = scene.scale;
     this.root = scene.add.container(0, 0).setDepth(70).setVisible(false);
 
@@ -57,19 +59,17 @@ export class RetentionOverlay {
         label: () => (this.snap.morningAvailable ? tf('morningClaim') : tf('morningDone')),
         fn: async () => {
           const r = await claimMorningFlame();
-          if (r) playTone('start');
-          else playTone('ui');
+          playTone(r ? 'start' : 'ui');
           this.refresh();
           this.onChanged();
         },
       },
       {
-        label: () =>
-          this.snap.challengeDone && !this.snap.challengeClaimed
-            ? tf('challengeClaim')
-            : this.snap.challengeClaimed
-              ? tf('claimed')
-              : tf('challengeTitle'),
+        label: () => {
+          if (this.snap.challengeDone && !this.snap.challengeClaimed) return tf('challengeClaim');
+          if (this.snap.challengeClaimed) return tf('claimed');
+          return tf('challengeTitle');
+        },
         fn: async () => {
           const r = await claimChallengeReward();
           if (r) {
@@ -84,8 +84,7 @@ export class RetentionOverlay {
         label: () => (this.snap.idleSparks > 0 ? tf('idleClaim') : tf('idleEmpty')),
         fn: async () => {
           const coins = await collectIdle();
-          if (coins > 0) playTone('collect', 3);
-          else playTone('ui');
+          playTone(coins > 0 ? 'collect' : 'ui', 3);
           this.refresh();
           this.onChanged();
         },
@@ -118,9 +117,10 @@ export class RetentionOverlay {
           color: '#071018',
         })
         .setOrigin(0.5);
-      bg.on('pointerup', () => void action.fn());
-      bg.setData('label', label);
-      bg.setData('relabel', action.label);
+      bg.on('pointerup', () => {
+        void action.fn();
+      });
+      this.actionLabels.push({ text: label, relabel: action.label });
       buttons.push(bg, label);
     });
 
@@ -136,19 +136,8 @@ export class RetentionOverlay {
     buttons.push(close);
 
     this.root.add(buttons);
-    this.refreshLabels = () => {
-      this.root.each((obj: Phaser.GameObjects.GameObject) => {
-        const go = obj as Phaser.GameObjects.Image;
-        if (go.getData('relabel') && go.getData('label')) {
-          (go.getData('label') as Phaser.GameObjects.Text).setText(
-            (go.getData('relabel') as () => string)(),
-          );
-        }
-      });
-    };
+    this.refresh();
   }
-
-  private refreshLabels: () => void = () => undefined;
 
   show(): void {
     this.refresh();
@@ -190,6 +179,9 @@ export class RetentionOverlay {
         .filter(Boolean)
         .join('\n'),
     );
-    this.refreshLabels();
+
+    for (const row of this.actionLabels) {
+      row.text.setText(row.relabel());
+    }
   }
 }

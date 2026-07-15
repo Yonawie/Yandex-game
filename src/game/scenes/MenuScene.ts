@@ -21,7 +21,7 @@ export class MenuScene extends Phaser.Scene {
   private skinHint!: Phaser.GameObjects.Text;
   private modeText!: Phaser.GameObjects.Text;
   private retentionHint!: Phaser.GameObjects.Text;
-  private retentionOverlay!: RetentionOverlay;
+  private retentionOverlay: RetentionOverlay | null = null;
 
   constructor() {
     super('Menu');
@@ -118,7 +118,7 @@ export class MenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     this.retentionHint.on('pointerup', () => {
       playTone('ui');
-      this.retentionOverlay.show();
+      this.retentionOverlay?.show();
     });
     this.refreshRetentionHint();
 
@@ -174,7 +174,7 @@ export class MenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     hub.on('pointerup', () => {
       playTone('ui');
-      this.retentionOverlay.show();
+      this.retentionOverlay?.show();
     });
 
     const soundLabel = save.sound ? tf('soundOn') : tf('soundOff');
@@ -194,11 +194,15 @@ export class MenuScene extends Phaser.Scene {
       playTone('ui');
     });
 
-    this.retentionOverlay = new RetentionOverlay(this, () => {
-      this.coinsText.setText(`${tf('coins')}: ${getSave().coins}`);
-      this.refreshRetentionHint();
-      this.refreshSkinLabel();
-    });
+    try {
+      this.retentionOverlay = new RetentionOverlay(this, () => {
+        this.coinsText.setText(`${tf('coins')}: ${getSave().coins}`);
+        this.refreshRetentionHint();
+        this.refreshSkinLabel();
+      });
+    } catch (e) {
+      console.warn('Retention overlay failed', e);
+    }
 
     if (!save.seenTip) this.showTips();
 
