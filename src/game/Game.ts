@@ -6,25 +6,18 @@ import {
   INFINITY_MULT_STEP,
   LETTER_SCORE,
   LETTER_WEIGHTS,
-  MIN_RADIUS,
+  MIN_COLS,
+  MIN_ROWS,
   RARE_LETTERS,
   TRAY_SIZE,
+  boardSize,
   lengthCoef,
   popChance,
-  radiusFor,
   rareComboMult,
 } from "../data/balance";
-import { isValidWord } from "../data/dictionary";
+import { SEED_WORDS, isValidWord } from "../data/dictionary";
 import { Sfx } from "./audio/sfx";
-import {
-  Axial,
-  axialToPixel,
-  cellsInRadius,
-  hexDistance,
-  isNeighbor,
-  keyOf,
-  neighbors,
-} from "./hex";
+import { CellPos, allCells, inBounds, isNeighbor, keyOf, neighbors } from "./grid";
 import type { CellState, FloatText, MultKind, Particle, Shockwave } from "./types";
 
 export type GamePhase = "menu" | "playing" | "result";
@@ -51,6 +44,19 @@ function weightedLetter(): string {
   return "О";
 }
 
+/** Deal a tray that always contains at least one seed word’s letters. */
+export function dealPlayableTray(): string[] {
+  const seed = SEED_WORDS[Math.floor(Math.random() * SEED_WORDS.length)] ?? "дом";
+  const tray = seed.toUpperCase().replace(/Ё/g, "Е").split("");
+  while (tray.length < TRAY_SIZE) tray.push(weightedLetter());
+  // shuffle
+  for (let i = tray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [tray[i], tray[j]] = [tray[j], tray[i]];
+  }
+  return tray;
+}
+
 function pickMult(diff: Difficulty): MultKind {
   const p = popChance(diff);
   const r = Math.random();
@@ -62,11 +68,14 @@ function pickMult(diff: Difficulty): MultKind {
 export class Game {
   phase: GamePhase = "menu";
   difficulty: Difficulty = "normal";
-  radius = 3;
+  cols = 6;
+  rows = 7;
+  /** Margin of locked / ripped film on infinity shrink */
+  margin = 0;
   cells = new Map<string, CellState>();
   tray: string[] = [];
   selectedTray = -1;
-  path: Axial[] = [];
+  path: CellPos[] = [];
   score = 0;
   bestWord = "";
   rareStreak = 0;
@@ -84,7 +93,10 @@ export class Game {
 
   start(diff: Difficulty) {
     this.difficulty = diff;
-    this.radius = radiusFor(diff);
+    const size = boardSize(diff);
+    this.cols = size.cols;
+    this.rows = size.rows;
+    this.margin = 0;
     this.score = 0;
     this.bestWord = "";
     this.rareStreak = 0;
@@ -99,39 +111,33 @@ export class Game {
     this.floats = [];
     this.flash = 0;
     this.buildField();
-    this.tray = Array.from({ length: TRAY_SIZE }, () => weightedLetter());
+    this.tray = dealPlayableTray();
     this.phase = "playing";
-    this.tip("Клади буквы цепочкой · слова из 6+ открывают множители");
+    this.tip("Клади буквы рядом · слова из 6+ открывают множители на плёнке");
   }
 
   private buildField() {
     this.cells.clear();
-    const list = cellsInRadius(this.radius);
-    for (const a of list) {
-      this.cells.set(keyOf(a), {
-        q: a.q,
-        r: a.r,
+    for (const p of allCells(this.cols, this.rows)) {
+      this.cells.set(keyOf(p), {
+        c: p.c,
+        r: p.r,
         letter: null,
         brick: false,
         hiddenMult: null,
         activeMult: null,
       });
     }
-    // Plant hidden multipliers on ~28% of cells
-    const slots = list.filter(() => Math.random() < 0.28);
-    for (const a of slots) {
-      const c = this.cells.get(keyOf(a))!;
-      c.hiddenMult = pickMult(this.difficulty);
+    const slots = allCells(this.cols, this.rows).filter(() => Math.random() < 0.28);
+    for (const p of slots) {
+      const cell = this.cells.get(keyOf(p))!;
+      cell.hiddenMult = pickMult(this.difficulty);
     }
-    if (this.difficulty === "easy") {
-      // reveal one starter
-      const first = slots[0];
-      if (first) {
-        const c = this.cells.get(keyOf(first))!;
-        if (c.hiddenMult) {
-          c.activeMult = c.hiddenMult;
-          c.hiddenMult = null;
-        }
+    if (this.difficulty === "easy" && slots[0]) {
+      const c = this.cells.get(keyOf(slots[0]))!;
+      if (c.hiddenMult) {
+        c.activeMult = c.hiddenMult;
+        c.hiddenMult = null;
       }
     }
   }
@@ -141,28 +147,23 @@ export class Game {
     this.messageT = 2.8;
   }
 
-  playableKeys(): string[] {
-    return [...this.cells.keys()].filter((k) => {
-      const c = this.cells.get(k)!;
-      return hexDistance(c, { q: 0, r: 0 }) <= this.radius;
-    });
+  /** Playable if inside board and not outside margin (infinity shrink). */
+  isPlayable(p: CellPos): boolean {
+    if (!inBounds(p, this.cols, this.rows)) return false;
+    const m = this.margin;
+    return p.c >= m && p.r >= m && p.c < this.cols - m && p.r < this.rows - m;
+  }
+
+  playableCells(): CellState[] {
+    return [...this.cells.values()].filter((c) => this.isPlayable(c));
   }
 
   emptyCount(): number {
-    let n = 0;
-    for (const k of this.playableKeys()) {
-      const c = this.cells.get(k)!;
-      if (!c.brick && !c.letter) n++;
-    }
-    return n;
+    return this.playableCells().filter((c) => !c.brick && !c.letter).length;
   }
 
   brickCount(): number {
-    let n = 0;
-    for (const k of this.playableKeys()) {
-      if (this.cells.get(k)!.brick) n++;
-    }
-    return n;
+    return this.playableCells().filter((c) => c.brick).length;
   }
 
   selectTray(i: number) {
@@ -173,23 +174,18 @@ export class Game {
     Sfx.place();
   }
 
-  tapCell(a: Axial) {
+  tapCell(p: CellPos) {
     if (this.phase !== "playing") return;
-    const k = keyOf(a);
-    const cell = this.cells.get(k);
+    if (!this.isPlayable(p)) return;
+    const cell = this.cells.get(keyOf(p));
     if (!cell) return;
-    if (hexDistance(a, { q: 0, r: 0 }) > this.radius) return;
 
-    // Undo if tapping last path cell
     const last = this.path[this.path.length - 1];
-    if (last && last.q === a.q && last.r === a.r) {
+    if (last && last.c === p.c && last.r === p.r) {
       this.undoLast();
       return;
     }
-
-    // Already in path — ignore
-    if (this.path.some((p) => p.q === a.q && p.r === a.r)) return;
-
+    if (this.path.some((x) => x.c === p.c && x.r === p.r)) return;
     if (cell.brick || cell.letter) return;
 
     if (this.selectedTray < 0) {
@@ -198,27 +194,26 @@ export class Game {
     }
 
     if (this.path.length === 0) {
-      this.placeOn(a, this.selectedTray);
+      this.placeOn(p, this.selectedTray);
       return;
     }
 
-    if (!isNeighbor(last!, a)) {
-      this.tip("Только соседние соты");
+    if (!isNeighbor(last!, p)) {
+      this.tip("Только соседние клетки (↑↓←→)");
       return;
     }
 
-    this.placeOn(a, this.selectedTray);
+    this.placeOn(p, this.selectedTray);
   }
 
-  private placeOn(a: Axial, trayIdx: number) {
+  private placeOn(p: CellPos, trayIdx: number) {
     const letter = this.tray[trayIdx];
     if (!letter) return;
-    const cell = this.cells.get(keyOf(a))!;
+    const cell = this.cells.get(keyOf(p))!;
     cell.letter = letter;
-    this.path.push({ q: a.q, r: a.r });
+    this.path.push({ c: p.c, r: p.r });
     this.tray[trayIdx] = "";
     this.selectedTray = -1;
-    // auto-select next non-empty tray letter if any
     const next = this.tray.findIndex((ch) => ch !== "");
     if (next >= 0) this.selectedTray = next;
     Sfx.place();
@@ -226,8 +221,8 @@ export class Game {
 
   undoLast() {
     if (!this.path.length) return;
-    const a = this.path.pop()!;
-    const cell = this.cells.get(keyOf(a))!;
+    const p = this.path.pop()!;
+    const cell = this.cells.get(keyOf(p))!;
     const letter = cell.letter;
     cell.letter = null;
     if (letter) {
@@ -244,9 +239,7 @@ export class Game {
   }
 
   currentWord(): string {
-    return this.path
-      .map((a) => this.cells.get(keyOf(a))!.letter || "")
-      .join("");
+    return this.path.map((p) => this.cells.get(keyOf(p))!.letter || "").join("");
   }
 
   submit(): SubmitResult {
@@ -263,14 +256,13 @@ export class Game {
       return { ok: false, reason: "Нет в словаре" };
     }
 
-    // Score
     let letterSum = 0;
     let rareInWord = 0;
     let cellMult = 1;
     let triggerPop = false;
 
-    for (const a of this.path) {
-      const cell = this.cells.get(keyOf(a))!;
+    for (const p of this.path) {
+      const cell = this.cells.get(keyOf(p))!;
       const L = cell.letter!;
       letterSum += LETTER_SCORE[L] ?? 2;
       if (RARE_LETTERS.has(L)) rareInWord++;
@@ -294,15 +286,13 @@ export class Game {
     this.score += gain;
     if (word.length >= this.bestWord.length) this.bestWord = word;
 
-    // Turn letters into bricks (keep letter stamp)
-    this.path.forEach((a, i) => {
-      const cell = this.cells.get(keyOf(a))!;
+    this.path.forEach((p, i) => {
+      const cell = this.cells.get(keyOf(p))!;
       cell.brick = true;
       cell.letter = word[i] ?? cell.letter;
       if (cell.activeMult) cell.activeMult = null;
     });
 
-    // Spawn brick particles at each cell (caller also draws)
     this.spawnBrickJuice(this.path);
 
     let unlocked = 0;
@@ -314,19 +304,18 @@ export class Game {
     let popped = 0;
     if (triggerPop) {
       const radius = this.rareStreak >= 3 ? 2 : 1;
-      popped = this.popAround(this.path[Math.floor(this.path.length / 2)], radius);
+      const mid = this.path[Math.floor(this.path.length / 2)];
+      popped = this.popAround(mid, radius);
       Sfx.pop();
       this.flash = 0.35;
     }
 
-    // Clear spent mult stamps on path already done
     this.path = [];
     this.refillTray();
-
     Sfx.valid();
     this.floats.push({
-      x: 0,
-      y: -20,
+      x: this.cols / 2,
+      y: this.rows / 2,
       text: `+${gain}`,
       life: 1.1,
       color: "#FFF6D6",
@@ -334,7 +323,7 @@ export class Game {
 
     let infinityClear = false;
     if (this.difficulty === "infinity") {
-      const playable = this.playableKeys().length;
+      const playable = this.playableCells().length;
       const bricks = this.brickCount();
       const occupancy = playable ? bricks / playable : 1;
       if (
@@ -355,9 +344,7 @@ export class Game {
           : `«${word}» · +${gain}`,
     );
 
-    if (this.emptyCount() === 0) {
-      this.phase = "result";
-    }
+    if (this.emptyCount() === 0) this.phase = "result";
 
     return {
       ok: true,
@@ -369,32 +356,31 @@ export class Game {
     };
   }
 
-  private spawnBrickJuice(path: Axial[]) {
-    for (const a of path) {
-      // particles relative; renderer maps with camera
-      const p = axialToPixel(a, 1);
+  private spawnBrickJuice(path: CellPos[]) {
+    for (const p of path) {
       for (let i = 0; i < 6; i++) {
         const ang = Math.random() * Math.PI * 2;
         this.particles.push({
-          x: p.x,
-          y: p.y,
+          x: p.c + 0.5,
+          y: p.r + 0.5,
           vx: Math.cos(ang) * (0.4 + Math.random()),
           vy: Math.sin(ang) * (0.4 + Math.random()),
           life: 0.4 + Math.random() * 0.3,
           max: 0.7,
           color: "#E8A85C",
-          size: 0.08 + Math.random() * 0.06,
+          size: 0.12 + Math.random() * 0.08,
         });
       }
     }
   }
 
-  private unlockMultipliers(near: Axial[]): number {
+  private unlockMultipliers(near: CellPos[]): number {
     const candidates: CellState[] = [];
-    for (const cell of this.cells.values()) {
+    for (const cell of this.playableCells()) {
       if (!cell.hiddenMult) continue;
-      if (hexDistance(cell, { q: 0, r: 0 }) > this.radius) continue;
-      const minD = Math.min(...near.map((a) => hexDistance(cell, a)));
+      const minD = Math.min(
+        ...near.map((p) => Math.abs(cell.c - p.c) + Math.abs(cell.r - p.r)),
+      );
       if (minD <= 2) candidates.push(cell);
     }
     candidates.sort(() => Math.random() - 0.5);
@@ -403,31 +389,40 @@ export class Game {
       const c = candidates[i];
       c.activeMult = c.hiddenMult;
       c.hiddenMult = null;
-      const p = axialToPixel(c, 1);
-      this.shocks.push({ x: p.x, y: p.y, r: 0, max: 2.2, life: 0.55 });
+      this.shocks.push({
+        x: c.c + 0.5,
+        y: c.r + 0.5,
+        r: 0,
+        max: 1.8,
+        life: 0.55,
+      });
     }
     return n;
   }
 
-  private popAround(center: Axial, radius: number): number {
+  private popAround(center: CellPos, radius: number): number {
     let n = 0;
-    const p0 = axialToPixel(center, 1);
-    this.shocks.push({ x: p0.x, y: p0.y, r: 0, max: radius * 2.8, life: 0.7 });
-    for (const cell of this.cells.values()) {
-      if (hexDistance(cell, center) > radius) continue;
+    this.shocks.push({
+      x: center.c + 0.5,
+      y: center.r + 0.5,
+      r: 0,
+      max: radius + 1.4,
+      life: 0.7,
+    });
+    for (const cell of this.playableCells()) {
+      const d = Math.abs(cell.c - center.c) + Math.abs(cell.r - center.r);
+      if (d > radius) continue;
       if (!cell.brick) continue;
-      // don't pop cells that were just placed this word if still in same frame — allow pop including them for juice
       cell.brick = false;
       cell.letter = null;
       cell.activeMult = null;
       n++;
-      const p = axialToPixel(cell, 1);
       for (let i = 0; i < 10; i++) {
         const ang = Math.random() * Math.PI * 2;
         const sp = 1.2 + Math.random() * 2;
         this.particles.push({
-          x: p.x,
-          y: p.y,
+          x: cell.c + 0.5,
+          y: cell.r + 0.5,
           vx: Math.cos(ang) * sp,
           vy: Math.sin(ang) * sp,
           life: 0.5 + Math.random() * 0.45,
@@ -445,12 +440,15 @@ export class Game {
       INFINITY_MULT_CAP,
       this.infinityMult * INFINITY_MULT_STEP,
     );
-    if (this.radius > MIN_RADIUS) {
-      this.radius -= 1;
+    const maxMargin = Math.min(
+      Math.floor((this.cols - MIN_COLS) / 2),
+      Math.floor((this.rows - MIN_ROWS) / 2),
+    );
+    if (this.margin < maxMargin) {
+      this.margin += 1;
       this.shrinkCount += 1;
-      // destroy outside bricks
       for (const cell of this.cells.values()) {
-        if (hexDistance(cell, { q: 0, r: 0 }) > this.radius) {
+        if (!this.isPlayable(cell)) {
           cell.brick = false;
           cell.letter = null;
           cell.activeMult = null;
@@ -458,9 +456,7 @@ export class Game {
         }
       }
     }
-    // plant a few new hidden mults inside
-    for (const cell of this.cells.values()) {
-      if (hexDistance(cell, { q: 0, r: 0 }) > this.radius) continue;
+    for (const cell of this.playableCells()) {
       if (!cell.brick && !cell.hiddenMult && !cell.activeMult && Math.random() < 0.12) {
         cell.hiddenMult = pickMult("infinity");
       }
@@ -468,44 +464,44 @@ export class Game {
     this.flash = 0.55;
     Sfx.infinity();
     this.floats.push({
-      x: 0,
-      y: 40,
-      text: `∞ ×${this.infinityMult.toFixed(2)} · соты −1`,
+      x: this.cols / 2,
+      y: this.rows / 2 + 1,
+      text: `∞ ×${this.infinityMult.toFixed(2)} · плёнка сжалась`,
       life: 1.6,
       color: "#7FD4E8",
     });
   }
 
   private refillTray() {
-    for (let i = 0; i < this.tray.length; i++) {
-      if (this.tray[i] === "") this.tray[i] = weightedLetter();
-    }
+    // keep unused letters, refill empties with a fresh playable deal mixed in
+    const kept = this.tray.filter((ch) => ch !== "");
+    const fresh = dealPlayableTray();
+    const need = TRAY_SIZE - kept.length;
+    this.tray = [...kept, ...fresh.slice(0, need)];
+    while (this.tray.length < TRAY_SIZE) this.tray.push(weightedLetter());
     this.selectedTray = -1;
   }
 
   reshuffleTray() {
     if (this.phase !== "playing") return;
     this.cancelPath();
-    this.tray = Array.from({ length: TRAY_SIZE }, () => weightedLetter());
+    this.tray = dealPlayableTray();
     if (this.difficulty === "hard") this.rareStreak = 0;
     else this.rareStreak = Math.max(0, this.rareStreak - 1);
-    this.tip("Трей сброшен");
+    this.tip("Трей сброшен — новое слово спрятано в буквах");
     Sfx.invalid();
   }
 
   rewardedContinue() {
     if (this.continueUsed || this.phase !== "result") return false;
     this.continueUsed = true;
-    // clear up to 5 random bricks
-    const bricks = [...this.cells.values()].filter(
-      (c) => c.brick && hexDistance(c, { q: 0, r: 0 }) <= this.radius,
-    );
+    const bricks = this.playableCells().filter((c) => c.brick);
     bricks.sort(() => Math.random() - 0.5);
     for (const c of bricks.slice(0, 5)) {
       c.brick = false;
       c.letter = null;
     }
-    this.refillTray();
+    this.tray = dealPlayableTray();
     this.phase = "playing";
     this.tip("Кирпичи лопнули — продолжай!");
     Sfx.pop();
@@ -516,9 +512,9 @@ export class Game {
     if (this.messageT > 0) this.messageT -= dt;
     if (this.flash > 0) this.flash -= dt;
     for (const p of this.particles) {
-      p.x += p.vx * dt * 8;
-      p.y += p.vy * dt * 8;
-      p.vy += dt * 2;
+      p.x += p.vx * dt * 3;
+      p.y += p.vy * dt * 3;
+      p.vy += dt * 1.5;
       p.life -= dt;
     }
     this.particles = this.particles.filter((p) => p.life > 0);
@@ -528,20 +524,14 @@ export class Game {
     }
     this.shocks = this.shocks.filter((s) => s.life > 0);
     for (const f of this.floats) {
-      f.y -= dt * 40;
+      f.y -= dt * 1.2;
       f.life -= dt;
     }
     this.floats = this.floats.filter((f) => f.life > 0);
 
-    // soft game-over check: no empty cells
     if (this.phase === "playing" && this.emptyCount() === 0) {
       this.phase = "result";
     }
-  }
-
-  /** Hint: can place from selected letter anywhere empty if path empty */
-  canPlaceAnywhere(): boolean {
-    return this.path.length === 0;
   }
 
   neighborHintKeys(): Set<string> {
@@ -549,10 +539,9 @@ export class Game {
     const last = this.path[this.path.length - 1];
     const set = new Set<string>();
     for (const n of neighbors(last)) {
+      if (!this.isPlayable(n)) continue;
       const c = this.cells.get(keyOf(n));
-      if (!c) continue;
-      if (hexDistance(n, { q: 0, r: 0 }) > this.radius) continue;
-      if (!c.brick && !c.letter) set.add(keyOf(n));
+      if (c && !c.brick && !c.letter) set.add(keyOf(n));
     }
     return set;
   }

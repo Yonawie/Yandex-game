@@ -23,15 +23,17 @@ export function lengthCoef(len: number): number {
   return 1;
 }
 
-export function radiusFor(diff: Difficulty): number {
+/** Soft-grid board size by difficulty (cols × rows). */
+export function boardSize(diff: Difficulty): { cols: number; rows: number } {
   switch (diff) {
     case "easy":
+      return { cols: 7, rows: 8 };
     case "normal":
-      return 3;
+      return { cols: 6, rows: 7 };
     case "hard":
-      return 2;
+      return { cols: 5, rows: 6 };
     case "infinity":
-      return 4;
+      return { cols: 8, rows: 9 };
   }
 }
 
@@ -58,4 +60,5 @@ export const INFINITY_CLEAR_BRICK_THRESHOLD = 8;
 export const INFINITY_CLEAR_OCCUPANCY = 0.15;
 export const INFINITY_MULT_STEP = 1.25;
 export const INFINITY_MULT_CAP = 5;
-export const MIN_RADIUS = 2;
+export const MIN_COLS = 4;
+export const MIN_ROWS = 5;

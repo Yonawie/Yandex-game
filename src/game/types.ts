@@ -1,13 +1,11 @@
 export type MultKind = "x2" | "x3" | "pop";
 
 export type CellState = {
-  q: number;
+  c: number;
   r: number;
   letter: string | null;
   brick: boolean;
-  /** Hidden until unlocked by a word len > 5 */
   hiddenMult: MultKind | null;
-  /** Visible & armed */
   activeMult: MultKind | null;
 };
 

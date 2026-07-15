@@ -1,8 +1,8 @@
 {
-  "name": "sotoslov",
+  "name": "plenka",
   "private": true,
-  "version": "1.0.0",
-  "description": "Сотослов — словесная стратегия размещения на сотах для Яндекс Игр",
+  "version": "1.1.0",
+  "description": "Плёнка — словесная стратегия на мыльной сетке для Яндекс Игр",
   "type": "module",
   "scripts": {
     "dev": "vite",
