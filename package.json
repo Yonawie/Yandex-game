@@ -1,0 +1,11 @@
+{
+  "name": "alive-pictures",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Живые картины — поиск предметов для Яндекс Игр",
+  "scripts": {
+    "start": "npx --yes serve -l 4173 .",
+    "ok": "node scripts/validate.mjs"
+  }
+}
