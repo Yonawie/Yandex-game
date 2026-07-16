@@ -219,8 +219,13 @@ async function main() {
     ["vfx-shatter-a", "vfx_shatter_a", 48],
     ["vfx-shatter-b", "vfx_shatter_b", 48],
     ["vfx-shatter-c", "vfx_shatter_c", 48],
+    ["vfx-crack-1", "vfx_crack_1", 64],
+    ["vfx-crack-2", "vfx_crack_2", 64],
     ["gem-on", "ui_gem_on", 48],
     ["gem-off", "ui_gem_off", 48],
+    ["ui-undo", "ui_undo", 48],
+    ["ui-reshuffle", "ui_reshuffle", 48],
+    ["ui-menu", "ui_menu", 48],
   ];
   for (const [file, frame, size] of vfxSpecs) {
     let pngBuf = await prepareVfx(file, size);
@@ -256,10 +261,12 @@ async function main() {
     buffers.push({ name: "prop_ceiling", w: info.width, h: info.height, data });
   }
 
-  // wide UI props: strike button + stamp slab
+  // wide UI props: strike button + stamp slab + tray + floor
   for (const [file, frame, tw, th] of [
     ["ui-strike", "ui_strike", 220, 72],
     ["ui-stamp", "ui_stamp", 280, 88],
+    ["ui-tray", "ui_tray", 320, 80],
+    ["ui-floor", "ui_floor", 320, 40],
   ]) {
     const path = join(srcBase, `${file}.png`);
     if (!existsSync(path)) continue;

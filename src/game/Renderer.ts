@@ -601,11 +601,16 @@ export class Renderer {
 
     // floor shelf under wall
     const fy = board.y + board.h + 2;
-    const floor = ctx.createLinearGradient(board.x, fy, board.x, fy + 14);
-    floor.addColorStop(0, `${S.brick}55`);
-    floor.addColorStop(1, "transparent");
-    ctx.fillStyle = floor;
-    ctx.fillRect(board.x - 4, fy, board.w + 8, 14);
+    const floorArt = getNamedAtlasCanvas("ui_floor");
+    if (floorArt) {
+      ctx.drawImage(floorArt, board.x - 8, fy - 2, board.w + 16, 18);
+    } else {
+      const floor = ctx.createLinearGradient(board.x, fy, board.x, fy + 14);
+      floor.addColorStop(0, `${S.brick}55`);
+      floor.addColorStop(1, "transparent");
+      ctx.fillStyle = floor;
+      ctx.fillRect(board.x - 4, fy, board.w + 8, 14);
+    }
 
     // drifting dust inside shaft
     ctx.save();
@@ -823,6 +828,12 @@ export class Renderer {
           ctx.shadowBlur = 10;
           this.pathRound(x - 2, y - 2, bw + 4, bh + 4, 8);
           ctx.stroke();
+          const preCrack = getNamedAtlasCanvas("vfx_crack_1");
+          if (preCrack) {
+            ctx.globalAlpha = 0.35 + Math.sin(t * 8) * 0.15;
+            ctx.shadowBlur = 0;
+            ctx.drawImage(preCrack, x, y, bw, bh);
+          }
           ctx.restore();
         }
       }
@@ -866,24 +877,30 @@ export class Renderer {
   private drawCrackLines(x: number, y: number, bw: number, bh: number, p: number) {
     const { ctx, game } = this;
     const S = game.style();
+    const crack = getNamedAtlasCanvas(p > 0.55 ? "vfx_crack_2" : "vfx_crack_1");
     ctx.save();
-    ctx.globalAlpha = 0.75;
-    ctx.strokeStyle = S.ink;
-    ctx.lineWidth = 1.4;
-    const cx = x + bw / 2;
-    const cy = y + bh / 2;
-    const len = Math.min(bw, bh) * 0.42 * p;
-    ctx.beginPath();
-    ctx.moveTo(cx - len, cy - len * 0.3);
-    ctx.lineTo(cx + len * 0.2, cy + len * 0.15);
-    ctx.lineTo(cx + len, cy - len * 0.5);
-    ctx.moveTo(cx + len * 0.1, cy - len);
-    ctx.lineTo(cx - len * 0.15, cy + len * 0.8);
-    ctx.stroke();
-    ctx.strokeStyle = S.accentHot;
-    ctx.globalAlpha = 0.35 * p;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    if (crack) {
+      ctx.globalAlpha = 0.55 + p * 0.4;
+      ctx.drawImage(crack, x - 2, y - 2, bw + 4, bh + 4);
+    } else {
+      ctx.globalAlpha = 0.75;
+      ctx.strokeStyle = S.ink;
+      ctx.lineWidth = 1.4;
+      const cx = x + bw / 2;
+      const cy = y + bh / 2;
+      const len = Math.min(bw, bh) * 0.42 * p;
+      ctx.beginPath();
+      ctx.moveTo(cx - len, cy - len * 0.3);
+      ctx.lineTo(cx + len * 0.2, cy + len * 0.15);
+      ctx.lineTo(cx + len, cy - len * 0.5);
+      ctx.moveTo(cx + len * 0.1, cy - len);
+      ctx.lineTo(cx - len * 0.15, cy + len * 0.8);
+      ctx.stroke();
+      ctx.strokeStyle = S.accentHot;
+      ctx.globalAlpha = 0.35 * p;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
@@ -1129,23 +1146,37 @@ export class Renderer {
     const railW = Math.min(w - 16, total + 28);
     const railX = (w - railW) / 2;
     ctx.save();
-    const rail = ctx.createLinearGradient(railX, railY, railX, railY + railH);
-    rail.addColorStop(0, echo ? `${S.rare}33` : `${S.bg[1]}cc`);
-    rail.addColorStop(1, "rgba(0,0,0,0.45)");
-    ctx.fillStyle = rail;
-    this.pathRound(railX, railY, railW, railH, 16);
-    ctx.fill();
-    ctx.strokeStyle = echo ? `${S.rare}88` : `${S.accent}55`;
-    ctx.lineWidth = 1.5;
-    this.pathRound(railX, railY, railW, railH, 16);
-    ctx.stroke();
-    if (echo) {
-      ctx.shadowColor = S.rare;
-      ctx.shadowBlur = 18;
-      ctx.strokeStyle = `${S.rare}44`;
-      this.pathRound(railX - 2, railY - 2, railW + 4, railH + 4, 18);
+    const trayArt = getNamedAtlasCanvas("ui_tray");
+    if (trayArt) {
+      ctx.drawImage(trayArt, railX, railY, railW, railH);
+      if (echo) {
+        ctx.shadowColor = S.rare;
+        ctx.shadowBlur = 16;
+        ctx.strokeStyle = `${S.rare}55`;
+        ctx.lineWidth = 2;
+        this.pathRound(railX - 2, railY - 2, railW + 4, railH + 4, 18);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    } else {
+      const rail = ctx.createLinearGradient(railX, railY, railX, railY + railH);
+      rail.addColorStop(0, echo ? `${S.rare}33` : `${S.bg[1]}cc`);
+      rail.addColorStop(1, "rgba(0,0,0,0.45)");
+      ctx.fillStyle = rail;
+      this.pathRound(railX, railY, railW, railH, 16);
+      ctx.fill();
+      ctx.strokeStyle = echo ? `${S.rare}88` : `${S.accent}55`;
+      ctx.lineWidth = 1.5;
+      this.pathRound(railX, railY, railW, railH, 16);
       ctx.stroke();
-      ctx.shadowBlur = 0;
+      if (echo) {
+        ctx.shadowColor = S.rare;
+        ctx.shadowBlur = 18;
+        ctx.strokeStyle = `${S.rare}44`;
+        this.pathRound(railX - 2, railY - 2, railW + 4, railH + 4, 18);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
     }
     ctx.restore();
 
@@ -1224,7 +1255,7 @@ export class Renderer {
     const total = side * 2 + strikeW + gap * 2;
     const x0 = (w - total) / 2;
 
-    this.mechBtn(x0, y + 6, side, 46, "↩", "undo", false);
+    this.iconBtn(x0, y + 6, side, 46, "ui_undo", "undo", "↩");
 
     const press = this.strikePress;
     const sx = x0 + side + gap;
@@ -1286,8 +1317,42 @@ export class Renderer {
     ctx.shadowBlur = 0;
     ctx.restore();
 
-    this.mechBtn(sx + strikeW + gap, y + 6, side, 46, "↻", "reshuffle", false);
-    this.mechBtn(8, y + 6, 34, 46, "☰", "to-menu", false);
+    this.iconBtn(sx + strikeW + gap, y + 6, side, 46, "ui_reshuffle", "reshuffle", "↻");
+    this.iconBtn(8, y + 6, 34, 46, "ui_menu", "to-menu", "☰");
+  }
+
+  private iconBtn(
+    x: number,
+    y: number,
+    bw: number,
+    bh: number,
+    frame: string,
+    id: string,
+    fallback: string,
+  ) {
+    const { ctx, game } = this;
+    const S = game.style();
+    this.hits.push({ id, x, y, w: bw, h: bh });
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    this.roundRect(x + 2, y + 3, bw, bh, 11, "rgba(0,0,0,0.35)", true);
+    const art = getNamedAtlasCanvas(frame);
+    if (art) {
+      const pad = 4;
+      ctx.drawImage(art, x + pad, y + pad, bw - pad * 2, bh - pad * 2);
+    } else {
+      this.roundRect(x, y, bw, bh, 11, `${S.bg[1]}ee`, true);
+      ctx.strokeStyle = `${S.accent}66`;
+      ctx.lineWidth = 1;
+      this.pathRound(x, y, bw, bh, 11);
+      ctx.stroke();
+      ctx.fillStyle = S.ink;
+      ctx.font = `800 16px ${FONT}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(fallback, x + bw / 2, y + bh / 2 + 1);
+    }
+    ctx.restore();
   }
 
   private drawMessage() {
