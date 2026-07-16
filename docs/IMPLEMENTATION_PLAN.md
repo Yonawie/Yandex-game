@@ -90,9 +90,9 @@
 - «Бей вчерашний» / delta к лучшему за сегодня из save.
 
 **Acceptance:**
-- [ ] Новый рекорд визуально и текстом отличается.
-- [ ] Без SDK — graceful fallback (только локальный best).
-- [ ] Share/screenshot hook если уже есть в SDK — иначе skip без блокировки.
+- [x] Новый рекорд визуально и текстом отличается.
+- [x] Без SDK — graceful fallback (только локальный best).
+- [x] Share/screenshot hook если уже есть в SDK — иначе skip без блокировки.
 
 ---
 

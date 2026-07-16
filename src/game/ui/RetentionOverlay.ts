@@ -108,7 +108,11 @@ export class RetentionOverlay {
           playTone(r ? 'start' : 'ui');
           this.refresh();
           this.onChanged();
-          return r ? `+${r.coins}` : tf('morningDone');
+          if (r) {
+            this.celebrateStreak();
+            return `${tf('morningTitle')} · ${tf('streak')} ${this.snap.streak}\n+${r.coins}`;
+          }
+          return tf('morningDone');
         },
       },
       {
@@ -276,6 +280,29 @@ export class RetentionOverlay {
     });
   }
 
+  private celebrateStreak(): void {
+    const stamp = this.scene.add
+      .text(this.scene.scale.width / 2, this.scene.scale.height * 0.36, `${tf('streak')} ${this.snap.streak}`, {
+        fontFamily: 'Literata, Georgia, serif',
+        fontSize: '36px',
+        color: '#FFB347',
+      })
+      .setOrigin(0.5)
+      .setDepth(80)
+      .setAlpha(0)
+      .setScale(0.7);
+    this.scene.tweens.add({
+      targets: stamp,
+      alpha: 1,
+      scale: 1,
+      duration: 320,
+      ease: 'Back.easeOut',
+      yoyo: true,
+      hold: 500,
+      onComplete: () => stamp.destroy(),
+    });
+  }
+
   isOpen(): boolean {
     return this.root.visible;
   }
@@ -296,13 +323,21 @@ export class RetentionOverlay {
 
     this.body.setText(
       [
-        `${tf('morningTitle')} · ${tf('streak')} ${this.snap.streak}`,
-        `${tf('challengeTitle')}: ${chName}`,
-        `${tf('shards')}: ${this.snap.weekShards}/${WEEKLY_SHARDS_NEEDED}`,
+        `▸ ${tf('morningTitle')}`,
+        `${tf('streak')} ${this.snap.streak}${this.snap.morningAvailable ? ` · ${tf('morningClaim')}` : ''}`,
+        '',
+        `▸ ${tf('challengeTitle')}`,
+        `${chName} · ${Math.min(this.snap.challengeProgress, this.snap.challenge.target)}/${this.snap.challenge.target}`,
+        this.snap.challengeDone && !this.snap.challengeClaimed ? tf('rewardWaiting') : '',
+        '',
+        `▸ ${tf('shards')}  ${this.snap.weekShards}/${WEEKLY_SHARDS_NEEDED}`,
         this.snap.echoTarget > 0 ? `${tf('echoTarget')}: ${this.snap.echoTarget}` : '',
         this.snap.boostRunsLeft > 0 ? tf('boostActive') : '',
+        this.snap.unreadLetters.length
+          ? `${tf('lettersTitle')}: ${tf('letterNew')} ${this.snap.unreadLetters.length}`
+          : '',
       ]
-        .filter(Boolean)
+        .filter((line, i, arr) => !(line === '' && (arr[i - 1] === '' || i === 0)))
         .join('\n'),
     );
 

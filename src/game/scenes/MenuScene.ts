@@ -9,7 +9,7 @@ import { yandex } from '@/sdk/yandex';
 import { listModes, isModeUnlocked } from '@/content/modes';
 import { getActiveModeId, setActiveMode } from '@/content/runtimeConfig';
 import { RetentionOverlay } from '@/game/ui/RetentionOverlay';
-import { syncRetentionClock, getSnapshot, markIdleLeave } from '@/retention/service';
+import { syncRetentionClock, getSnapshot, markIdleLeave, retentionHasAttention } from '@/retention/service';
 import { WEEKLY_SHARDS_NEEDED } from '@/content/retention';
 import { makeAmberButton } from '@/visual/uiPress';
 
@@ -23,6 +23,7 @@ export class MenuScene extends Phaser.Scene {
   private modeText!: Phaser.GameObjects.Text;
   private retentionHint!: Phaser.GameObjects.Text;
   private retentionOverlay: RetentionOverlay | null = null;
+  private retentionBadge: Phaser.GameObjects.Arc | null = null;
   private tipsOpen = false;
 
   constructor() {
@@ -175,6 +176,10 @@ export class MenuScene extends Phaser.Scene {
       playTone('ui');
       this.retentionOverlay?.show();
     });
+    this.retentionBadge = this.add
+      .circle(hub.x + hub.width / 2 + 10, hub.y - 10, 5, 0xff6b4a, 1)
+      .setDepth(21)
+      .setVisible(false);
 
     const soundLabel = save.sound ? tf('soundOn') : tf('soundOff');
     const soundBtn = this.add
@@ -220,8 +225,10 @@ export class MenuScene extends Phaser.Scene {
     if (snap.morningAvailable) bits.push(tf('morningClaim'));
     if (snap.idleSparks > 0) bits.push(`+${snap.idleSparks}`);
     if (snap.unreadLetters.length) bits.push(`${tf('letterNew')}`);
+    if (snap.challengeDone && !snap.challengeClaimed) bits.push(tf('rewardWaiting'));
     bits.push(`${snap.weekShards}/${WEEKLY_SHARDS_NEEDED}`);
     this.retentionHint.setText(bits.join('  ·  '));
+    this.retentionBadge?.setVisible(retentionHasAttention());
   }
 
   private cycleMode(dir: number): void {

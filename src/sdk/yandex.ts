@@ -34,6 +34,13 @@ export interface YandexSDKLike {
   getPlayer: (opts?: { scopes?: boolean }) => Promise<YandexPlayerLike>;
   getLeaderboards?: () => Promise<{
     setLeaderboardScore: (name: string, score: number) => Promise<void>;
+    getLeaderboardPlayerEntry?: (name: string) => Promise<{ rank: number; score: number }>;
+    getLeaderboardEntries?: (
+      name: string,
+      opts?: { quantityTop?: number; includeUser?: boolean; quantityAround?: number },
+    ) => Promise<{
+      entries: Array<{ rank: number; score: number; player?: { publicName?: string } }>;
+    }>;
   }>;
   on?: (event: string, cb: (...args: unknown[]) => void) => void;
 }
@@ -222,6 +229,33 @@ class YandexBridge {
       await lb?.setLeaderboardScore('score', Math.floor(score));
     } catch {
       /* leaderboard may be unset in console yet */
+    }
+  }
+
+  async getPlayerRank(scoreName = 'score'): Promise<number | null> {
+    try {
+      const lb = await this.sdk?.getLeaderboards?.();
+      const entry = await lb?.getLeaderboardPlayerEntry?.(scoreName);
+      return entry?.rank ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async getTopEntries(
+    scoreName = 'score',
+    quantityTop = 5,
+  ): Promise<Array<{ rank: number; score: number; name: string }>> {
+    try {
+      const lb = await this.sdk?.getLeaderboards?.();
+      const res = await lb?.getLeaderboardEntries?.(scoreName, { quantityTop, includeUser: true });
+      return (res?.entries ?? []).map((e) => ({
+        rank: e.rank,
+        score: e.score,
+        name: e.player?.publicName?.trim() || `#${e.rank}`,
+      }));
+    } catch {
+      return [];
     }
   }
 }

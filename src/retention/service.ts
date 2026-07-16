@@ -171,6 +171,17 @@ export function getSnapshot(now = Date.now()): RetentionSnapshot {
   };
 }
 
+/** Menu badge: anything claimable / unread waiting in the hub. */
+export function retentionHasAttention(now = Date.now()): boolean {
+  const snap = getSnapshot(now);
+  return (
+    snap.morningAvailable ||
+    snap.idleSparks > 0 ||
+    snap.unreadLetters.length > 0 ||
+    (snap.challengeDone && !snap.challengeClaimed)
+  );
+}
+
 /** Step 2 — claim morning flame */
 export async function claimMorningFlame(now = Date.now()): Promise<{ coins: number; streak: number } | null> {
   const snap = getSnapshot(now);

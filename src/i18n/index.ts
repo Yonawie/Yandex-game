@@ -62,6 +62,12 @@ export interface Dictionary {
   claimed: string;
   weeklyReward: string;
   adFailed: string;
+  leaderboard: string;
+  yourRank: string;
+  beatBestBy: string;
+  shortOfBest: string;
+  rewardWaiting: string;
+  echoGap: string;
 }
 
 export const dictionaries: Record<Lang, Dictionary> = {
@@ -126,6 +132,12 @@ export const dictionaries: Record<Lang, Dictionary> = {
     claimed: 'Получено',
     weeklyReward: 'Неделя собрана!',
     adFailed: 'Реклама не загрузилась — попробуй ещё раз',
+    leaderboard: 'Таблица',
+    yourRank: 'Место',
+    beatBestBy: 'Рекорд побит на',
+    shortOfBest: 'До рекорда',
+    rewardWaiting: 'Награда ждёт в «Вернуться»',
+    echoGap: 'До вчерашнего эха',
   },
   en: {
     brand: 'Stay Lit',
@@ -188,6 +200,12 @@ export const dictionaries: Record<Lang, Dictionary> = {
     claimed: 'Claimed',
     weeklyReward: 'Week complete!',
     adFailed: 'Ad failed to load — try again',
+    leaderboard: 'Board',
+    yourRank: 'Rank',
+    beatBestBy: 'Beat best by',
+    shortOfBest: 'Short of best',
+    rewardWaiting: 'Reward waiting in Come back',
+    echoGap: 'To yesterday echo',
   },
 };
 
