@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { COLORS, HUE_HEX, type HueId, type SkinDef } from '@/data/balance';
+import { atlasHasFrame, WORLD_ATLAS } from '@/game/assets/atlas';
 
 function ensure(scene: Phaser.Scene, key: string, make: () => void): void {
-  if (!scene.textures.exists(key)) make();
+  if (scene.textures.exists(key) || atlasHasFrame(scene, key)) return;
+  make();
 }
 
 /** Procedural art — fills any keys not provided by loaded illustrated PNGs */
@@ -608,7 +610,7 @@ export function drawLantern(
   const glowColor = skin.glow || HUE_HEX[hue];
   const flameColor = HUE_HEX[hue];
   const key = `lantern-${hue}`;
-  const hasArt = scene.textures.exists(key);
+  const hasArt = atlasHasFrame(scene, key) || scene.textures.exists(key);
 
   const farGlow = scene.add
     .image(0, 6, scene.textures.exists('lane-glow') ? 'lane-glow' : 'px')
@@ -629,7 +631,10 @@ export function drawLantern(
   let ornament: Phaser.GameObjects.GameObject | undefined;
 
   if (hasArt) {
-    const img = scene.add.image(0, 0, key).setOrigin(0.5).setDisplaySize(78, 98);
+    const img = atlasHasFrame(scene, key)
+      ? scene.add.image(0, 0, WORLD_ATLAS, key)
+      : scene.add.image(0, 0, key);
+    img.setOrigin(0.5).setDisplaySize(78, 98);
     img.setTint(look.frameTint);
     img.setAlpha(look.bodyAlpha);
     body = img;
@@ -728,7 +733,8 @@ export function recolorDrawnLantern(lantern: Phaser.GameObjects.Container, hue: 
 
   if (body instanceof Phaser.GameObjects.Image) {
     const key = `lantern-${hue}`;
-    if (lantern.scene.textures.exists(key)) body.setTexture(key);
+    if (atlasHasFrame(lantern.scene, key)) body.setTexture(WORLD_ATLAS, key);
+    else if (lantern.scene.textures.exists(key)) body.setTexture(key);
     if (look) {
       body.setTint(look.frameTint);
       body.setAlpha(look.bodyAlpha);

@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { generateTextures } from '@/game/assets/generate';
-import { promoteAtlasFrames } from '@/game/assets/atlas';
 import { yandex } from '@/sdk/yandex';
 import { setLang, tf } from '@/i18n';
 import { hydrateSave, setRemoteWriter, loadLocalSave } from '@/data/save';
@@ -66,8 +65,6 @@ export class PreloadScene extends Phaser.Scene {
     if (this.textures.exists('bg-sky')) {
       this.add.image(width / 2, height / 2, 'bg-sky').setDisplaySize(width, height).setAlpha(0.85);
     }
-
-    promoteAtlasFrames(this, 'world');
 
     const title = this.add
       .text(width / 2, height * 0.42, tf('brand'), {

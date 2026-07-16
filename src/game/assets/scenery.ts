@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Depth } from '@/visual/depths';
+import { addWorldImage, atlasHasFrame } from '@/game/assets/atlas';
 
 export function addBg(scene: Phaser.Scene): void {
   const { width, height } = scene.scale;
@@ -49,7 +50,6 @@ export function placeNightScenery(
   const { width, height } = scene.scale;
   if (!opts.skipBg) addBg(scene);
 
-  // far ridge — slow drift
   if (scene.textures.exists('ridge-far')) {
     const far = scene.add
       .image(width / 2, height * 0.78, 'ridge-far')
@@ -62,7 +62,6 @@ export function placeNightScenery(
     opts.parallaxLayers?.push(far);
   }
 
-  // near ridge
   if (scene.textures.exists('ridge-near')) {
     const near = scene.add
       .image(width / 2, height * 0.88, 'ridge-near')
@@ -75,17 +74,14 @@ export function placeNightScenery(
     opts.parallaxLayers?.push(near);
   }
 
-  // quiet side banners
-  if (scene.textures.exists('silk-banner')) {
-    const left = scene.add
-      .image(width * 0.05, height * 0.28, 'silk-banner')
+  if (atlasHasFrame(scene, 'silk-banner') || scene.textures.exists('silk-banner')) {
+    const left = addWorldImage(scene, width * 0.05, height * 0.28, 'silk-banner')
       .setDepth(Depth.PROPS)
       .setAlpha(0.55)
       .setScale(0.82)
       .setTint(0xd8e8f8)
       .setOrigin(0.5, 0);
-    const right = scene.add
-      .image(width * 0.95, height * 0.34, 'silk-banner')
+    const right = addWorldImage(scene, width * 0.95, height * 0.34, 'silk-banner')
       .setDepth(Depth.PROPS)
       .setAlpha(0.5)
       .setScale(0.76)

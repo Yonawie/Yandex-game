@@ -4,6 +4,7 @@ import { getEntityDef, resolveTexture } from '@/content/entities';
 import { resolveMode, getActiveModeId, loadRemoteBalancePatch } from '@/content/runtimeConfig';
 import type { EntityKind, ModeDef, RunEventDef, SpawnRequest } from '@/content/types';
 import { drawLantern, laneX, recolorDrawnLantern, hueForSkin } from '@/game/assets/generate';
+import { addWorldImage } from '@/game/assets/atlas';
 import { placeNightScenery, addBg } from '@/game/assets/scenery';
 import { Spawner } from '@/game/systems/Spawner';
 import { EventDirector } from '@/game/systems/EventDirector';
@@ -55,6 +56,8 @@ export class GameScene extends Phaser.Scene {
   private ghostLeft!: Phaser.GameObjects.Image;
   private ghostRight!: Phaser.GameObjects.Image;
   private ghostHint!: Phaser.GameObjects.Text;
+  private bottomHint: Phaser.GameObjects.Text | null = null;
+  private hintDismissed = false;
   private juice!: JuiceCamera;
   private vfx!: VfxDirector;
   private grade!: ColorGrade;
@@ -298,7 +301,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0, 0.5)
       .setDepth(40);
 
-    this.add
+    this.bottomHint = this.add
       .text(width / 2, height - 48, `${tf('collectHint')}  ·  ${tf('avoidHint')}`, {
         fontFamily: 'Manrope, sans-serif',
         fontSize: '18px',
@@ -689,7 +692,7 @@ export class GameScene extends Phaser.Scene {
     const { width } = this.scale;
     const x = laneX(width, req.lane, this.mode.lanes, this.mode.lanePadding);
     const key = resolveTexture(def, req.hue);
-    const go = this.add.image(x, -50, key).setDepth(12).setScale(def.scale * 0.6).setAlpha(0);
+    const go = addWorldImage(this, x, -50, key).setDepth(12).setScale(def.scale * 0.6).setAlpha(0);
     this.tweens.add({
       targets: go,
       alpha: 1,
@@ -722,6 +725,7 @@ export class GameScene extends Phaser.Scene {
     const next = Phaser.Math.Clamp(this.playerLane + dir, 0, this.mode.lanes - 1);
     if (next === this.playerLane) return;
     this.playerLane = next;
+    this.dismissBottomHint();
     playTone('ui');
     this.tweens.add({
       targets: this.lantern,
@@ -731,6 +735,21 @@ export class GameScene extends Phaser.Scene {
       yoyo: true,
     });
     this.camLean = dir * 0.028;
+  }
+
+  private dismissBottomHint(): void {
+    if (this.hintDismissed || !this.bottomHint) return;
+    this.hintDismissed = true;
+    this.tweens.add({
+      targets: this.bottomHint,
+      alpha: 0,
+      duration: 420,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        this.bottomHint?.destroy();
+        this.bottomHint = null;
+      },
+    });
   }
 
   private handleHit(e: FallingEntity): void {
