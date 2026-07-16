@@ -1,1 +1,47 @@
-# Yandex-game
+# Не гасни / Stay Lit
+
+Endless vertical arcade for **Яндекс Игры**.
+
+Стек: **Phaser 3 + TypeScript + Vite + Yandex Games SDK**.
+
+- **Универсальный стек YaGames:** [`docs/YANDEX_STACK.md`](docs/YANDEX_STACK.md)
+- ТЗ: [`docs/TZ.md`](docs/TZ.md)
+- Visual Bible: [`docs/VISUAL_BIBLE.md`](docs/VISUAL_BIBLE.md)
+- Как тестировать: [`docs/PLAY.md`](docs/PLAY.md)
+- Retention: [`docs/RETENTION.md`](docs/RETENTION.md)
+- Публикация: [`docs/PUBLISH.md`](docs/PUBLISH.md)
+- Витрина: [`store/STORE.md`](store/STORE.md)
+
+## Ассеты
+
+```bash
+npm run atlas   # assets/source/art → public/atlases + backgrounds/bg-sky.webp
+npm run pack    # atlas + build + zip
+```
+
+## Проверка игры (самый простой способ)
+
+```bash
+npm install
+npm run play
+```
+
+В терминале появится публичная ссылка — открой её в браузере или на телефоне.
+
+## Остальное
+
+```bash
+npm run dev     # локальный Vite
+npm run pack    # → release/stay-lit-yandex.zip в Консоль Яндекс Игр
+```
+
+## Архитектура контента
+
+- `src/content/entities.ts` — каталог объектов
+- `src/content/modes.ts` — Ночь / Буря
+- `src/content/events.ts` — рантайм-ивенты
+- `src/content/runtimeConfig.ts` — remote A-B patch
+
+## Управление
+
+Тап влево / вправо — смена нити. Свои светлячки, порталы меняют цвет, пустоты гасят.

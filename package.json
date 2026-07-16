@@ -1,0 +1,28 @@
+{
+  "name": "stay-lit",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Не гасни — endless vertical arcade for Yandex Games",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "atlas": "node scripts/build-atlas.mjs",
+    "build": "npm run atlas && tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "play": "node scripts/play.mjs",
+    "pack": "npm run build && node scripts/pack-yandex.mjs",
+    "qa": "node scripts/qa-features.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/literata": "^5.2.8",
+    "@fontsource/manrope": "^5.2.8",
+    "phaser": "^3.87.0"
+  },
+  "devDependencies": {
+    "archiver": "^7.0.1",
+    "playwright": "^1.49.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11"
+  }
+}
