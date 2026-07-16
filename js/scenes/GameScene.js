@@ -143,6 +143,7 @@ export class GameScene extends Phaser.Scene {
       g.setAlpha(0.8);
     }
     return g;
+  }
 
   spawnAmbient(mapId) {
     const count = 24;
