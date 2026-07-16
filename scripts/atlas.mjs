@@ -57,6 +57,16 @@ const SKINS = [
       mirror: "#101010",
     },
   },
+  {
+    id: "ocean",
+    cubeFile: (kind) => `cube-ocean-${kind}.png`,
+    letterFill: {
+      normal: "#042028",
+      rare: "#1A1020",
+      armor: "#021018",
+      mirror: "#042028",
+    },
+  },
 ];
 
 const LETTER_FILL = SKINS[0].letterFill;
@@ -333,6 +343,7 @@ async function main() {
     ["vfx-shock", "vfx_shock", 64],
     ["vfx-shock-cosmos", "vfx_shock_cosmos", 64],
     ["vfx-shock-railway", "vfx_shock_railway", 64],
+    ["vfx-shock-ocean", "vfx_shock_ocean", 64],
     ["vfx-shards", "vfx_shards", 64],
     ["vfx-shatter-a", "vfx_shatter_a", 48],
     ["vfx-shatter-b", "vfx_shatter_b", 48],
@@ -486,6 +497,15 @@ async function main() {
     copyFileSync(bgRailway, join(bgDir, "bg-railway.png"));
   }
 
+  const bgOcean = join(srcBase, "bg-ocean.png");
+  if (existsSync(bgOcean)) {
+    await sharp(bgOcean)
+      .resize(480, 854, { fit: "cover" })
+      .webp({ quality: 78 })
+      .toFile(join(bgDir, "bg-ocean.webp"));
+    copyFileSync(bgOcean, join(bgDir, "bg-ocean.png"));
+  }
+
   const meta = {
     name: "world",
     generatedAt: new Date().toISOString(),
@@ -494,7 +514,7 @@ async function main() {
     size: { w: width, h: height },
     bytes: compressed.length,
     skins: usedSkins,
-    note: "Multi-skin AI atlas (echo + cosmos + railway). Letters carved into cube pigment.",
+    note: "Multi-skin AI atlas (echo + cosmos + railway + ocean). Letters carved into cube pigment.",
     letterBake: "carve-multiply-v1",
     shatterSheet: 8,
   };

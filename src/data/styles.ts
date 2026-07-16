@@ -119,7 +119,7 @@ export const STYLES: VisualStyle[] = [
     id: "ocean",
     name: "Бездна",
     tagline: "Каустики · стекло · ракушечный блеск",
-    price: 450,
+    price: 320,
     pattern: "waves",
     bg: ["#02121C", "#063A48", "#0B5A62"],
     accent: "#5CE1E6",

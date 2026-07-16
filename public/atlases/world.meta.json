@@ -1,19 +1,20 @@
 {
   "name": "world",
-  "generatedAt": "2026-07-16T03:07:56.965Z",
-  "sourceCount": 413,
-  "frames": 411,
+  "generatedAt": "2026-07-16T03:18:52.194Z",
+  "sourceCount": 542,
+  "frames": 540,
   "size": {
-    "w": 1490,
-    "h": 2645
+    "w": 1529,
+    "h": 3469
   },
-  "bytes": 564733,
+  "bytes": 728442,
   "skins": [
     "echo",
     "cosmos",
-    "railway"
+    "railway",
+    "ocean"
   ],
-  "note": "Multi-skin AI atlas (echo + cosmos + railway). Letters carved into cube pigment.",
+  "note": "Multi-skin AI atlas (echo + cosmos + railway + ocean). Letters carved into cube pigment.",
   "letterBake": "carve-multiply-v1",
   "shatterSheet": 8
 }
