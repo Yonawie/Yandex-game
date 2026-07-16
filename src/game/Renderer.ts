@@ -38,12 +38,12 @@ export class Renderer {
     this.canvas.style.height = `${cssH}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-    const bw = cssW * 0.92;
-    const bh = cssH * 0.46;
+    const bw = cssW * 0.94;
+    const bh = cssH * 0.42;
     this.board.w = bw;
     this.board.h = bh;
     this.board.x = (cssW - bw) / 2;
-    this.board.y = cssH * 0.118;
+    this.board.y = cssH * 0.14;
     this.board.cw = bw / Math.max(1, this.game.cols);
     this.board.ch = bh / Math.max(1, this.game.maxH);
   }
@@ -78,6 +78,7 @@ export class Renderer {
     ctx.translate(shakeX, shakeY);
 
     this.drawHud(t);
+    this.drawPlayArena(t);
     this.drawCeilingBeam(t);
     this.drawWall(t);
     this.drawCracks(t);
@@ -469,18 +470,36 @@ export class Renderer {
   private drawHud(t: number) {
     const { ctx, w, game } = this;
     const S = game.style();
+    const top = 10;
 
-    // left — score embedded in space, no card
+    // HUD rail — thin material strip, not a card cluster
+    const rail = ctx.createLinearGradient(0, 0, 0, 64);
+    rail.addColorStop(0, `${S.bg[0]}ee`);
+    rail.addColorStop(1, "transparent");
+    ctx.fillStyle = rail;
+    ctx.fillRect(0, 0, w, 68);
+
+    ctx.fillStyle = S.rare;
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(0, 0, w, 3);
+    ctx.globalAlpha = 1;
+
+    // left — cinematic score
     ctx.textAlign = "left";
     ctx.fillStyle = S.ink;
-    ctx.font = `800 28px ${DISPLAY}`;
-    ctx.shadowColor = "rgba(0,0,0,0.45)";
-    ctx.shadowBlur = 10;
-    ctx.fillText(`${game.score}`, 22, 36);
+    ctx.font = `900 ${Math.min(36, w * 0.09)}px ${DISPLAY}`;
+    ctx.shadowColor = S.accent;
+    ctx.shadowBlur = 14;
+    ctx.fillText(`${game.score}`, 18, top + 32);
     ctx.shadowBlur = 0;
     ctx.fillStyle = S.muted;
-    ctx.font = `600 10px ${FONT}`;
-    ctx.fillText("ОЧКИ", 22, 52);
+    ctx.font = `700 10px ${FONT}`;
+    ctx.fillText("ОЧКИ", 18, top + 48);
+    // accent underline under score
+    ctx.fillStyle = S.accent;
+    ctx.globalAlpha = 0.55;
+    ctx.fillRect(18, top + 52, Math.min(72, 18 + String(game.score).length * 14), 2);
+    ctx.globalAlpha = 1;
 
     // right — mode / shards / chain
     ctx.textAlign = "right";
@@ -492,28 +511,94 @@ export class Renderer {
           : game.difficulty === "hard"
             ? tr("hard")
             : "Норма";
-    ctx.fillStyle = S.accent;
-    ctx.font = `700 12px ${FONT}`;
-    ctx.fillText(mode, w - 22, 28);
+    ctx.fillStyle = S.accentHot;
+    ctx.font = `800 13px ${FONT}`;
+    ctx.fillText(mode, w - 18, top + 24);
     ctx.fillStyle = game.chain > 1 ? S.rare : S.muted;
-    ctx.font = `600 11px ${FONT}`;
-    ctx.fillText(game.chain > 1 ? `Эхо ×${game.chain}` : `◆ ${game.save.coins}`, w - 22, 46);
+    ctx.font = `700 12px ${FONT}`;
+    ctx.fillText(game.chain > 1 ? `Эхо ×${game.chain}` : `◆ ${game.save.coins}`, w - 18, top + 44);
+    if (MaterialFactory.atlasReady()) {
+      ctx.fillStyle = S.rare;
+      ctx.font = `800 9px ${FONT}`;
+      ctx.fillText("ATLAS", w - 18, top + 58);
+    }
 
     // center rare mineral gems
     const streak = game.rareStreak;
     ["Ф", "Ц", "Щ"].forEach((g, i) => {
       const on = streak > i;
-      const x = w / 2 + (i - 1) * 38;
-      const y = 30;
-      const pulse = on ? 1 + Math.sin(t * 7 + i) * 0.07 : 1;
-      this.drawGem(x, y, 15 * pulse, g, on, t + i);
+      const x = w / 2 + (i - 1) * 42;
+      const y = top + 28;
+      const pulse = on ? 1 + Math.sin(t * 7 + i) * 0.08 : 1;
+      this.drawGem(x, y, 16 * pulse, g, on, t + i);
     });
     if (streak > 0) {
       ctx.fillStyle = S.rare;
-      ctx.font = `700 10px ${FONT}`;
+      ctx.font = `800 11px ${FONT}`;
       ctx.textAlign = "center";
-      ctx.fillText(`×${rareComboMult(streak).toFixed(2)}`, w / 2, 56);
+      ctx.fillText(`×${rareComboMult(streak).toFixed(2)}`, w / 2, top + 54);
     }
+  }
+
+  /** Shaft / pillars / floor — makes the wall read as a stage, not floating tiles. */
+  private drawPlayArena(t: number) {
+    const { ctx, board, game } = this;
+    const S = game.style();
+    const pad = 10;
+    const x = board.x - pad;
+    const y = board.y - 18;
+    const aw = board.w + pad * 2;
+    const ah = board.h + 28;
+
+    // deep shaft
+    const shaft = ctx.createLinearGradient(x, y, x, y + ah);
+    shaft.addColorStop(0, `${S.bg[0]}00`);
+    shaft.addColorStop(0.15, `${S.bg[0]}aa`);
+    shaft.addColorStop(0.55, "rgba(4,8,14,0.72)");
+    shaft.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = shaft;
+    this.pathRound(x, y, aw, ah, 16);
+    ctx.fill();
+
+    // side pillars
+    for (const side of [-1, 1] as const) {
+      const px = side < 0 ? x : x + aw - 8;
+      const col = ctx.createLinearGradient(px, y, px + 8, y);
+      col.addColorStop(0, S.brickDeep);
+      col.addColorStop(0.5, S.brick);
+      col.addColorStop(1, S.brickDeep);
+      ctx.fillStyle = col;
+      ctx.globalAlpha = 0.55;
+      ctx.fillRect(px, y + 8, 8, ah - 16);
+      ctx.globalAlpha = 1;
+    }
+
+    // inner rim light
+    ctx.strokeStyle = `${S.accent}44`;
+    ctx.lineWidth = 1.5;
+    this.pathRound(x + 4, y + 4, aw - 8, ah - 8, 12);
+    ctx.stroke();
+
+    // floor shelf under wall
+    const fy = board.y + board.h + 2;
+    const floor = ctx.createLinearGradient(board.x, fy, board.x, fy + 14);
+    floor.addColorStop(0, `${S.brick}55`);
+    floor.addColorStop(1, "transparent");
+    ctx.fillStyle = floor;
+    ctx.fillRect(board.x - 4, fy, board.w + 8, 14);
+
+    // drifting dust inside shaft
+    ctx.save();
+    for (let i = 0; i < 18; i++) {
+      const dx = board.x + ((i * 47 + t * (10 + (i % 4))) % board.w);
+      const dy = board.y + ((i * 31 + t * 14) % board.h);
+      ctx.globalAlpha = 0.1 + (i % 4) * 0.03;
+      ctx.fillStyle = i % 2 ? S.accentHot : S.particle[i % 3];
+      ctx.beginPath();
+      ctx.arc(dx, dy, 1.2 + (i % 2), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   private drawGem(cx: number, cy: number, r: number, letter: string, on: boolean, t: number) {
@@ -564,57 +649,66 @@ export class Renderer {
     const S = game.style();
     const near = game.maxStackH() >= game.maxH - 2;
     const critical = game.maxStackH() >= game.maxH - 1;
-    const by = board.y - 2;
-    const bh = 14;
+    const by = board.y - 6;
+    const bh = 18;
 
-    // heavy metal beam
+    // heavy metal beam with bevel
     const metal = ctx.createLinearGradient(board.x, by, board.x, by + bh);
-    metal.addColorStop(0, "#6a7078");
-    metal.addColorStop(0.35, "#2e3338");
-    metal.addColorStop(0.7, "#1a1e22");
-    metal.addColorStop(1, "#0c0e10");
+    metal.addColorStop(0, "#9aa0a8");
+    metal.addColorStop(0.28, "#4a5058");
+    metal.addColorStop(0.65, "#1e2228");
+    metal.addColorStop(1, "#0a0c10");
     ctx.fillStyle = metal;
-    this.pathRound(board.x - 4, by, board.w + 8, bh, 3);
+    this.pathRound(board.x - 6, by, board.w + 12, bh, 4);
     ctx.fill();
+    ctx.strokeStyle = `${S.accentHot}33`;
+    ctx.lineWidth = 1;
+    this.pathRound(board.x - 6, by, board.w + 12, bh, 4);
+    ctx.stroke();
 
     // rivets
-    ctx.fillStyle = "#8a9098";
-    for (let i = 0; i < 8; i++) {
-      const rx = board.x + 10 + i * ((board.w - 20) / 7);
+    ctx.fillStyle = "#c0c4c8";
+    for (let i = 0; i < 9; i++) {
+      const rx = board.x + 8 + i * ((board.w - 16) / 8);
       ctx.beginPath();
-      ctx.arc(rx, by + bh / 2, 2.2, 0, Math.PI * 2);
+      ctx.arc(rx, by + bh / 2, 2.6, 0, Math.PI * 2);
       ctx.fill();
+      ctx.fillStyle = "#2a2e32";
+      ctx.beginPath();
+      ctx.arc(rx, by + bh / 2, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#c0c4c8";
     }
 
     // energy vein
-    const pulse = near ? 0.55 + Math.sin(t * (critical ? 10 : 5)) * 0.45 : 0.25;
+    const pulse = near ? 0.6 + Math.sin(t * (critical ? 11 : 5.5)) * 0.4 : 0.28;
     ctx.save();
     ctx.globalAlpha = pulse;
-    ctx.strokeStyle = S.danger;
-    ctx.lineWidth = critical ? 3.5 : 2.2;
-    ctx.shadowColor = S.danger;
-    ctx.shadowBlur = near ? 12 : 4;
+    ctx.strokeStyle = critical ? S.danger : S.rare;
+    ctx.lineWidth = critical ? 4 : 2.4;
+    ctx.shadowColor = critical ? S.danger : S.rare;
+    ctx.shadowBlur = near ? 16 : 6;
     ctx.beginPath();
-    ctx.moveTo(board.x + 8, by + bh / 2);
-    ctx.lineTo(board.x + board.w - 8, by + bh / 2);
+    ctx.moveTo(board.x + 10, by + bh / 2);
+    ctx.lineTo(board.x + board.w - 10, by + bh / 2);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
     if (near) {
-      for (let i = 0; i < 6; i++) {
-        const sx = board.x + 20 + ((i * 73 + t * 40) % (board.w - 40));
-        ctx.globalAlpha = 0.4 + Math.random() * 0.4;
+      for (let i = 0; i < 10; i++) {
+        const sx = board.x + 16 + ((i * 73 + t * 55) % (board.w - 32));
+        ctx.globalAlpha = 0.45 + Math.random() * 0.4;
         ctx.fillStyle = S.accentHot;
-        ctx.fillRect(sx, by + 2 + Math.random() * 8, 1.5, 3 + Math.random() * 4);
+        ctx.fillRect(sx, by + 2 + Math.random() * 10, 2, 3 + Math.random() * 5);
       }
     }
     ctx.restore();
 
-    ctx.fillStyle = near ? S.danger : `${S.muted}99`;
-    ctx.font = `700 ${near ? 12 : 10}px ${FONT}`;
+    ctx.fillStyle = near ? S.danger : `${S.muted}aa`;
+    ctx.font = `800 ${near ? 13 : 11}px ${FONT}`;
     ctx.textAlign = "center";
-    ctx.globalAlpha = near ? 0.7 + Math.sin(t * 4) * 0.3 : 0.45;
-    ctx.fillText(near ? "⚠ ПОТОЛОК" : "потолок", board.x + board.w / 2, by - 6);
+    ctx.globalAlpha = near ? 0.75 + Math.sin(t * 5) * 0.25 : 0.5;
+    ctx.fillText(near ? "ПОТОЛОК!" : "потолок", board.x + board.w / 2, by - 8);
     ctx.globalAlpha = 1;
   }
 
@@ -622,29 +716,63 @@ export class Renderer {
     const { ctx, game, board } = this;
     const S = game.style();
     const rise = game.wallRise * 6;
-    const breathGlobal = Math.sin(t * 1.6) * 1.2;
+    const breathGlobal = Math.sin(t * 1.6) * 1.4;
+    const gap = 6;
 
     // soft contact shadow under wall mass
     ctx.save();
-    ctx.globalAlpha = 0.22;
+    ctx.globalAlpha = 0.28;
     const shade = ctx.createRadialGradient(
       board.x + board.w / 2,
       board.y + board.h + 8,
       10,
       board.x + board.w / 2,
       board.y + board.h + 8,
-      board.w * 0.45,
+      board.w * 0.5,
     );
     shade.addColorStop(0, "#000");
     shade.addColorStop(1, "transparent");
     ctx.fillStyle = shade;
-    ctx.fillRect(board.x, board.y + board.h - 20, board.w, 40);
+    ctx.fillRect(board.x, board.y + board.h - 24, board.w, 48);
     ctx.restore();
+
+    // mortar grid (reads as masonry wall)
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.strokeStyle = S.brickDeep;
+    ctx.lineWidth = 1;
+    for (let c = 0; c <= game.cols; c++) {
+      const x = board.x + c * board.cw;
+      ctx.beginPath();
+      ctx.moveTo(x, board.y);
+      ctx.lineTo(x, board.y + board.h);
+      ctx.stroke();
+    }
+    for (let r = 0; r <= game.maxH; r++) {
+      const y = board.y + board.h - r * board.ch;
+      ctx.beginPath();
+      ctx.moveTo(board.x, y);
+      ctx.lineTo(board.x + board.w, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // danger haze near ceiling rows
+    const maxH = game.maxStackH();
+    if (maxH >= game.maxH - 3) {
+      ctx.save();
+      const haze = ctx.createLinearGradient(board.x, board.y, board.x, board.y + board.ch * 3);
+      haze.addColorStop(0, `${S.danger}33`);
+      haze.addColorStop(1, "transparent");
+      ctx.fillStyle = haze;
+      ctx.fillRect(board.x, board.y, board.w, board.ch * 3);
+      ctx.restore();
+    }
 
     // pre-strike light wash
     if (game.strikePulse > 0) {
       ctx.save();
-      ctx.globalAlpha = game.strikePulse * 0.35;
+      ctx.globalAlpha = game.strikePulse * 0.42;
       const wash = ctx.createLinearGradient(board.x, board.y, board.x + board.w, board.y);
       wash.addColorStop(0, "transparent");
       wash.addColorStop(0.5, S.accentHot);
@@ -658,8 +786,7 @@ export class Renderer {
       const stack = game.stacks[c];
       for (let r = 0; r < stack.length; r++) {
         const cell = stack[r];
-        const breath = Math.sin(t * 2.1 + c * 0.55 + r * 0.35) * 1.1 + breathGlobal * 0.3;
-        const gap = 9;
+        const breath = Math.sin(t * 2.2 + c * 0.55 + r * 0.35) * 1.3 + breathGlobal * 0.35;
         const bw = board.cw - gap;
         const bh = board.ch - gap;
         const x = board.x + c * board.cw + gap / 2;
@@ -675,10 +802,12 @@ export class Renderer {
         });
         if (preview) {
           ctx.save();
-          ctx.globalAlpha = 0.45 + Math.sin(t * 9) * 0.2;
+          ctx.globalAlpha = 0.55 + Math.sin(t * 10) * 0.25;
           ctx.strokeStyle = S.accentHot;
-          ctx.lineWidth = 2;
-          this.pathRound(x - 1, y - 1, bw + 2, bh + 2, 7);
+          ctx.lineWidth = 2.5;
+          ctx.shadowColor = S.rare;
+          ctx.shadowBlur = 10;
+          this.pathRound(x - 2, y - 2, bw + 4, bh + 4, 8);
           ctx.stroke();
           ctx.restore();
         }
@@ -687,14 +816,27 @@ export class Renderer {
 
     for (const s of game.shocks) {
       ctx.save();
-      ctx.globalAlpha = Math.max(0, s.life) * 0.85;
+      ctx.globalAlpha = Math.max(0, s.life) * 0.9;
       ctx.strokeStyle = S.accentHot;
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = S.accent;
+      ctx.shadowBlur = 12;
       ctx.beginPath();
       ctx.arc(
         board.x + board.w * s.x,
         board.y + board.h * (1 - s.y),
-        s.r * Math.min(board.w, board.h) * 0.48,
+        s.r * Math.min(board.w, board.h) * 0.5,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = S.rare;
+      ctx.beginPath();
+      ctx.arc(
+        board.x + board.w * s.x,
+        board.y + board.h * (1 - s.y),
+        s.r * Math.min(board.w, board.h) * 0.32,
         0,
         Math.PI * 2,
       );
@@ -706,7 +848,7 @@ export class Renderer {
   private drawCracks(_t: number) {
     const { game, board } = this;
     for (const c of game.cracks) {
-      const gap = 9;
+      const gap = 6;
       const bw = board.cw - gap;
       const bh = board.ch - gap;
       const x = board.x + c.col * board.cw + gap / 2;
@@ -760,19 +902,26 @@ export class Renderer {
     else if (preview) kind = "preview";
     else if (RARE_LETTERS.has(letter)) kind = "rare";
 
-    // Material atlas sprite — главный видимый апгрейд кубиков
+    // contact shadow under each brick
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    this.pathRound(x + 2, y + 3, bw, bh, 7);
+    ctx.fill();
+
     const tile = MaterialFactory.getCanvas(S, kind, letter);
     ctx.drawImage(tile, x - 1, y - 1, bw + 2, bh + 2);
 
     if (armor > 0) {
-      ctx.fillStyle = S.ink;
-      ctx.font = `800 ${Math.min(bw, bh) * 0.18}px ${FONT}`;
+      ctx.fillStyle = S.accentHot;
+      ctx.font = `900 ${Math.min(bw, bh) * 0.2}px ${FONT}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
+      ctx.shadowColor = "#000";
+      ctx.shadowBlur = 4;
       ctx.fillText(`${armor}+`, x + bw / 2, y + bh * 0.18);
+      ctx.shadowBlur = 0;
     } else if (mirror) {
       ctx.fillStyle = S.ink;
-      ctx.font = `800 ${Math.min(bw, bh) * 0.2}px ${FONT}`;
+      ctx.font = `800 ${Math.min(bw, bh) * 0.22}px ${FONT}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("◐", x + bw / 2, y + bh * 0.18);
@@ -782,7 +931,7 @@ export class Renderer {
       ctx.strokeStyle = S.accentHot;
       ctx.lineWidth = 2.5;
       ctx.shadowColor = S.accent;
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 14;
       this.pathRound(x - 2, y - 2, bw + 4, bh + 4, 8);
       ctx.stroke();
       ctx.shadowBlur = 0;
@@ -917,28 +1066,33 @@ export class Renderer {
     const S = game.style();
     const echo = game.usingEcho();
     const ratio = echo ? game.echoT / game.echoWindow : Math.max(0, game.growCD / game.growEvery);
-    const y = board.y + board.h + 8;
-    const hBar = 4;
+    const y = board.y + board.h + 10;
+    const hBar = 7;
 
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
-    this.roundRect(board.x, y, board.w, hBar, 2, "rgba(0,0,0,0.45)", true);
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    this.roundRect(board.x, y, board.w, hBar, 3, "rgba(0,0,0,0.5)", true);
 
     if (echo) {
-      // light wave
       const wave = ctx.createLinearGradient(board.x, y, board.x + board.w, y);
-      const shift = (t * 0.8) % 1;
-      wave.addColorStop(Math.max(0, shift - 0.15), "transparent");
+      const shift = (t * 0.9) % 1;
+      wave.addColorStop(Math.max(0, shift - 0.2), "transparent");
       wave.addColorStop(shift, S.rare);
-      wave.addColorStop(Math.min(1, shift + 0.15), "transparent");
+      wave.addColorStop(Math.min(1, shift + 0.2), S.accentHot);
       ctx.fillStyle = wave;
-      this.roundRect(board.x, y, board.w * ratio, hBar, 2, S.rare, true);
-      ctx.globalAlpha = 0.55;
-      ctx.fillStyle = wave;
-      ctx.fillRect(board.x, y, board.w * ratio, hBar);
-      ctx.globalAlpha = 1;
+      this.pathRound(board.x, y, Math.max(4, board.w * ratio), hBar, 3);
+      ctx.fill();
+      ctx.fillStyle = S.rare;
+      ctx.font = `800 10px ${FONT}`;
+      ctx.textAlign = "center";
+      ctx.fillText("ЭХО", board.x + board.w / 2, y - 4);
     } else {
       const col = ratio < 0.25 ? S.danger : S.accent;
-      this.roundRect(board.x, y, Math.max(2, board.w * ratio), hBar, 2, col, true);
+      const g = ctx.createLinearGradient(board.x, y, board.x + board.w * ratio, y);
+      g.addColorStop(0, col);
+      g.addColorStop(1, S.brickHi);
+      ctx.fillStyle = g;
+      this.pathRound(board.x, y, Math.max(4, board.w * ratio), hBar, 3);
+      ctx.fill();
     }
   }
 
@@ -947,37 +1101,62 @@ export class Renderer {
     const S = game.style();
     const tray = game.activeTray();
     const n = tray.length;
-    const gap = 10;
-    const size = Math.min(48, (w - 36 - gap * Math.max(0, n - 1)) / Math.max(1, n));
+    const gap = 8;
+    const size = Math.min(56, (w - 28 - gap * Math.max(0, n - 1)) / Math.max(1, n));
     const total = n * size + (n - 1) * gap;
     const x0 = (w - total) / 2;
-    const y = h - 168;
+    const y = h - 178;
+    const echo = game.usingEcho();
 
-    // current word — large, free in air
+    // tray platform / rail
+    const railY = y - 8;
+    const railH = size + 28;
+    const railW = Math.min(w - 16, total + 28);
+    const railX = (w - railW) / 2;
+    ctx.save();
+    const rail = ctx.createLinearGradient(railX, railY, railX, railY + railH);
+    rail.addColorStop(0, echo ? `${S.rare}33` : `${S.bg[1]}cc`);
+    rail.addColorStop(1, "rgba(0,0,0,0.45)");
+    ctx.fillStyle = rail;
+    this.pathRound(railX, railY, railW, railH, 16);
+    ctx.fill();
+    ctx.strokeStyle = echo ? `${S.rare}88` : `${S.accent}55`;
+    ctx.lineWidth = 1.5;
+    this.pathRound(railX, railY, railW, railH, 16);
+    ctx.stroke();
+    if (echo) {
+      ctx.shadowColor = S.rare;
+      ctx.shadowBlur = 18;
+      ctx.strokeStyle = `${S.rare}44`;
+      this.pathRound(railX - 2, railY - 2, railW + 4, railH + 4, 18);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+
+    // current word — large, free above rail
     const word = game.currentWord();
     ctx.textAlign = "center";
     if (word) {
       const strong = word.length >= 5 || game.previewIds.size >= 3;
-      const vib = strong ? Math.sin(t * 28) * 1.2 : 0;
+      const vib = strong ? Math.sin(t * 28) * 1.4 : 0;
       ctx.save();
-      ctx.translate(w / 2 + vib, y - 42);
-      if (strong) {
-        ctx.shadowColor = S.accent;
-        ctx.shadowBlur = 16;
-      }
+      ctx.translate(w / 2 + vib, y - 46);
+      ctx.shadowColor = strong ? S.rare : S.accent;
+      ctx.shadowBlur = strong ? 22 : 12;
       ctx.fillStyle = S.accentHot;
-      ctx.font = `800 ${Math.min(40, w * 0.1)}px ${DISPLAY}`;
+      ctx.font = `900 ${Math.min(44, w * 0.11)}px ${DISPLAY}`;
       ctx.fillText(word, 0, 0);
       ctx.shadowBlur = 0;
       ctx.restore();
       const hits = game.previewIds.size;
       ctx.fillStyle = hits ? S.rare : S.muted;
-      ctx.font = `600 11px ${FONT}`;
-      ctx.fillText(hits ? `выбьет ${hits}` : "нет букв стены", w / 2, y - 18);
+      ctx.font = `700 12px ${FONT}`;
+      ctx.fillText(hits ? `выбьет ${hits}` : "нет букв стены", w / 2, y - 22);
     } else {
-      ctx.fillStyle = `${S.muted}aa`;
-      ctx.font = `600 13px ${FONT}`;
-      ctx.fillText(game.usingEcho() ? "эхо-трей" : "собери слово", w / 2, y - 34);
+      ctx.fillStyle = `${S.muted}cc`;
+      ctx.font = `700 14px ${FONT}`;
+      ctx.fillText(echo ? "эхо-трей · бей снова" : "собери слово", w / 2, y - 36);
     }
 
     tray.forEach((ch, i) => {
@@ -985,36 +1164,35 @@ export class Renderer {
       const selIdx = game.pick.indexOf(i);
       const sel = selIdx >= 0;
       const empty = ch === "";
-      const bob = sel ? -4 + Math.sin(t * 11 + i) * 2 : 0;
-      const sc = sel ? 1.08 : 1;
+      const bob = sel ? -5 + Math.sin(t * 12 + i) * 2.5 : Math.sin(t * 2 + i) * 0.8;
+      const sc = sel ? 1.1 : 1;
       this.hits.push({ id: `tray-${i}`, x, y: y + bob, w: size, h: size });
       ctx.save();
       if (empty) {
-        ctx.globalAlpha = 0.18;
-        this.roundRect(x, y, size, size, 10, `${S.accent}33`, true);
+        ctx.globalAlpha = 0.22;
+        this.roundRect(x, y, size, size, 12, `${S.accent}33`, true);
       } else {
         ctx.translate(x + size / 2, y + bob + size / 2);
         ctx.scale(sc, sc);
         ctx.translate(-(x + size / 2), -(y + bob + size / 2));
-        // volumetric tile from material atlas
-        ctx.fillStyle = "rgba(0,0,0,0.35)";
-        this.roundRect(x + 2, y + bob + 3, size, size, 10, "rgba(0,0,0,0.35)", true);
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        this.roundRect(x + 2, y + bob + 4, size, size, 12, "rgba(0,0,0,0.4)", true);
         const kind: CubeKind = RARE_LETTERS.has(ch) ? "rare" : sel ? "preview" : "normal";
         const tile = MaterialFactory.getCanvas(S, kind, ch);
         ctx.drawImage(tile, x, y + bob, size, size);
         if (sel) {
           ctx.strokeStyle = S.accentHot;
-          ctx.lineWidth = 2.5;
+          ctx.lineWidth = 3;
           ctx.shadowColor = S.accent;
-          ctx.shadowBlur = 10;
-          this.pathRound(x, y + bob, size, size, 10);
+          ctx.shadowBlur = 14;
+          this.pathRound(x - 1, y + bob - 1, size + 2, size + 2, 12);
           ctx.stroke();
           ctx.shadowBlur = 0;
           ctx.fillStyle = S.bg[0];
-          ctx.font = `800 10px ${FONT}`;
+          ctx.font = `900 11px ${FONT}`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(String(selIdx + 1), x + size - 10, y + bob + 12);
+          ctx.fillText(String(selIdx + 1), x + size - 11, y + bob + 13);
         }
       }
       ctx.restore();
@@ -1024,61 +1202,80 @@ export class Renderer {
   private drawActions(t: number) {
     const { w, h, game } = this;
     const S = game.style();
-    const y = h - 88;
-    const side = Math.min(56, w * 0.14);
-    const strikeW = Math.min(190, w * 0.48);
+    const y = h - 92;
+    const side = Math.min(58, w * 0.145);
+    const strikeW = Math.min(210, w * 0.52);
     const gap = 10;
     const total = side * 2 + strikeW + gap * 2;
     const x0 = (w - total) / 2;
 
-    this.mechBtn(x0, y + 4, side, 44, "↩", "undo", false);
+    this.mechBtn(x0, y + 6, side, 46, "↩", "undo", false);
 
-    // massive УДАР — depress juice
+    // massive УДАР — material slab + outer pulse ring
     const press = this.strikePress;
     const sx = x0 + side + gap;
-    const pulse = 1 + Math.sin(t * 3) * 0.015 + game.strikePulse * 0.04 - press * 0.04;
+    const pulse = 1 + Math.sin(t * 3.2) * 0.02 + game.strikePulse * 0.05 - press * 0.05;
     const sw = strikeW * pulse;
-    const sh = 52;
-    const drawY = y + press * 5;
-    this.hits.push({ id: "submit", x: sx - (sw - strikeW) / 2, y, w: sw, h: sh });
+    const sh = 56;
+    const drawY = y + press * 6;
+    const drawX = sx - (sw - strikeW) / 2;
+    this.hits.push({ id: "submit", x: drawX, y, w: sw, h: sh });
     const { ctx } = this;
     ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
-    this.roundRect(
-      sx - (sw - strikeW) / 2 + 3,
-      drawY + 5 + (1 - press) * 2,
-      sw,
-      sh,
-      12,
-      "rgba(0,0,0,0.45)",
-      true,
-    );
-    const g = ctx.createLinearGradient(sx, drawY, sx, drawY + sh);
-    g.addColorStop(0, press > 0.3 ? S.accent : S.brickHi);
-    g.addColorStop(0.4, S.accent);
+
+    // outer energy ring
+    ctx.globalAlpha = 0.25 + Math.sin(t * 4) * 0.1 + game.strikePulse * 0.35;
+    ctx.strokeStyle = S.rare;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = S.rare;
+    ctx.shadowBlur = 12;
+    this.pathRound(drawX - 4, drawY - 4, sw + 8, sh + 8, 14);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    this.roundRect(drawX + 3, drawY + 6, sw, sh, 14, "rgba(0,0,0,0.5)", true);
+
+    const g = ctx.createLinearGradient(drawX, drawY, drawX, drawY + sh);
+    g.addColorStop(0, press > 0.3 ? S.accentHot : S.brickHi);
+    g.addColorStop(0.35, S.accent);
+    g.addColorStop(0.7, S.brick);
     g.addColorStop(1, S.brickDeep);
     ctx.fillStyle = g;
-    this.pathRound(sx - (sw - strikeW) / 2, drawY, sw, sh, 12);
+    this.pathRound(drawX, drawY, sw, sh, 14);
     ctx.fill();
-    if (press > 0.2) {
+
+    // top lip highlight
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = "#fff";
+    this.pathRound(drawX + 6, drawY + 4, sw - 12, 10, 6);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    if (press > 0.15 || game.strikePulse > 0.1) {
       ctx.strokeStyle = S.accentHot;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.shadowColor = S.accentHot;
-      ctx.shadowBlur = 16;
-      this.pathRound(sx - (sw - strikeW) / 2, drawY, sw, sh, 12);
+      ctx.shadowBlur = 18;
+      this.pathRound(drawX, drawY, sw, sh, 14);
       ctx.stroke();
       ctx.shadowBlur = 0;
     }
+
     ctx.fillStyle = S.ink;
     if (S.id === "candy" || S.id === "ink") ctx.fillStyle = "#1a1020";
-    ctx.font = `800 20px ${DISPLAY}`;
+    ctx.font = `900 22px ${DISPLAY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(tr("strike"), sx - (sw - strikeW) / 2 + sw / 2, drawY + sh / 2 + 1);
+    ctx.shadowColor = "rgba(0,0,0,0.35)";
+    ctx.shadowBlur = 4;
+    ctx.fillText(tr("strike"), drawX + sw / 2, drawY + sh / 2 + 1);
+    ctx.shadowBlur = 0;
     ctx.restore();
 
-    this.mechBtn(sx + strikeW + gap, y + 4, side, 44, "↻", "reshuffle", false);
-    this.mechBtn(10, y + 4, 36, 44, "☰", "to-menu", false);
+    this.mechBtn(sx + strikeW + gap, y + 6, side, 46, "↻", "reshuffle", false);
+    this.mechBtn(8, y + 6, 34, 46, "☰", "to-menu", false);
   }
 
   private drawMessage() {
