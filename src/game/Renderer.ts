@@ -626,41 +626,47 @@ export class Renderer {
     const S = game.style();
     ctx.save();
     if (on) {
-      const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, r * 2.2);
-      glow.addColorStop(0, `${S.rare}66`);
+      const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, r * 2.4);
+      glow.addColorStop(0, `${S.rare}77`);
       glow.addColorStop(1, "transparent");
       ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(cx, cy, r * 2.2, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r * 2.4, 0, Math.PI * 2);
       ctx.fill();
     }
-    // faceted mineral
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - r);
-    ctx.lineTo(cx + r * 0.85, cy - r * 0.2);
-    ctx.lineTo(cx + r * 0.55, cy + r * 0.85);
-    ctx.lineTo(cx - r * 0.55, cy + r * 0.85);
-    ctx.lineTo(cx - r * 0.85, cy - r * 0.2);
-    ctx.closePath();
-    const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
-    g.addColorStop(0, on ? S.rare : S.muted);
-    g.addColorStop(0.5, on ? S.accentHot : `${S.muted}88`);
-    g.addColorStop(1, on ? S.brickDeep : S.brickDeep);
-    ctx.fillStyle = g;
-    ctx.globalAlpha = on ? 1 : 0.4;
-    ctx.fill();
-    if (on) {
-      ctx.strokeStyle = S.accentHot;
-      ctx.lineWidth = 1;
-      ctx.globalAlpha = 0.5 + Math.sin(t * 6) * 0.2;
-      ctx.stroke();
+
+    const gem = getNamedAtlasCanvas(on ? "ui_gem_on" : "ui_gem_off");
+    const size = r * 2.4;
+    if (gem) {
+      ctx.globalAlpha = on ? 1 : 0.55;
+      const bob = on ? Math.sin(t * 6) * 1.2 : 0;
+      ctx.drawImage(gem, cx - size / 2, cy - size / 2 + bob, size, size);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r);
+      ctx.lineTo(cx + r * 0.85, cy - r * 0.2);
+      ctx.lineTo(cx + r * 0.55, cy + r * 0.85);
+      ctx.lineTo(cx - r * 0.55, cy + r * 0.85);
+      ctx.lineTo(cx - r * 0.85, cy - r * 0.2);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+      g.addColorStop(0, on ? S.rare : S.muted);
+      g.addColorStop(0.5, on ? S.accentHot : `${S.muted}88`);
+      g.addColorStop(1, S.brickDeep);
+      ctx.fillStyle = g;
+      ctx.globalAlpha = on ? 1 : 0.4;
+      ctx.fill();
     }
-    ctx.globalAlpha = on ? 1 : 0.45;
-    ctx.fillStyle = S.ink;
-    ctx.font = `800 ${r * 0.85}px ${FONT}`;
+
+    ctx.globalAlpha = on ? 1 : 0.55;
+    ctx.fillStyle = on ? S.ink : S.muted;
+    ctx.font = `900 ${r * 0.75}px ${FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    ctx.shadowColor = on ? S.accentHot : "transparent";
+    ctx.shadowBlur = on ? 6 : 0;
     ctx.fillText(letter, cx, cy + 1);
+    ctx.shadowBlur = 0;
     ctx.restore();
   }
 
@@ -952,46 +958,49 @@ export class Renderer {
     ctx.translate(w / 2, board.y + board.h * 0.42);
     ctx.rotate((-6 + Math.sin(life * 18) * 1.2) * (Math.PI / 180));
     ctx.scale(scale, scale * 1.08);
-    ctx.globalAlpha = Math.min(0.92, fade);
-
-    // material slab behind glyph
-    const tw = Math.min(w * 0.92, 26 * game.stamp.length + 80);
-    const th = Math.min(110, h * 0.14);
-    const g = ctx.createLinearGradient(-tw / 2, -th / 2, tw / 2, th / 2);
-    g.addColorStop(0, S.brickHi);
-    g.addColorStop(0.45, S.brick);
-    g.addColorStop(1, S.brickDeep);
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    this.roundRect(-tw / 2 + 6, -th / 2 + 8, tw, th, 12, "rgba(0,0,0,0.35)", true);
-    ctx.fillStyle = g;
-    this.pathRound(-tw / 2, -th / 2, tw, th, 12);
-    ctx.fill();
-    ctx.strokeStyle = S.accentHot;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = Math.min(0.55, fade);
-    this.pathRound(-tw / 2, -th / 2, tw, th, 12);
-    ctx.stroke();
-
     ctx.globalAlpha = Math.min(0.95, fade);
+
+    const tw = Math.min(w * 0.92, 28 * game.stamp.length + 100);
+    const th = Math.min(120, h * 0.15);
+    const slab = getNamedAtlasCanvas("ui_stamp");
+    if (slab) {
+      ctx.drawImage(slab, -tw / 2, -th / 2, tw, th);
+    } else {
+      const g = ctx.createLinearGradient(-tw / 2, -th / 2, tw / 2, th / 2);
+      g.addColorStop(0, S.brickHi);
+      g.addColorStop(0.45, S.brick);
+      g.addColorStop(1, S.brickDeep);
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      this.roundRect(-tw / 2 + 6, -th / 2 + 8, tw, th, 12, "rgba(0,0,0,0.35)", true);
+      ctx.fillStyle = g;
+      this.pathRound(-tw / 2, -th / 2, tw, th, 12);
+      ctx.fill();
+    }
+
     ctx.fillStyle = S.letter;
     ctx.font = `900 ${Math.min(78, w * 0.2)}px ${DISPLAY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowColor = S.accent;
-    ctx.shadowBlur = 24;
+    ctx.shadowColor = S.accentHot;
+    ctx.shadowBlur = 22;
     ctx.fillText(game.stamp, 0, 2);
     ctx.shadowBlur = 0;
     ctx.restore();
 
-    // expanding shock ring
     if (life > 0.55) {
       ctx.save();
-      ctx.globalAlpha = (life - 0.55) * 0.7;
-      ctx.strokeStyle = S.accentHot;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(w / 2, board.y + board.h * 0.42, (1.15 - life) * h * 0.7 + 60, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.globalAlpha = (life - 0.55) * 0.85;
+      const shock = getNamedAtlasCanvas("vfx_shock");
+      const rad = (1.15 - life) * h * 0.7 + 60;
+      if (shock) {
+        ctx.drawImage(shock, w / 2 - rad, board.y + board.h * 0.42 - rad, rad * 2, rad * 2);
+      } else {
+        ctx.strokeStyle = S.accentHot;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(w / 2, board.y + board.h * 0.42, rad, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.restore();
     }
   }
@@ -1015,16 +1024,12 @@ export class Renderer {
         ctx.textBaseline = "middle";
         ctx.fillText(p.letter, 0, 0);
       } else if (p.kind === "shard") {
-        const s = Math.max(8, p.size * board.w * 1.4);
-        const shards = getNamedAtlasCanvas("vfx_shards");
-        if (shards) {
-          // random crop of the shards sheet for variety
-          const sw = shards.width * 0.35;
-          const sh = shards.height * 0.35;
-          const rot = p.rot ?? 0;
-          const sx = (Math.abs(Math.sin(rot * 3 + p.x * 9)) * (shards.width - sw)) | 0;
-          const sy = (Math.abs(Math.cos(rot * 2 + p.y * 7)) * (shards.height - sh)) | 0;
-          ctx.drawImage(shards, sx, sy, sw, sh, -s, -s, s * 2, s * 2);
+        const s = Math.max(10, p.size * board.w * 1.5);
+        const variants = ["vfx_shatter_a", "vfx_shatter_b", "vfx_shatter_c"] as const;
+        const pick = variants[((p.x * 17 + p.y * 13) | 0) % variants.length]!;
+        const shard = getNamedAtlasCanvas(pick) ?? getNamedAtlasCanvas("vfx_shards");
+        if (shard) {
+          ctx.drawImage(shard, -s, -s, s * 2, s * 2);
         } else {
           ctx.fillStyle = p.color;
           ctx.beginPath();
@@ -1214,19 +1219,18 @@ export class Renderer {
     const S = game.style();
     const y = h - 92;
     const side = Math.min(58, w * 0.145);
-    const strikeW = Math.min(210, w * 0.52);
+    const strikeW = Math.min(220, w * 0.54);
     const gap = 10;
     const total = side * 2 + strikeW + gap * 2;
     const x0 = (w - total) / 2;
 
     this.mechBtn(x0, y + 6, side, 46, "↩", "undo", false);
 
-    // massive УДАР — material slab + outer pulse ring
     const press = this.strikePress;
     const sx = x0 + side + gap;
     const pulse = 1 + Math.sin(t * 3.2) * 0.02 + game.strikePulse * 0.05 - press * 0.05;
     const sw = strikeW * pulse;
-    const sh = 56;
+    const sh = 58;
     const drawY = y + press * 6;
     const drawX = sx - (sw - strikeW) / 2;
     this.hits.push({ id: "submit", x: drawX, y, w: sw, h: sh });
@@ -1234,34 +1238,33 @@ export class Renderer {
     ctx.save();
 
     // outer energy ring
-    ctx.globalAlpha = 0.25 + Math.sin(t * 4) * 0.1 + game.strikePulse * 0.35;
+    ctx.globalAlpha = 0.28 + Math.sin(t * 4) * 0.1 + game.strikePulse * 0.35;
     ctx.strokeStyle = S.rare;
     ctx.lineWidth = 2;
     ctx.shadowColor = S.rare;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 14;
     this.pathRound(drawX - 4, drawY - 4, sw + 8, sh + 8, 14);
     ctx.stroke();
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
 
+    // contact shadow
     ctx.fillStyle = "rgba(0,0,0,0.5)";
-    this.roundRect(drawX + 3, drawY + 6, sw, sh, 14, "rgba(0,0,0,0.5)", true);
+    this.roundRect(drawX + 3, drawY + 7, sw, sh, 14, "rgba(0,0,0,0.5)", true);
 
-    const g = ctx.createLinearGradient(drawX, drawY, drawX, drawY + sh);
-    g.addColorStop(0, press > 0.3 ? S.accentHot : S.brickHi);
-    g.addColorStop(0.35, S.accent);
-    g.addColorStop(0.7, S.brick);
-    g.addColorStop(1, S.brickDeep);
-    ctx.fillStyle = g;
-    this.pathRound(drawX, drawY, sw, sh, 14);
-    ctx.fill();
-
-    // top lip highlight
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = "#fff";
-    this.pathRound(drawX + 6, drawY + 4, sw - 12, 10, 6);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    const strikeArt = getNamedAtlasCanvas("ui_strike");
+    if (strikeArt) {
+      ctx.drawImage(strikeArt, drawX, drawY, sw, sh);
+    } else {
+      const g = ctx.createLinearGradient(drawX, drawY, drawX, drawY + sh);
+      g.addColorStop(0, press > 0.3 ? S.accentHot : S.brickHi);
+      g.addColorStop(0.35, S.accent);
+      g.addColorStop(0.7, S.brick);
+      g.addColorStop(1, S.brickDeep);
+      ctx.fillStyle = g;
+      this.pathRound(drawX, drawY, sw, sh, 14);
+      ctx.fill();
+    }
 
     if (press > 0.15 || game.strikePulse > 0.1) {
       ctx.strokeStyle = S.accentHot;
@@ -1273,13 +1276,12 @@ export class Renderer {
       ctx.shadowBlur = 0;
     }
 
-    ctx.fillStyle = S.ink;
-    if (S.id === "candy" || S.id === "ink") ctx.fillStyle = "#1a1020";
+    ctx.fillStyle = "#0E141C";
     ctx.font = `900 22px ${DISPLAY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowColor = "rgba(0,0,0,0.35)";
-    ctx.shadowBlur = 4;
+    ctx.shadowColor = "rgba(255,255,255,0.25)";
+    ctx.shadowBlur = 3;
     ctx.fillText(tr("strike"), drawX + sw / 2, drawY + sh / 2 + 1);
     ctx.shadowBlur = 0;
     ctx.restore();

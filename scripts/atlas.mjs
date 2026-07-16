@@ -212,10 +212,15 @@ async function main() {
     }
   }
 
-  // VFX frames
+  // VFX + UI frames
   const vfxSpecs = [
     ["vfx-shock", "vfx_shock", 64],
     ["vfx-shards", "vfx_shards", 64],
+    ["vfx-shatter-a", "vfx_shatter_a", 48],
+    ["vfx-shatter-b", "vfx_shatter_b", 48],
+    ["vfx-shatter-c", "vfx_shatter_c", 48],
+    ["gem-on", "ui_gem_on", 48],
+    ["gem-off", "ui_gem_off", 48],
   ];
   for (const [file, frame, size] of vfxSpecs) {
     let pngBuf = await prepareVfx(file, size);
@@ -223,6 +228,13 @@ async function main() {
       pngBuf = await sharp(
         Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 4}" fill="none" stroke="#F4FFFD" stroke-width="3"/></svg>`),
       )
+        .png()
+        .toBuffer();
+    } else {
+      pngBuf = await removeStudioBg(pngBuf);
+      pngBuf = await sharp(pngBuf)
+        .trim({ threshold: 10 })
+        .resize(size, size, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .png()
         .toBuffer();
     }
@@ -242,6 +254,25 @@ async function main() {
     writeFileSync(join(srcArt, "prop_ceiling.png"), beam);
     const { data, info } = await sharp(beam).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     buffers.push({ name: "prop_ceiling", w: info.width, h: info.height, data });
+  }
+
+  // wide UI props: strike button + stamp slab
+  for (const [file, frame, tw, th] of [
+    ["ui-strike", "ui_strike", 220, 72],
+    ["ui-stamp", "ui_stamp", 280, 88],
+  ]) {
+    const path = join(srcBase, `${file}.png`);
+    if (!existsSync(path)) continue;
+    let buf = await removeStudioBg(path);
+    buf = await sharp(buf)
+      .trim({ threshold: 12 })
+      .resize(tw, th, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
+    writeFileSync(join(srcArt, `${frame}.png`), buf);
+    const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    buffers.push({ name: frame, w: info.width, h: info.height, data });
+    console.log(`  ${frame}: AI UI`);
   }
 
   console.log(`  ${buffers.length} sprites`);
