@@ -58,7 +58,7 @@
 
 | Пачка | Путь |
 |---|---|
-| Atlas мира | `public/atlases/world.png` (+ JSON) |
+| Atlas мира | `public/atlases/world.png` (~90KB, echo × letters) + `world.json` |
 | Фон | `public/backgrounds/bg-sky.webp` |
 | SFX | WebAudio layered |
 | Store | `store/` icon / cover / shots |
