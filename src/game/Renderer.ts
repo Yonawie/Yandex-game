@@ -4,6 +4,7 @@ import { t as tr } from "../i18n";
 import { Game } from "./Game";
 import { paintColorGrade } from "./visual/ColorGrade";
 import { CubeKind, MaterialFactory } from "./visual/MaterialFactory";
+import { getNamedAtlasCanvas, getPlayBackground } from "./visual/WorldAtlas";
 
 const FONT = "Manrope, system-ui, sans-serif";
 const DISPLAY = `Unbounded, ${FONT}`;
@@ -103,6 +104,21 @@ export class Renderer {
     const { ctx, w, h, game } = this;
     const S = game.style();
     ctx.save();
+
+    // AI play backdrop when in-run (or always under menu wash)
+    const bg = getPlayBackground();
+    if (bg && (game.phase === "playing" || game.phase === "result")) {
+      ctx.globalAlpha = 0.92;
+      ctx.drawImage(bg, 0, 0, w, h);
+      ctx.globalAlpha = 1;
+      // style wash on top of photo bg
+      const wash = ctx.createLinearGradient(0, 0, 0, h);
+      wash.addColorStop(0, `${S.bg[0]}66`);
+      wash.addColorStop(0.5, `${S.bg[1]}44`);
+      wash.addColorStop(1, `${S.bg[2]}88`);
+      ctx.fillStyle = wash;
+      ctx.fillRect(0, 0, w, h);
+    }
 
     // layered parallax bands — obvious scene depth
     for (let i = 0; i < 4; i++) {
@@ -289,7 +305,11 @@ export class Renderer {
     ctx.font = `800 13px ${FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(tr("premiumRibbon") + (MaterialFactory.atlasReady() ? " · ATLAS" : ""), w / 2, 17);
+    ctx.fillText(
+      tr("premiumRibbon") + (MaterialFactory.atlasReady() ? " · AI ATLAS" : ""),
+      w / 2,
+      17,
+    );
     ctx.textBaseline = "alphabetic";
 
     // huge brand wordmark
@@ -649,38 +669,26 @@ export class Renderer {
     const S = game.style();
     const near = game.maxStackH() >= game.maxH - 2;
     const critical = game.maxStackH() >= game.maxH - 1;
-    const by = board.y - 6;
-    const bh = 18;
+    const by = board.y - 8;
+    const bh = 22;
 
-    // heavy metal beam with bevel
-    const metal = ctx.createLinearGradient(board.x, by, board.x, by + bh);
-    metal.addColorStop(0, "#9aa0a8");
-    metal.addColorStop(0.28, "#4a5058");
-    metal.addColorStop(0.65, "#1e2228");
-    metal.addColorStop(1, "#0a0c10");
-    ctx.fillStyle = metal;
-    this.pathRound(board.x - 6, by, board.w + 12, bh, 4);
-    ctx.fill();
-    ctx.strokeStyle = `${S.accentHot}33`;
-    ctx.lineWidth = 1;
-    this.pathRound(board.x - 6, by, board.w + 12, bh, 4);
-    ctx.stroke();
-
-    // rivets
-    ctx.fillStyle = "#c0c4c8";
-    for (let i = 0; i < 9; i++) {
-      const rx = board.x + 8 + i * ((board.w - 16) / 8);
-      ctx.beginPath();
-      ctx.arc(rx, by + bh / 2, 2.6, 0, Math.PI * 2);
+    const prop = getNamedAtlasCanvas("prop_ceiling");
+    if (prop) {
+      ctx.save();
+      ctx.drawImage(prop, board.x - 8, by, board.w + 16, bh);
+      ctx.restore();
+    } else {
+      const metal = ctx.createLinearGradient(board.x, by, board.x, by + bh);
+      metal.addColorStop(0, "#9aa0a8");
+      metal.addColorStop(0.28, "#4a5058");
+      metal.addColorStop(0.65, "#1e2228");
+      metal.addColorStop(1, "#0a0c10");
+      ctx.fillStyle = metal;
+      this.pathRound(board.x - 6, by, board.w + 12, bh, 4);
       ctx.fill();
-      ctx.fillStyle = "#2a2e32";
-      ctx.beginPath();
-      ctx.arc(rx, by + bh / 2, 1.1, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#c0c4c8";
     }
 
-    // energy vein
+    // energy vein overlay
     const pulse = near ? 0.6 + Math.sin(t * (critical ? 11 : 5.5)) * 0.4 : 0.28;
     ctx.save();
     ctx.globalAlpha = pulse;
@@ -815,32 +823,23 @@ export class Renderer {
     }
 
     for (const s of game.shocks) {
+      const cx = board.x + board.w * s.x;
+      const cy = board.y + board.h * (1 - s.y);
+      const rad = s.r * Math.min(board.w, board.h) * 0.55;
       ctx.save();
-      ctx.globalAlpha = Math.max(0, s.life) * 0.9;
-      ctx.strokeStyle = S.accentHot;
-      ctx.lineWidth = 3;
-      ctx.shadowColor = S.accent;
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(
-        board.x + board.w * s.x,
-        board.y + board.h * (1 - s.y),
-        s.r * Math.min(board.w, board.h) * 0.5,
-        0,
-        Math.PI * 2,
-      );
-      ctx.stroke();
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = S.rare;
-      ctx.beginPath();
-      ctx.arc(
-        board.x + board.w * s.x,
-        board.y + board.h * (1 - s.y),
-        s.r * Math.min(board.w, board.h) * 0.32,
-        0,
-        Math.PI * 2,
-      );
-      ctx.stroke();
+      ctx.globalAlpha = Math.max(0, s.life) * 0.95;
+      const shock = getNamedAtlasCanvas("vfx_shock");
+      if (shock) {
+        ctx.drawImage(shock, cx - rad, cy - rad, rad * 2, rad * 2);
+      } else {
+        ctx.strokeStyle = S.accentHot;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = S.accent;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.restore();
     }
   }
@@ -1016,14 +1015,25 @@ export class Renderer {
         ctx.textBaseline = "middle";
         ctx.fillText(p.letter, 0, 0);
       } else if (p.kind === "shard") {
-        const s = Math.max(3, p.size * board.w * 1.1);
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.moveTo(0, -s);
-        ctx.lineTo(s * 0.7, s * 0.4);
-        ctx.lineTo(-s * 0.55, s * 0.55);
-        ctx.closePath();
-        ctx.fill();
+        const s = Math.max(8, p.size * board.w * 1.4);
+        const shards = getNamedAtlasCanvas("vfx_shards");
+        if (shards) {
+          // random crop of the shards sheet for variety
+          const sw = shards.width * 0.35;
+          const sh = shards.height * 0.35;
+          const rot = p.rot ?? 0;
+          const sx = (Math.abs(Math.sin(rot * 3 + p.x * 9)) * (shards.width - sw)) | 0;
+          const sy = (Math.abs(Math.cos(rot * 2 + p.y * 7)) * (shards.height - sh)) | 0;
+          ctx.drawImage(shards, sx, sy, sw, sh, -s, -s, s * 2, s * 2);
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.moveTo(0, -s);
+          ctx.lineTo(s * 0.7, s * 0.4);
+          ctx.lineTo(-s * 0.55, s * 0.55);
+          ctx.closePath();
+          ctx.fill();
+        }
       } else if (p.kind === "glow") {
         const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(4, p.size * board.w));
         rg.addColorStop(0, p.color);

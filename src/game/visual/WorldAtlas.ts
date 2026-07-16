@@ -12,10 +12,21 @@ type AtlasJson = {
 let sheet: HTMLImageElement | HTMLCanvasElement | null = null;
 let frames: Record<string, AtlasFrame> = {};
 let ready = false;
+let playBg: HTMLImageElement | null = null;
 const sliceCache = new Map<string, HTMLCanvasElement>();
 
 function frameKey(styleId: string, kind: CubeKind, letter: string): string {
   return `${styleId}_${kind}_${letter}`;
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const i = new Image();
+    i.decoding = "async";
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error(src));
+    i.src = src;
+  });
 }
 
 export function isAtlasReady(): boolean {
@@ -28,13 +39,7 @@ export async function loadWorldAtlas(
 ): Promise<boolean> {
   try {
     const [img, json] = await Promise.all([
-      new Promise<HTMLImageElement>((resolve, reject) => {
-        const i = new Image();
-        i.decoding = "async";
-        i.onload = () => resolve(i);
-        i.onerror = () => reject(new Error("atlas png"));
-        i.src = pngUrl;
-      }),
+      loadImage(pngUrl),
       fetch(jsonUrl).then((r) => {
         if (!r.ok) throw new Error("atlas json");
         return r.json() as Promise<AtlasJson>;
@@ -44,6 +49,17 @@ export async function loadWorldAtlas(
     frames = json.frames ?? {};
     ready = Object.keys(frames).length > 0;
     sliceCache.clear();
+
+    // optional play backdrop (AI)
+    try {
+      playBg = await loadImage("./backgrounds/bg-sky.webp");
+    } catch {
+      try {
+        playBg = await loadImage("./backgrounds/bg-play.png");
+      } catch {
+        playBg = null;
+      }
+    }
     return ready;
   } catch {
     ready = false;
@@ -53,14 +69,22 @@ export async function loadWorldAtlas(
   }
 }
 
-/** Slice a frame into a canvas (cached). */
+export function getPlayBackground(): HTMLImageElement | null {
+  return playBg;
+}
+
+/** Slice a cube frame into a canvas (cached). */
 export function getAtlasCanvas(
   styleId: string,
   kind: CubeKind,
   letter: string,
 ): HTMLCanvasElement | null {
+  return getNamedAtlasCanvas(frameKey(styleId, kind, letter));
+}
+
+/** Slice any named atlas frame (vfx_shock, prop_ceiling, …). */
+export function getNamedAtlasCanvas(name: string): HTMLCanvasElement | null {
   if (!ready || !sheet) return null;
-  const name = frameKey(styleId, kind, letter);
   const hit = sliceCache.get(name);
   if (hit) return hit;
   const f = frames[name]?.frame;

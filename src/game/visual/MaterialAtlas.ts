@@ -4,6 +4,8 @@ export type { CubeKind } from "./MaterialFactory";
 export {
   loadWorldAtlas,
   getAtlasCanvas,
+  getNamedAtlasCanvas,
+  getPlayBackground,
   isAtlasReady,
   getAtlasSheet,
   getAtlasFrame,

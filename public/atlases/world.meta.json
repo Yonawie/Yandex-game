@@ -1,13 +1,19 @@
 {
   "name": "world",
-  "generatedAt": "2026-07-16T01:05:27.525Z",
-  "sourceCount": 131,
+  "generatedAt": "2026-07-16T01:31:42.726Z",
+  "sourceCount": 133,
   "frames": 131,
   "size": {
     "w": 1456,
     "h": 874
   },
-  "bytes": 91841,
+  "bytes": 137248,
   "skin": "echo",
-  "note": "TexturePacker-compatible. Replace assets/source/art with hand-authored PNGs and re-run npm run atlas."
+  "bases": [
+    "normal",
+    "rare",
+    "armor",
+    "mirror"
+  ],
+  "note": "AI-authored cube bases + letter stamp. Replace assets/source/base/*.png and re-run npm run atlas."
 }
