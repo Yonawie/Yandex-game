@@ -1,16 +1,17 @@
 {
   "name": "world",
-  "generatedAt": "2026-07-16T02:36:01.683Z",
+  "generatedAt": "2026-07-16T02:41:23.141Z",
   "sourceCount": 276,
   "frames": 274,
   "size": {
     "w": 1491,
     "h": 1796
   },
-  "bytes": 328215,
+  "bytes": 384796,
   "skins": [
     "echo",
     "cosmos"
   ],
-  "note": "Multi-skin AI atlas (echo + cosmos). Replace assets/source/base/*.png and re-run npm run atlas."
+  "note": "Multi-skin AI atlas (echo + cosmos). Letters carved into cube pigment (not sticker overlay).",
+  "letterBake": "carve-multiply-v1"
 }

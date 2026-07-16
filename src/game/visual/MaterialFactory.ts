@@ -7,7 +7,7 @@ const CACHE = new Map<string, HTMLCanvasElement>();
 const TEX_SIZE = 160;
 
 function key(styleId: string, kind: CubeKind, letter: string): string {
-  return `${styleId}|${kind}|${letter}|v4`;
+  return `${styleId}|${kind}|${letter}|v5-bake`;
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -39,6 +39,60 @@ function roundRect(
   ctx.arcTo(x, y + h, x, y, rr);
   ctx.arcTo(x, y, x + w, y, rr);
   ctx.closePath();
+}
+
+/** Carve glyph into current face — multiply/soft-light stack, not flat fill. */
+function bakeLetterIntoFace(
+  ctx: CanvasRenderingContext2D,
+  letter: string,
+  ink: string,
+  preview: boolean,
+) {
+  const cx = TEX_SIZE / 2;
+  const cy = TEX_SIZE / 2 - 4;
+  const font = `800 ${Math.floor(TEX_SIZE * 0.52)}px Manrope, DejaVu Sans, system-ui, sans-serif`;
+
+  ctx.save();
+  ctx.font = font;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // soft seat under glyph
+  ctx.globalCompositeOperation = "multiply";
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.fillText(letter, cx + 0.5, cy + 2);
+
+  // deep AO offset
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  ctx.fillText(letter, cx + 2, cy + 3);
+
+  // carved body (dark ink into pigment)
+  ctx.globalAlpha = 0.82;
+  ctx.fillStyle = ink;
+  ctx.fillText(letter, cx, cy);
+  ctx.globalAlpha = 1;
+
+  // lip catchlight (soft)
+  ctx.globalCompositeOperation = "soft-light";
+  ctx.fillStyle = preview ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.45)";
+  ctx.fillText(letter, cx - 1.5, cy - 2);
+
+  // readability core (still multiply so texture bleeds)
+  ctx.globalCompositeOperation = "multiply";
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = ink;
+  ctx.fillText(letter, cx, cy);
+
+  if (preview) {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "#ffffff";
+    ctx.shadowBlur = 10;
+    ctx.fillText(letter, cx, cy);
+  }
+
+  ctx.restore();
 }
 
 /** Жирный AAA-кубик: глубокая фаска, AO, материал стиля, крупная буква. */
@@ -129,18 +183,8 @@ function paintCube(S: VisualStyle, kind: CubeKind, letter: string): HTMLCanvasEl
   roundRect(ctx, x + 5, y + 5, w - 10, h - 18, r - 4);
   ctx.stroke();
 
-  // letter stamped ~70%
-  ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
-  ctx.font = `800 ${Math.floor(TEX_SIZE * 0.56)}px Manrope, system-ui, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(letter, TEX_SIZE / 2 + 2, TEX_SIZE / 2 - 2);
-  ctx.fillStyle = S.letter;
-  ctx.shadowColor = kind === "preview" ? S.accentHot : "rgba(0,0,0,0.35)";
-  ctx.shadowBlur = kind === "preview" ? 12 : 4;
-  ctx.fillText(letter, TEX_SIZE / 2, TEX_SIZE / 2 - 4);
-  ctx.restore();
+  // letter carved into face pigment (not sticker)
+  bakeLetterIntoFace(ctx, letter, S.letter, kind === "preview");
 
   if (kind === "rare") {
     ctx.strokeStyle = S.accentHot;

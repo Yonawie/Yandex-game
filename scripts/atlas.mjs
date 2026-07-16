@@ -149,28 +149,98 @@ async function prepareBaseCube(skin, kind) {
     .toBuffer();
 }
 
-function letterOverlaySvg(letter, fill) {
-  const fontSize = Math.round(TILE * 0.52);
+function parseHex(hex) {
+  const h = String(hex).replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  return [parseInt(full.slice(0, 2), 16), parseInt(full.slice(2, 4), 16), parseInt(full.slice(4, 6), 16)];
+}
+
+/** Solid glyph mask (white letter, transparent elsewhere). */
+function letterMaskSvg(letter, dx = 0, dy = 0, color = "#ffffff", opacity = 1) {
+  const fontSize = Math.round(TILE * 0.5);
   return Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${TILE}" height="${TILE}" viewBox="0 0 ${TILE} ${TILE}">
-  <text x="${TILE / 2 + 1}" y="${TILE * 0.62}" text-anchor="middle"
-        font-family="Manrope, Arial Black, DejaVu Sans, sans-serif"
-        font-size="${fontSize}" font-weight="800" fill="rgba(0,0,0,0.28)">${letter}</text>
-  <text x="${TILE / 2}" y="${TILE * 0.6}" text-anchor="middle"
-        font-family="Manrope, Arial Black, DejaVu Sans, sans-serif"
-        font-size="${fontSize}" font-weight="800" fill="${fill}">${letter}</text>
+  <text x="${TILE / 2 + dx}" y="${TILE * 0.62 + dy}" text-anchor="middle"
+        font-family="DejaVu Sans, Manrope, Arial Black, sans-serif"
+        font-size="${fontSize}" font-weight="800"
+        fill="${color}" fill-opacity="${opacity}">${letter}</text>
 </svg>`);
 }
 
+async function letterMaskPng(letter, dx = 0, dy = 0) {
+  return sharp(letterMaskSvg(letter, dx, dy)).ensureAlpha().png().toBuffer();
+}
+
+/**
+ * Bake letter INTO the cube pigment (carve + AO + ink multiply + soft lip),
+ * not a flat sticker overlay.
+ */
 async function stampLetter(basePng, letter, fill) {
+  const mask = await letterMaskPng(letter);
+  const maskSoft = await sharp(mask).blur(0.4).png().toBuffer();
+
+  const seat = await sharp({
+    create: { width: TILE, height: TILE, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0.4 } },
+  })
+    .png()
+    .composite([
+      {
+        input: await sharp(await letterMaskPng(letter, 0.5, 1.5)).blur(2.0).png().toBuffer(),
+        blend: "dest-in",
+      },
+    ])
+    .png()
+    .toBuffer();
+
+  const carved = await sharp(basePng)
+    .modulate({ brightness: 0.22, saturation: 0.45 })
+    .composite([{ input: maskSoft, blend: "dest-in" }])
+    .png()
+    .toBuffer();
+
+  const ao = await sharp(basePng)
+    .modulate({ brightness: 0.12 })
+    .composite([
+      {
+        input: await sharp(await letterMaskPng(letter, 1.6, 2.4)).blur(0.9).png().toBuffer(),
+        blend: "dest-in",
+      },
+    ])
+    .png()
+    .toBuffer();
+
+  const rim = await sharp(basePng)
+    .modulate({ brightness: 1.35, saturation: 0.6 })
+    .composite([{ input: await letterMaskPng(letter, -1.2, -1.6), blend: "dest-in" }])
+    .png()
+    .toBuffer();
+
+  const [r, g, b] = parseHex(fill);
+  const ink = await sharp({
+    create: { width: TILE, height: TILE, channels: 4, background: { r, g, b, alpha: 0.62 } },
+  })
+    .png()
+    .composite([{ input: mask, blend: "dest-in" }])
+    .png()
+    .toBuffer();
+
+  const outline = await sharp(letterMaskSvg(letter, 0, 0, "#000000", 0.55)).blur(0.85).png().toBuffer();
+
   return sharp(basePng)
-    .composite([{ input: await sharp(letterOverlaySvg(letter, fill)).png().toBuffer(), blend: "over" }])
+    .composite([
+      { input: seat, blend: "multiply" },
+      { input: outline, blend: "multiply" },
+      { input: ao, blend: "multiply" },
+      { input: carved, blend: "over" },
+      { input: ink, blend: "multiply" },
+      { input: rim, blend: "soft-light" },
+    ])
     .png()
     .toBuffer();
 }
 
 async function proceduralFallback(kind, letter) {
-  // minimal fallback if base missing
+  // minimal fallback if base missing — then bake letter into it
   const fills = {
     normal: ["#FFE2A8", "#F0B35A", "#8A3E16"],
     rare: ["#F4FFFD", "#FF4D7A", "#8A1838"],
@@ -184,10 +254,9 @@ async function proceduralFallback(kind, letter) {
     </linearGradient></defs>
     <rect x="6" y="8" width="84" height="84" rx="14" fill="${deep}" opacity="0.85"/>
     <rect x="4" y="4" width="84" height="80" rx="14" fill="url(#g)"/>
-    <text x="49" y="58" text-anchor="middle" font-size="46" font-weight="800" fill="rgba(0,0,0,0.25)">${letter}</text>
-    <text x="48" y="56" text-anchor="middle" font-size="46" font-weight="800" fill="${LETTER_FILL[kind]}">${letter}</text>
   </svg>`;
-  return sharp(Buffer.from(svg)).png().toBuffer();
+  const blank = await sharp(Buffer.from(svg)).png().toBuffer();
+  return stampLetter(blank, letter, LETTER_FILL[kind] ?? "#1A0C04");
 }
 
 async function prepareVfx(name, size) {
@@ -361,7 +430,8 @@ async function main() {
         format: "RGBA8888",
         size: { w: width, h: height },
         scale: "1",
-        smartupdate: `$echo-ai|${buffers.length}|${Date.now()}`,
+        smartupdate: `$echo-ai-bake|${buffers.length}|${Date.now()}`,
+        letterBake: "carve-multiply-v1",
       },
     }),
   );
@@ -395,7 +465,8 @@ async function main() {
     size: { w: width, h: height },
     bytes: compressed.length,
     skins: usedSkins,
-    note: "Multi-skin AI atlas (echo + cosmos). Replace assets/source/base/*.png and re-run npm run atlas.",
+    note: "Multi-skin AI atlas (echo + cosmos). Letters carved into cube pigment (not sticker overlay).",
+    letterBake: "carve-multiply-v1",
   };
   writeFileSync(join(outDir, "world.meta.json"), JSON.stringify(meta, null, 2));
 
