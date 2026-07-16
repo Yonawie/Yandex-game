@@ -111,17 +111,16 @@ export class Renderer {
     const S = game.style();
     ctx.save();
 
-    // AI play backdrop when in-run (or always under menu wash)
+    // AI play backdrop on menu / shop / play / result
     const bg = getPlayBackground(S.id);
-    if (bg && (game.phase === "playing" || game.phase === "result")) {
-      ctx.globalAlpha = 0.92;
+    if (bg) {
+      ctx.globalAlpha = game.phase === "playing" || game.phase === "result" ? 0.92 : 0.78;
       ctx.drawImage(bg, 0, 0, w, h);
       ctx.globalAlpha = 1;
-      // style wash on top of photo bg
       const wash = ctx.createLinearGradient(0, 0, 0, h);
-      wash.addColorStop(0, `${S.bg[0]}66`);
-      wash.addColorStop(0.5, `${S.bg[1]}44`);
-      wash.addColorStop(1, `${S.bg[2]}88`);
+      wash.addColorStop(0, `${S.bg[0]}88`);
+      wash.addColorStop(0.45, `${S.bg[1]}66`);
+      wash.addColorStop(1, `${S.bg[2]}aa`);
       ctx.fillStyle = wash;
       ctx.fillRect(0, 0, w, h);
     }
@@ -282,137 +281,115 @@ export class Renderer {
     const { ctx, w, h, game } = this;
     const S = game.style();
 
-    // full-bleed amber→coral wash — instantly distinct from old teal menu
-    const wash = ctx.createLinearGradient(0, 0, w, h);
-    wash.addColorStop(0, "#2A0A18");
-    wash.addColorStop(0.45, S.bg[1]);
-    wash.addColorStop(1, "#0A2A32");
-    ctx.fillStyle = wash;
+    // shaft vignette — same stage language as play
+    const shaft = ctx.createRadialGradient(w / 2, h * 0.38, 20, w / 2, h * 0.42, w * 0.75);
+    shaft.addColorStop(0, `${S.bg[1]}22`);
+    shaft.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = shaft;
     ctx.fillRect(0, 0, w, h);
 
-    // diagonal light streaks
-    ctx.save();
-    ctx.globalAlpha = 0.18;
-    for (let i = 0; i < 6; i++) {
-      const x = ((t * 40 + i * 90) % (w + 120)) - 60;
-      const streak = ctx.createLinearGradient(x, 0, x + 40, h);
-      streak.addColorStop(0, "transparent");
-      streak.addColorStop(0.5, S.accentHot);
-      streak.addColorStop(1, "transparent");
-      ctx.fillStyle = streak;
-      ctx.fillRect(x, 0, 28, h);
-    }
-    ctx.restore();
-
-    // impossible-to-miss version ribbon
-    ctx.fillStyle = S.rare;
-    ctx.fillRect(0, 0, w, 34);
-    ctx.fillStyle = "#12040A";
-    ctx.font = `800 13px ${FONT}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(
-      tr("premiumRibbon") + (MaterialFactory.atlasReady() ? " · AI ATLAS" : ""),
-      w / 2,
-      17,
-    );
-    ctx.textBaseline = "alphabetic";
-
-    // huge brand wordmark
+    // brand hero
     ctx.save();
     ctx.textAlign = "center";
     ctx.fillStyle = S.ink;
-    ctx.font = `900 ${Math.min(100, w * 0.3)}px ${DISPLAY}`;
-    ctx.shadowColor = S.rare;
-    ctx.shadowBlur = 40;
-    ctx.fillText(tr("brandHero"), w / 2, h * 0.16);
+    ctx.font = `900 ${Math.min(92, w * 0.28)}px ${DISPLAY}`;
+    ctx.shadowColor = S.accent;
+    ctx.shadowBlur = 28;
+    ctx.fillText(tr("brandHero"), w / 2, h * 0.14);
     ctx.shadowBlur = 0;
-    ctx.fillStyle = S.accent;
-    ctx.font = `700 14px ${FONT}`;
-    ctx.fillText(tr("amberLine"), w / 2, h * 0.16 + 26);
+    ctx.fillStyle = S.muted;
+    ctx.font = `600 14px ${FONT}`;
+    ctx.fillText(tr("tagline"), w / 2, h * 0.14 + 28);
     ctx.restore();
 
-    // giant logo cubes — brand is always Cyrillic ЭХО (atlas frames)
+    // logo cubes ЭХО — dominant visual, no overlays
     const logo = ["Э", "Х", "О"];
-    const cw = Math.min(86, w * 0.22);
-    const gap = 16;
+    const cw = Math.min(92, w * 0.24);
+    const gap = 14;
     const total = logo.length * cw + (logo.length - 1) * gap;
     const x0 = (w - total) / 2;
-    const y0 = h * 0.24;
+    const y0 = h * 0.22;
     logo.forEach((ch, i) => {
-      const bob = Math.sin(t * 2.8 + i * 1.2) * 8;
+      const bob = Math.sin(t * 2.4 + i * 1.1) * 6;
       this.drawBevelCube(x0 + i * (cw + gap), y0 + bob, cw, cw, ch, {
         armor: 0,
         mirror: i === 1,
-        preview: i === Math.floor(t * 1.5) % 3,
+        preview: i === Math.floor(t * 1.2) % 3,
         alpha: 1,
         breath: bob,
       });
     });
 
+    // soft meta line — not a card
     ctx.fillStyle = S.accentHot;
-    ctx.font = `600 16px ${FONT}`;
+    ctx.font = `700 13px ${FONT}`;
     ctx.textAlign = "center";
-    ctx.fillText(tr("tagline"), w / 2, y0 + cw + 38);
+    ctx.fillText(`◆ ${game.save.coins}  ·  ${tr("record")} ${game.save.best}`, w / 2, y0 + cw + 36);
 
-    // shards counter
-    ctx.save();
-    const pw = 190;
-    const px = (w - pw) / 2;
-    const py = y0 + cw + 54;
-    this.roundRect(px, py, pw, 36, 18, S.panel, true);
-    ctx.strokeStyle = S.rare;
-    ctx.lineWidth = 2;
-    this.pathRound(px, py, pw, 36, 18);
-    ctx.stroke();
-    ctx.fillStyle = S.accentHot;
-    ctx.font = `800 14px ${FONT}`;
-    ctx.fillText(`◆ ${game.save.coins}  ·  ${tr("record")} ${game.save.best}`, w / 2, py + 23);
-    ctx.restore();
+    // primary CTA
+    const bw = Math.min(300, w * 0.82);
+    const playY = y0 + cw + 58;
+    this.mechBtn((w - bw) / 2, playY, bw, 54, tr("play"), "play-normal", true);
 
-    const btns = [
-      { id: "play-normal", label: tr("play"), primary: true },
-      { id: "play-easy", label: tr("easy"), primary: false },
-      { id: "play-hard", label: tr("hard"), primary: false },
-      { id: "play-infinity", label: tr("infinity"), primary: true },
-      { id: "open-shop", label: tr("styles"), primary: false },
+    // compact difficulty row (not a stacked dashboard)
+    const diffs: { id: string; label: string }[] = [
+      { id: "play-easy", label: tr("easy") },
+      { id: "play-hard", label: tr("hard") },
+      { id: "play-infinity", label: tr("infinityShort") },
     ];
-    btns.forEach((b, i) => {
-      const bw = Math.min(320, w * 0.86);
-      const bh = i === 0 ? 56 : 44;
-      const by = h * 0.54 + (i === 0 ? 0 : 56 + (i - 1) * 48);
-      this.mechBtn((w - bw) / 2, by, bw, bh, b.label, b.id, b.primary);
+    const gapBtn = 8;
+    const chipW = (bw - gapBtn * (diffs.length - 1)) / diffs.length;
+    const chipY = playY + 66;
+    diffs.forEach((d, i) => {
+      const x = (w - bw) / 2 + i * (chipW + gapBtn);
+      this.mechBtn(x, chipY, chipW, 40, d.label, d.id, false);
     });
 
-    paintColorGrade(ctx, w, h, S, t, 0.15);
+    this.mechBtn((w - bw) / 2, chipY + 52, bw, 44, tr("styles"), "open-shop", false);
+
+    // floor shelf echo of play arena
+    const floorArt = getNamedAtlasCanvas("ui_floor");
+    if (floorArt) {
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(floorArt, 24, h - 36, w - 48, 22);
+      ctx.globalAlpha = 1;
+    }
+
+    paintColorGrade(ctx, w, h, S, t, 0.12);
   }
 
   private drawShop(t: number) {
     const { ctx, w, h, game } = this;
     const S = game.style();
 
-    if (this.worldMode) {
-      ctx.fillStyle = "rgba(0,0,0,0.48)";
-      ctx.fillRect(0, 0, w, h);
-    }
+    // HUD-like top rail
+    const rail = ctx.createLinearGradient(0, 0, 0, 72);
+    rail.addColorStop(0, `${S.bg[0]}ee`);
+    rail.addColorStop(1, "transparent");
+    ctx.fillStyle = rail;
+    ctx.fillRect(0, 0, w, 76);
+    ctx.fillStyle = S.rare;
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(0, 0, w, 3);
+    ctx.globalAlpha = 1;
 
     ctx.fillStyle = S.ink;
-    ctx.font = `800 28px ${DISPLAY}`;
+    ctx.font = `800 26px ${DISPLAY}`;
     ctx.textAlign = "center";
-    ctx.fillText(tr("shopTitle"), w / 2, 48);
+    ctx.fillText(tr("shopTitle"), w / 2, 36);
     ctx.fillStyle = S.accentHot;
     ctx.font = `700 13px ${FONT}`;
-    ctx.fillText(`◆ ${game.save.coins} ${tr("shards")}`, w / 2, 70);
+    ctx.fillText(`◆ ${game.save.coins} ${tr("shards")}`, w / 2, 58);
 
-    const rowH = 148;
-    const startY = 88;
-    const viewH = h - 170;
+    const rowH = 128;
+    const startY = 78;
+    const viewH = h - 150;
     const maxScroll = Math.max(0, STYLES.length * rowH - viewH);
     game.shopScroll = Math.max(0, Math.min(maxScroll, game.shopScroll));
 
     ctx.save();
     ctx.beginPath();
-    ctx.rect(12, startY, w - 24, viewH);
+    ctx.rect(0, startY, w, viewH);
     ctx.clip();
 
     STYLES.forEach((st, i) => {
@@ -421,76 +398,50 @@ export class Renderer {
       const owned = game.save.owned.includes(st.id);
       const eq = game.save.equipped === st.id;
 
-      // large atmospheric card — soft fill, no glass
-      const card = ctx.createLinearGradient(24, y, 24, y + 136);
-      card.addColorStop(0, st.bg[0]);
-      card.addColorStop(1, st.bg[2]);
-      ctx.fillStyle = card;
-      this.pathRound(18, y, w - 36, 136, 18);
-      ctx.fill();
+      // soft stage strip — not a bordered card
+      const strip = ctx.createLinearGradient(0, y, 0, y + rowH - 12);
+      strip.addColorStop(0, `${st.bg[0]}cc`);
+      strip.addColorStop(1, `${st.bg[2]}99`);
+      ctx.fillStyle = strip;
+      ctx.fillRect(0, y, w, rowH - 12);
+
       if (eq) {
-        ctx.strokeStyle = st.accentHot;
-        ctx.lineWidth = 1.5;
-        this.pathRound(18, y, w - 36, 136, 18);
-        ctx.stroke();
+        ctx.fillStyle = st.accentHot;
+        ctx.fillRect(0, y, 4, rowH - 12);
       }
 
       ctx.fillStyle = st.ink;
-      ctx.font = `800 20px ${DISPLAY}`;
+      ctx.font = `800 18px ${DISPLAY}`;
       ctx.textAlign = "left";
-      ctx.fillText(st.name, 34, y + 32);
+      ctx.fillText(st.name, 20, y + 28);
       ctx.fillStyle = st.muted;
       ctx.font = `500 12px ${FONT}`;
-      ctx.fillText(st.tagline, 34, y + 52);
-
-      // material preview cubes
-      ["А", "Р", "К"].forEach((ch, si) => {
-        const bx = 34 + si * 36;
-        const by = y + 68;
-        ctx.fillStyle = st.brickDeep;
-        this.roundRect(bx, by, 30, 30, 6, st.brickDeep, true);
-        ctx.fillStyle = [st.brick, st.brickHi, st.accent][si];
-        this.roundRect(bx + 2, by + 2, 26, 24, 5, [st.brick, st.brickHi, st.accent][si], true);
-        ctx.fillStyle = st.letter;
-        ctx.font = `800 14px ${FONT}`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(ch, bx + 15, by + 16);
-      });
-
-      // three color dots
-      [st.brick, st.accent, st.rare].forEach((c, si) => {
-        ctx.fillStyle = c;
-        ctx.beginPath();
-        ctx.arc(w - 52 - si * 18, y + 40, 6, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // destruction hint
-      ctx.fillStyle = st.muted;
+      ctx.fillText(st.tagline, 20, y + 48);
       ctx.font = `600 10px ${FONT}`;
-      ctx.textAlign = "left";
-      ctx.fillText(`разрушение · ${st.breakLabel}`, 34, y + 118);
+      ctx.fillText(`${tr("breakAs")} ${st.breakLabel}`, 20, y + 66);
 
-      const label = eq ? "Экипирован" : owned ? "Экипировать" : `◆ ${st.price}`;
-      const btnW = 118;
-      const bx = w - 36 - btnW - 12;
-      const by = y + 86;
-      this.hits.push({ id: `style-${st.id}`, x: bx, y: by, w: btnW, h: 36 });
-      this.roundRect(bx, by, btnW, 36, 10, eq ? st.rare : owned ? st.accent : st.brickDeep, true);
-      ctx.fillStyle = st.ink;
-      if (st.id === "candy" || st.id === "ink") ctx.fillStyle = "#1a1020";
-      if (st.id === "cosmos") ctx.fillStyle = "#0B1020";
-      ctx.font = `800 12px ${FONT}`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, bx + btnW / 2, by + 18);
+      // real atlas/material cubes
+      (["А", "Р", "К"] as const).forEach((ch, si) => {
+        const kind = (["normal", "rare", "mirror"] as const)[si];
+        const canvas = MaterialFactory.getCanvas(st, kind, ch);
+        const bx = 20 + si * 38;
+        const by = y + 76;
+        ctx.drawImage(canvas, bx, by, 34, 34);
+      });
+
+      const label = eq ? tr("equipped") : owned ? tr("equip") : `◆ ${st.price}`;
+      const btnW = 124;
+      const bx = w - 20 - btnW;
+      const by = y + 78;
+      this.mechBtn(bx, by, btnW, 36, label, `style-${st.id}`, !owned || eq);
     });
     ctx.restore();
     void t;
 
-    this.mechBtn(24, h - 62, (w - 56) / 2, 40, "▲", "shop-up", false);
-    this.mechBtn(32 + (w - 56) / 2, h - 62, (w - 56) / 2, 40, "Закрыть", "close-shop", true);
+    this.mechBtn(24, h - 56, (w - 56) / 2, 40, "▲", "shop-up", false);
+    this.mechBtn(32 + (w - 56) / 2, h - 56, (w - 56) / 2, 40, tr("close"), "close-shop", true);
+
+    paintColorGrade(ctx, w, h, S, t, 0.1);
   }
 
   private drawHud(t: number) {
@@ -534,20 +485,15 @@ export class Renderer {
         ? `∞ ×${game.infinityMult.toFixed(2)}`
         : game.difficulty === "easy"
           ? tr("easy")
-          : game.difficulty === "hard"
+            : game.difficulty === "hard"
             ? tr("hard")
-            : "Норма";
+            : tr("normal");
     ctx.fillStyle = S.accentHot;
     ctx.font = `800 13px ${FONT}`;
     ctx.fillText(mode, w - 18, top + 24);
     ctx.fillStyle = game.chain > 1 ? S.rare : S.muted;
     ctx.font = `700 12px ${FONT}`;
     ctx.fillText(game.chain > 1 ? `Эхо ×${game.chain}` : `◆ ${game.save.coins}`, w - 18, top + 44);
-    if (MaterialFactory.atlasReady()) {
-      ctx.fillStyle = S.rare;
-      ctx.font = `800 9px ${FONT}`;
-      ctx.fillText("ATLAS", w - 18, top + 58);
-    }
 
     // center rare mineral gems
     const streak = game.rareStreak;

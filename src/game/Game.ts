@@ -186,7 +186,7 @@ export class Game {
     this.cols = b.cols;
     this.maxH = b.maxH;
     this.growEvery = b.growEvery;
-    this.growCD = b.growEvery * 0.85;
+    this.growCD = b.growEvery * b.growStartFactor;
     this.echoWindow = b.echoWindow;
     this.startRows = b.startRows;
     this.armorChance = b.armorChance;

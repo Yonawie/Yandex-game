@@ -34,6 +34,8 @@ export type EchoBalance = {
   maxH: number;
   startRows: number;
   growEvery: number;
+  /** First pressure arrives sooner than full growEvery */
+  growStartFactor: number;
   echoWindow: number;
   armorChance: number;
   mirrorChance: number;
@@ -43,55 +45,63 @@ export type EchoBalance = {
   growOnTurnEnd: boolean;
 };
 
+/**
+ * Pressure-first balance: normal must feel urgent — wall climbs, armor appears,
+ * one letter breaks one brick (skill = long words / echo chains).
+ */
 export function balanceFor(diff: Difficulty): EchoBalance {
   switch (diff) {
     case "easy":
       return {
         cols: 6,
-        maxH: 12,
-        startRows: 1,
-        growEvery: 14,
-        echoWindow: 5,
+        maxH: 11,
+        startRows: 2,
+        growEvery: 10,
+        growStartFactor: 0.7,
+        echoWindow: 4.5,
         armorChance: 0,
         mirrorChance: 0,
-        hitsPerLetter: 2,
+        hitsPerLetter: 1,
         growOnTurnEnd: false,
       };
     case "normal":
       return {
         cols: 7,
-        maxH: 11,
-        startRows: 2,
-        growEvery: 11,
-        echoWindow: 4.2,
-        armorChance: 0,
-        mirrorChance: 0,
-        hitsPerLetter: 2,
-        growOnTurnEnd: false,
+        maxH: 10,
+        startRows: 3,
+        growEvery: 7,
+        growStartFactor: 0.5,
+        echoWindow: 3.6,
+        armorChance: 0.06,
+        mirrorChance: 0.03,
+        hitsPerLetter: 1,
+        growOnTurnEnd: true,
       };
     case "hard":
       return {
         cols: 7,
-        maxH: 10,
-        startRows: 2,
-        growEvery: 8,
-        echoWindow: 3.4,
-        armorChance: 0.08,
-        mirrorChance: 0.04,
-        hitsPerLetter: 2,
+        maxH: 9,
+        startRows: 3,
+        growEvery: 5.2,
+        growStartFactor: 0.4,
+        echoWindow: 2.9,
+        armorChance: 0.14,
+        mirrorChance: 0.07,
+        hitsPerLetter: 1,
         growOnTurnEnd: true,
       };
     case "infinity":
       return {
         cols: 7,
-        maxH: 12,
-        startRows: 2,
-        growEvery: 10,
-        echoWindow: 4,
-        armorChance: 0.12,
-        mirrorChance: 0.07,
-        hitsPerLetter: 2,
-        growOnTurnEnd: false,
+        maxH: 10,
+        startRows: 3,
+        growEvery: 6.5,
+        growStartFactor: 0.45,
+        echoWindow: 3.3,
+        armorChance: 0.16,
+        mirrorChance: 0.09,
+        hitsPerLetter: 1,
+        growOnTurnEnd: true,
       };
   }
 }
