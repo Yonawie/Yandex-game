@@ -305,9 +305,8 @@ export class Renderer {
     ctx.fillText(tr("amberLine"), w / 2, h * 0.16 + 26);
     ctx.restore();
 
-    // giant logo cubes (MaterialFactory tiles)
-    const logo = tr("brandHero").slice(0, 3).split("");
-    while (logo.length < 3) logo.push("·");
+    // giant logo cubes — brand is always Cyrillic ЭХО (atlas frames)
+    const logo = ["Э", "Х", "О"];
     const cw = Math.min(86, w * 0.22);
     const gap = 16;
     const total = logo.length * cw + (logo.length - 1) * gap;
