@@ -921,25 +921,34 @@ export class GameScene extends Phaser.Scene {
 
   private showContinue(): void {
     const { width, height } = this.scale;
-    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.55).setDepth(60);
+    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x020810, 0.62).setDepth(60);
+    const panel = this.add.graphics().setDepth(60);
+    const pw = Math.min(380, width * 0.86);
+    const ph = 280;
+    panel.fillStyle(0x0a1a28, 0.94);
+    panel.fillRoundedRect(width / 2 - pw / 2, height * 0.34, pw, ph, 22);
+    panel.lineStyle(2, 0xffb347, 0.4);
+    panel.strokeRoundedRect(width / 2 - pw / 2, height * 0.34, pw, ph, 22);
+
     const title = this.add
-      .text(width / 2, height * 0.38, tf('gameOver'), {
+      .text(width / 2, height * 0.4, tf('gameOver'), {
         fontFamily: 'Literata, Georgia, serif',
-        fontSize: '48px',
+        fontSize: '44px',
         color: '#FFF8EC',
       })
       .setOrigin(0.5)
       .setDepth(61);
+    title.setShadow(0, 3, '#FF6B4A', 10, true, true);
 
     const adBtn = this.add
       .image(width / 2, height * 0.52, 'ui-btn')
-      .setDisplaySize(360, 70)
+      .setDisplaySize(Math.min(320, pw - 40), 64)
       .setDepth(61)
       .setInteractive({ useHandCursor: true });
     const adText = this.add
       .text(width / 2, height * 0.52, tf('continueAd'), {
         fontFamily: 'Manrope, sans-serif',
-        fontSize: '24px',
+        fontSize: '22px',
         color: '#0C1C2E',
       })
       .setOrigin(0.5)
@@ -958,10 +967,10 @@ export class GameScene extends Phaser.Scene {
     const feedback = this.add
       .text(width / 2, height * 0.7, '', {
         fontFamily: 'Manrope, sans-serif',
-        fontSize: '18px',
+        fontSize: '17px',
         color: '#FFB4A8',
         align: 'center',
-        wordWrap: { width: width * 0.8 },
+        wordWrap: { width: width * 0.78 },
       })
       .setOrigin(0.5)
       .setDepth(62)
@@ -969,6 +978,7 @@ export class GameScene extends Phaser.Scene {
 
     const cleanup = () => {
       overlay.destroy();
+      panel.destroy();
       title.destroy();
       adBtn.destroy();
       adText.destroy();
