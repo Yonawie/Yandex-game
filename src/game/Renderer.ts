@@ -358,34 +358,55 @@ export class Renderer {
     paintColorGrade(ctx, w, h, S, t, 0.12);
   }
 
+  /** Shop list layout — used by draw + input scroll clamp. */
+  shopLayout() {
+    const h = this.h;
+    const rowH = 118;
+    const startY = 72;
+    const footerH = 64;
+    const viewH = h - startY - footerH;
+    const maxScroll = Math.max(0, STYLES.length * rowH - viewH);
+    return { rowH, startY, viewH, maxScroll, footerH };
+  }
+
   private drawShop(t: number) {
     const { ctx, w, h, game } = this;
     const S = game.style();
+    const { rowH, startY, viewH, maxScroll } = this.shopLayout();
+    game.shopScroll = Math.max(0, Math.min(maxScroll, game.shopScroll));
 
-    // HUD-like top rail
-    const rail = ctx.createLinearGradient(0, 0, 0, 72);
-    rail.addColorStop(0, `${S.bg[0]}ee`);
+    // stage vignette like play
+    const shaft = ctx.createRadialGradient(w / 2, h * 0.35, 16, w / 2, h * 0.4, w * 0.8);
+    shaft.addColorStop(0, `${S.bg[1]}18`);
+    shaft.addColorStop(1, "rgba(0,0,0,0.5)");
+    ctx.fillStyle = shaft;
+    ctx.fillRect(0, 0, w, h);
+
+    // top rail
+    const rail = ctx.createLinearGradient(0, 0, 0, 68);
+    rail.addColorStop(0, `${S.bg[0]}f2`);
     rail.addColorStop(1, "transparent");
     ctx.fillStyle = rail;
-    ctx.fillRect(0, 0, w, 76);
+    ctx.fillRect(0, 0, w, 70);
     ctx.fillStyle = S.rare;
-    ctx.globalAlpha = 0.85;
+    ctx.globalAlpha = 0.9;
     ctx.fillRect(0, 0, w, 3);
     ctx.globalAlpha = 1;
 
     ctx.fillStyle = S.ink;
-    ctx.font = `800 26px ${DISPLAY}`;
+    ctx.font = `800 24px ${DISPLAY}`;
     ctx.textAlign = "center";
-    ctx.fillText(tr("shopTitle"), w / 2, 36);
+    ctx.fillText(tr("shopTitle"), w / 2, 32);
     ctx.fillStyle = S.accentHot;
-    ctx.font = `700 13px ${FONT}`;
-    ctx.fillText(`◆ ${game.save.coins} ${tr("shards")}`, w / 2, 58);
+    ctx.font = `700 12px ${FONT}`;
+    ctx.fillText(`◆ ${game.save.coins} ${tr("shards")}`, w / 2, 52);
 
-    const rowH = 128;
-    const startY = 78;
-    const viewH = h - 150;
-    const maxScroll = Math.max(0, STYLES.length * rowH - viewH);
-    game.shopScroll = Math.max(0, Math.min(maxScroll, game.shopScroll));
+    // scroll hint
+    if (maxScroll > 0) {
+      ctx.fillStyle = S.muted;
+      ctx.font = `600 10px ${FONT}`;
+      ctx.fillText(tr("shopScrollHint"), w / 2, 66);
+    }
 
     ctx.save();
     ctx.beginPath();
@@ -398,48 +419,91 @@ export class Renderer {
       const owned = game.save.owned.includes(st.id);
       const eq = game.save.equipped === st.id;
 
-      // soft stage strip — not a bordered card
-      const strip = ctx.createLinearGradient(0, y, 0, y + rowH - 12);
-      strip.addColorStop(0, `${st.bg[0]}cc`);
+      // play-arena strip: soft floor, no rounded card chrome
+      const strip = ctx.createLinearGradient(12, y + 4, 12, y + rowH - 10);
+      strip.addColorStop(0, `${st.bg[0]}dd`);
+      strip.addColorStop(0.55, `${st.bg[1]}bb`);
       strip.addColorStop(1, `${st.bg[2]}99`);
       ctx.fillStyle = strip;
-      ctx.fillRect(0, y, w, rowH - 12);
+      ctx.fillRect(0, y + 2, w, rowH - 8);
 
-      if (eq) {
-        ctx.fillStyle = st.accentHot;
-        ctx.fillRect(0, y, 4, rowH - 12);
-      }
+      // side pillar accent
+      ctx.fillStyle = eq ? st.accentHot : `${st.accent}66`;
+      ctx.fillRect(0, y + 2, eq ? 5 : 3, rowH - 8);
+
+      // hairline separator
+      ctx.fillStyle = `${st.ink}14`;
+      ctx.fillRect(16, y + rowH - 8, w - 32, 1);
 
       ctx.fillStyle = st.ink;
-      ctx.font = `800 18px ${DISPLAY}`;
+      ctx.font = `800 17px ${DISPLAY}`;
       ctx.textAlign = "left";
-      ctx.fillText(st.name, 20, y + 28);
+      ctx.fillText(st.name, 18, y + 26);
       ctx.fillStyle = st.muted;
-      ctx.font = `500 12px ${FONT}`;
-      ctx.fillText(st.tagline, 20, y + 48);
-      ctx.font = `600 10px ${FONT}`;
-      ctx.fillText(`${tr("breakAs")} ${st.breakLabel}`, 20, y + 66);
+      ctx.font = `500 11px ${FONT}`;
+      ctx.fillText(st.tagline, 18, y + 44);
 
-      // real atlas/material cubes
-      (["А", "Р", "К"] as const).forEach((ch, si) => {
+      // atlas cubes — same materials as wall
+      (["Э", "Х", "О"] as const).forEach((ch, si) => {
         const kind = (["normal", "rare", "mirror"] as const)[si];
         const canvas = MaterialFactory.getCanvas(st, kind, ch);
-        const bx = 20 + si * 38;
-        const by = y + 76;
-        ctx.drawImage(canvas, bx, by, 34, 34);
+        ctx.drawImage(canvas, 18 + si * 40, y + 56, 36, 36);
       });
 
+      ctx.fillStyle = st.muted;
+      ctx.font = `600 10px ${FONT}`;
+      ctx.textAlign = "left";
+      ctx.fillText(`${tr("breakAs")} ${st.breakLabel}`, 148, y + 78);
+
       const label = eq ? tr("equipped") : owned ? tr("equip") : `◆ ${st.price}`;
-      const btnW = 124;
-      const bx = w - 20 - btnW;
-      const by = y + 78;
-      this.mechBtn(bx, by, btnW, 36, label, `style-${st.id}`, !owned || eq);
+      const btnW = 118;
+      const bx = w - 16 - btnW;
+      const by = y + 62;
+      // only register hit if button is inside the clip window
+      if (by >= startY && by + 36 <= startY + viewH) {
+        this.mechBtn(bx, by, btnW, 36, label, `style-${st.id}`, !owned || eq);
+      } else {
+        // draw without hit if partially clipped
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        this.roundRect(bx + 2, by + 3, btnW, 36, 11, "rgba(0,0,0,0.3)", true);
+        this.roundRect(bx, by, btnW, 36, 11, !owned || eq ? st.accent : `${st.bg[1]}ee`, true);
+        ctx.fillStyle = st.ink;
+        ctx.font = `800 13px ${FONT}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, bx + btnW / 2, by + 19);
+        ctx.restore();
+      }
     });
     ctx.restore();
-    void t;
 
-    this.mechBtn(24, h - 56, (w - 56) / 2, 40, "▲", "shop-up", false);
-    this.mechBtn(32 + (w - 56) / 2, h - 56, (w - 56) / 2, 40, tr("close"), "close-shop", true);
+    // footer dock
+    const fy = h - 56;
+    ctx.fillStyle = `${S.bg[0]}ee`;
+    ctx.fillRect(0, fy - 8, w, 64);
+    const floorArt = getNamedAtlasCanvas("ui_floor");
+    if (floorArt) {
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(floorArt, 16, fy - 10, w - 32, 16);
+      ctx.globalAlpha = 1;
+    }
+
+    const third = (w - 48) / 3;
+    this.mechBtn(16, fy, third, 40, "▲", "shop-up", false);
+    this.mechBtn(24 + third, fy, third, 40, "▼", "shop-down", false);
+    this.mechBtn(32 + third * 2, fy, third, 40, tr("close"), "close-shop", true);
+
+    // scroll thumb
+    if (maxScroll > 0) {
+      const trackH = viewH - 16;
+      const thumbH = Math.max(28, trackH * (viewH / (STYLES.length * rowH)));
+      const thumbY = startY + 8 + (trackH - thumbH) * (game.shopScroll / maxScroll);
+      ctx.fillStyle = `${S.accent}55`;
+      ctx.fillRect(w - 6, startY + 8, 3, trackH);
+      ctx.fillStyle = S.accentHot;
+      ctx.fillRect(w - 7, thumbY, 5, thumbH);
+    }
 
     paintColorGrade(ctx, w, h, S, t, 0.1);
   }

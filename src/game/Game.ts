@@ -161,6 +161,11 @@ export class Game {
     this.phase = "menu";
   }
 
+  /** Clamp scroll for shop list. maxScroll comes from Renderer layout. */
+  scrollShop(delta: number, maxScroll: number) {
+    this.shopScroll = Math.max(0, Math.min(maxScroll, this.shopScroll + delta));
+  }
+
   buyOrEquip(id: StyleId) {
     if (this.save.owned.includes(id)) {
       this.save = equipStyle(this.save, id);

@@ -31,6 +31,8 @@ export class MainScene extends Phaser.Scene {
   private resultSdkDone = false;
   private lastW = 0;
   private lastH = 0;
+  private shopDragY: number | null = null;
+  private shopDragMoved = false;
 
   constructor() {
     super("Main");
@@ -85,8 +87,47 @@ export class MainScene extends Phaser.Scene {
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       Sfx.unlock();
+      if (this.core.phase === "shop") {
+        const { startY, viewH } = this.view.shopLayout();
+        if (pointer.y >= startY && pointer.y <= startY + viewH) {
+          this.shopDragY = pointer.y;
+          this.shopDragMoved = false;
+          return;
+        }
+      }
       const id = this.view.hitTest(pointer.x, pointer.y);
       if (id) this.handleUi(id);
+    });
+
+    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      if (this.core.phase !== "shop" || this.shopDragY == null || !pointer.isDown) return;
+      const dy = this.shopDragY - pointer.y;
+      if (Math.abs(dy) < 2) return;
+      this.shopDragMoved = true;
+      this.shopDragY = pointer.y;
+      const { maxScroll } = this.view.shopLayout();
+      this.core.scrollShop(dy, maxScroll);
+    });
+
+    this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      if (this.core.phase === "shop" && this.shopDragY != null) {
+        const dragged = this.shopDragMoved;
+        this.shopDragY = null;
+        this.shopDragMoved = false;
+        if (!dragged) {
+          const id = this.view.hitTest(pointer.x, pointer.y);
+          if (id) this.handleUi(id);
+        }
+        return;
+      }
+      this.shopDragY = null;
+      this.shopDragMoved = false;
+    });
+
+    this.input.on("wheel", (_p: Phaser.Input.Pointer, _g: unknown, _dx: number, dy: number) => {
+      if (this.core.phase !== "shop") return;
+      const { maxScroll } = this.view.shopLayout();
+      this.core.scrollShop(dy * 0.55, maxScroll);
     });
 
     this.input.keyboard?.on("keydown-ENTER", () => {
@@ -191,9 +232,16 @@ export class MainScene extends Phaser.Scene {
       case "close-shop":
         this.core.closeShop();
         break;
-      case "shop-up":
-        this.core.shopScroll = Math.max(0, this.core.shopScroll - 160);
+      case "shop-up": {
+        const { maxScroll, rowH } = this.view.shopLayout();
+        this.core.scrollShop(-rowH, maxScroll);
         break;
+      }
+      case "shop-down": {
+        const { maxScroll, rowH } = this.view.shopLayout();
+        this.core.scrollShop(rowH, maxScroll);
+        break;
+      }
       case "undo":
         this.core.undoLast();
         break;
