@@ -23,6 +23,7 @@ export function generateTextures(scene: Phaser.Scene): void {
   ensure(scene, 'portal-teal', () => makePortal(scene, 'portal-teal', HUE_HEX.teal));
   ensure(scene, 'portal-coral', () => makePortal(scene, 'portal-coral', HUE_HEX.coral));
   ensure(scene, 'shard', () => makeShard(scene));
+  ensure(scene, 'frost', () => makeFrost(scene));
   ensure(scene, 'px', () => makeParticle(scene));
   ensure(scene, 'spark', () => makeSpark(scene));
   ensure(scene, 'shred', () => makeShred(scene));
@@ -488,6 +489,26 @@ function makeShard(scene: Phaser.Scene): void {
   g.fillStyle(0xffffff, 0.95);
   g.fillCircle(22, 18, 3);
   g.generateTexture('shard', 56, 60);
+  g.destroy();
+}
+
+function makeFrost(scene: Phaser.Scene): void {
+  const g = gph(scene);
+  g.fillStyle(0x8ecae6, 0.22);
+  g.fillCircle(32, 32, 28);
+  g.lineStyle(3, 0xd8f4ff, 0.95);
+  g.lineBetween(32, 6, 32, 58);
+  g.lineBetween(8, 32, 56, 32);
+  g.lineBetween(14, 14, 50, 50);
+  g.lineBetween(50, 14, 14, 50);
+  g.fillStyle(0xffffff, 0.95);
+  g.fillCircle(32, 32, 6);
+  g.fillStyle(0xa8e4f5, 0.85);
+  g.fillCircle(32, 18, 4);
+  g.fillCircle(46, 32, 4);
+  g.fillCircle(32, 46, 4);
+  g.fillCircle(18, 32, 4);
+  g.generateTexture('frost', 64, 64);
   g.destroy();
 }
 

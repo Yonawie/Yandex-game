@@ -247,14 +247,14 @@ export class GameScene extends Phaser.Scene {
       this.stormRain = this.add.particles(width / 2, -20, 'rain-drop', {
         x: { min: 0, max: width },
         y: -20,
-        lifespan: 1400,
-        speedY: { min: 420, max: 720 },
-        speedX: { min: -40, max: 20 },
-        scale: { min: 0.7, max: 1.4 },
-        alpha: { start: 0.45, end: 0 },
-        quantity: 2,
-        frequency: 40,
-        tint: [0x8ecae6, 0xcbd5e1, 0xf4a261],
+        lifespan: 1300,
+        speedY: { min: 480, max: 820 },
+        speedX: { min: -55, max: 25 },
+        scale: { min: 0.7, max: 1.5 },
+        alpha: { start: 0.5, end: 0 },
+        quantity: 3,
+        frequency: 28,
+        tint: [0x8ecae6, 0xcbd5e1, 0xa8c8e0],
         blendMode: 'ADD',
       });
       this.stormRain.setDepth(6);
@@ -425,6 +425,7 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.scale;
 
     const active = this.eventsDir.getActive();
+    this.applyEventMood(active?.def ?? null);
     const scrollMul = active?.def.scrollMul ?? 1;
     const spawnMul = active?.def.spawnIntervalMul ?? 1;
 
@@ -860,6 +861,22 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private applyEventMood(ev: RunEventDef | null): void {
+    if (ev?.moodTint != null || ev?.vignetteAlpha != null) {
+      this.grade.setMood({
+        gradeTint: ev.moodTint ?? (this.mode.id === 'storm' ? 0x152030 : 0x182430),
+        gradeAlpha: ev.moodAlpha ?? (this.mode.id === 'storm' ? 0.08 : 0.055),
+        vignetteAlpha: ev.vignetteAlpha ?? (this.mode.id === 'storm' ? 0.42 : 0.34),
+      });
+      return;
+    }
+    this.grade.setMood({
+      vignetteAlpha: this.mode.id === 'storm' ? 0.42 : 0.34,
+      gradeTint: this.mode.id === 'storm' ? 0x152030 : 0x182430,
+      gradeAlpha: this.mode.id === 'storm' ? 0.08 : 0.055,
+    });
+  }
+
   private announceEvent(ev: RunEventDef): void {
     if (!ev.announce) return;
     this.eventText.setText(getLang() === 'ru' ? ev.nameRu : ev.nameEn);
@@ -872,9 +889,11 @@ export class GameScene extends Phaser.Scene {
       yoyo: true,
       hold: 1200,
     });
-    this.vfx.stamp(getLang() === 'ru' ? ev.nameRu : ev.nameEn, '#A8E4F5');
-    playTone('stamp');
+    const stampColor = ev.id === 'frost_veil' ? '#A8E4F5' : ev.id === 'ember_feast' ? '#FFB347' : '#A8E4F5';
+    this.vfx.stamp(getLang() === 'ru' ? ev.nameRu : ev.nameEn, stampColor);
+    playTone(ev.id === 'frost_veil' ? 'portal' : 'stamp');
     this.juice.punchZoom(1.03);
+    if (ev.moodTint != null) this.grade.pulse(this, ev.moodTint, ev.moodAlpha ?? 0.14, 280);
   }
 
   private die(): void {

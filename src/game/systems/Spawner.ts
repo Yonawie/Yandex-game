@@ -77,7 +77,9 @@ export class Spawner {
     const kind = pickWeighted(table) as SpawnRequest['kind'];
     const lane = Math.floor(Math.random() * lanes);
     let hue = HUE_IDS[Math.floor(Math.random() * HUE_IDS.length)] as HueId;
-    if (preferHue && (kind === 'firefly' || kind === 'portal') && Math.random() < preferChance) {
+    if (kind === 'frost') {
+      hue = 'teal';
+    } else if (preferHue && (kind === 'firefly' || kind === 'portal') && Math.random() < preferChance) {
       hue = preferHue;
     }
     return { kind, lane, hue };

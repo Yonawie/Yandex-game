@@ -36,6 +36,16 @@ export const ENTITY_DEFS: Record<string, EntityDef> = {
     score: 35,
     forceCombo: true,
   },
+  frost: {
+    id: 'frost',
+    texture: 'frost',
+    scale: 1.1,
+    colored: true,
+    fixedHue: 'teal',
+    hitRadius: 50,
+    score: 16,
+    wrongPenalty: 8,
+  },
 };
 
 export function getEntityDef(id: string): EntityDef {

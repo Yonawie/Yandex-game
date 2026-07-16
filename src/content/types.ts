@@ -1,6 +1,6 @@
 import type { HueId } from '@/data/balance';
 
-export type EntityKind = 'firefly' | 'void' | 'portal' | 'shard';
+export type EntityKind = 'firefly' | 'void' | 'portal' | 'shard' | 'frost';
 
 export interface EntityDef {
   id: EntityKind;
@@ -18,6 +18,8 @@ export interface EntityDef {
   wrongPenalty?: number;
   lethal?: boolean;
   recolors?: boolean;
+  /** if set, spawner always uses this hue */
+  fixedHue?: HueId;
 }
 
 export interface SpawnWeight {
@@ -63,6 +65,10 @@ export interface RunEventDef {
   /** temporary spawn table override */
   spawnTable?: SpawnWeight[];
   announce?: boolean;
+  /** optional world mood while active */
+  moodTint?: number;
+  moodAlpha?: number;
+  vignetteAlpha?: number;
 }
 
 export interface StoryBeat {
