@@ -567,59 +567,102 @@ function makeColorBadge(scene: Phaser.Scene, key: string, color: number): void {
   g.destroy();
 }
 
+export function hueForSkin(skin: SkinDef | string): HueId {
+  const id = typeof skin === 'string' ? skin : skin.id;
+  if (id === 'sea' || id === 'ghost') return 'teal';
+  if (id === 'rose') return 'coral';
+  return 'amber';
+}
+
+type SkinLook = {
+  glowMul: number;
+  farA: number;
+  midA: number;
+  bodyAlpha: number;
+  frameTint: number;
+  ornament: 'ember' | 'ring' | 'petal' | 'wisp';
+};
+
+function lookForSkin(skin: SkinDef): SkinLook {
+  switch (skin.id) {
+    case 'sea':
+      return { glowMul: 1.18, farA: 0.2, midA: 0.3, bodyAlpha: 1, frameTint: 0xb8f0ea, ornament: 'ring' };
+    case 'rose':
+      return { glowMul: 1.08, farA: 0.24, midA: 0.34, bodyAlpha: 1, frameTint: 0xffc4b0, ornament: 'petal' };
+    case 'ghost':
+      return { glowMul: 1.4, farA: 0.14, midA: 0.2, bodyAlpha: 0.7, frameTint: 0xe8f4fa, ornament: 'wisp' };
+    default:
+      return { glowMul: 1, farA: 0.22, midA: 0.32, bodyAlpha: 1, frameTint: 0xffe0a8, ornament: 'ember' };
+  }
+}
+
 export function drawLantern(
   scene: Phaser.Scene,
   x: number,
   y: number,
-  _skin: SkinDef,
+  skin: SkinDef,
   hue: HueId,
   scale = 1,
 ): Phaser.GameObjects.Container {
-  const glowColor = HUE_HEX[hue];
+  const look = lookForSkin(skin);
+  const glowColor = skin.glow || HUE_HEX[hue];
+  const flameColor = HUE_HEX[hue];
   const key = `lantern-${hue}`;
   const hasArt = scene.textures.exists(key);
 
-  // diamond wash behind player — kept soft so sky midtones stay readable
   const farGlow = scene.add
     .image(0, 6, scene.textures.exists('lane-glow') ? 'lane-glow' : 'px')
     .setTint(glowColor)
-    .setAlpha(0.22)
-    .setScale(hasArt ? 2.1 : 1.45)
+    .setAlpha(look.farA)
+    .setScale((hasArt ? 2.1 : 1.45) * look.glowMul)
     .setBlendMode(Phaser.BlendModes.ADD);
   const midGlow = scene.add
     .image(0, 4, scene.textures.exists('lane-glow') ? 'lane-glow' : 'px')
     .setTint(glowColor)
-    .setAlpha(0.32)
-    .setScale(hasArt ? 1.35 : 1.0)
+    .setAlpha(look.midA)
+    .setScale((hasArt ? 1.35 : 1.0) * look.glowMul)
     .setBlendMode(Phaser.BlendModes.ADD);
 
   let body: Phaser.GameObjects.GameObject;
   let flame: Phaser.GameObjects.Triangle | undefined;
   let glass: Phaser.GameObjects.Rectangle | undefined;
+  let ornament: Phaser.GameObjects.GameObject | undefined;
 
   if (hasArt) {
-    body = scene.add.image(0, 0, key).setOrigin(0.5).setDisplaySize(78, 98);
+    const img = scene.add.image(0, 0, key).setOrigin(0.5).setDisplaySize(78, 98);
+    img.setTint(look.frameTint);
+    img.setAlpha(look.bodyAlpha);
+    body = img;
+    ornament = makeSkinOrnament(scene, look.ornament, skin);
   } else {
-    // procedural fallback
     const cap = scene.add.rectangle(0, -28, 26, 10, 0x3a4d5e, 1).setOrigin(0.5);
     const hook = scene.add.rectangle(0, -36, 4, 12, 0xc8d8e6, 1).setOrigin(0.5, 1);
     const frame = scene.add.rectangle(0, 4, 34, 40, 0x243544, 1).setOrigin(0.5);
-    frame.setStrokeStyle(2, 0xd4e4f0, 0.85);
-    glass = scene.add.rectangle(0, 4, 26, 32, HUE_HEX[hue], 0.45).setOrigin(0.5);
-    flame = scene.add.triangle(0, 4, 0, -14, 10, 14, -10, 14, glowColor, 1);
-    const flameCore = scene.add.triangle(0, 6, 0, -6, 5, 10, -5, 10, COLORS.amberHot, 1);
+    frame.setStrokeStyle(2, look.frameTint, 0.9);
+    glass = scene.add.rectangle(0, 4, 26, 32, skin.core, 0.5).setOrigin(0.5);
+    flame = scene.add.triangle(0, 4, 0, -14, 10, 14, -10, 14, flameColor, 1);
+    const flameCore = scene.add.triangle(0, 6, 0, -6, 5, 10, -5, 10, skin.wick, 1);
     const base = scene.add.rectangle(0, 26, 30, 8, 0x3a4d5e, 1).setOrigin(0.5);
-    body = scene.add.container(0, 0, [hook, cap, frame, glass, flame, flameCore, base]);
+    ornament = makeSkinOrnament(scene, look.ornament, skin);
+    const parts: Phaser.GameObjects.GameObject[] = [hook, cap, frame, glass, flame, flameCore, base, ornament];
+    const bodyC = scene.add.container(0, 0, parts);
+    bodyC.setAlpha(look.bodyAlpha);
+    body = bodyC;
   }
 
-  const c = scene.add.container(x, y, [farGlow, midGlow, body]);
+  const kids: Phaser.GameObjects.GameObject[] = [farGlow, midGlow, body];
+  if (hasArt && ornament) kids.push(ornament);
+  const c = scene.add.container(x, y, kids);
   c.setData('outerGlow', midGlow);
   c.setData('midGlow', midGlow);
   c.setData('farGlow', farGlow);
   c.setData('body', body);
   c.setData('flame', flame);
   c.setData('glass', glass);
+  c.setData('ornament', ornament);
   c.setData('hue', hue);
+  c.setData('skinId', skin.id);
+  c.setData('look', look);
   c.setScale(scale);
   c.setDepth(20);
 
@@ -655,23 +698,43 @@ export function drawLantern(
   return c;
 }
 
+function makeSkinOrnament(
+  scene: Phaser.Scene,
+  kind: SkinLook['ornament'],
+  skin: SkinDef,
+): Phaser.GameObjects.GameObject {
+  if (kind === 'ring') {
+    return scene.add.circle(0, -34, 7, skin.glow, 0.55).setStrokeStyle(2, skin.core, 0.9);
+  }
+  if (kind === 'petal') {
+    return scene.add.triangle(0, -38, 0, -10, 8, 6, -8, 6, skin.glow, 0.85);
+  }
+  if (kind === 'wisp') {
+    return scene.add
+      .circle(0, -32, 10, 0xffffff, 0.2)
+      .setStrokeStyle(1.5, skin.glow, 0.7)
+      .setBlendMode(Phaser.BlendModes.ADD);
+  }
+  return scene.add.circle(0, -34, 4, skin.wick, 0.95);
+}
+
 export function recolorDrawnLantern(lantern: Phaser.GameObjects.Container, hue: HueId): void {
   const color = HUE_HEX[hue];
-  const outerGlow = lantern.getData('outerGlow') as Phaser.GameObjects.Image | undefined;
-  const midGlow = lantern.getData('midGlow') as Phaser.GameObjects.Image | undefined;
-  const farGlow = lantern.getData('farGlow') as Phaser.GameObjects.Image | undefined;
   const body = lantern.getData('body') as Phaser.GameObjects.Image | Phaser.GameObjects.Container | undefined;
   const flame = lantern.getData('flame') as Phaser.GameObjects.Triangle | undefined;
+  const look = lantern.getData('look') as SkinLook | undefined;
 
-  outerGlow?.setTint(color);
-  midGlow?.setTint(color);
-  farGlow?.setTint(color);
   flame?.setFillStyle(color, 1);
 
   if (body instanceof Phaser.GameObjects.Image) {
     const key = `lantern-${hue}`;
     if (lantern.scene.textures.exists(key)) body.setTexture(key);
-    else body.setTint(color);
+    if (look) {
+      body.setTint(look.frameTint);
+      body.setAlpha(look.bodyAlpha);
+    } else {
+      body.setTint(color);
+    }
   }
   lantern.setData('hue', hue);
 }

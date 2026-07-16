@@ -3,7 +3,7 @@ import { COLORS, HUE_HEX, SKINS, type HueId } from '@/data/balance';
 import { getEntityDef, resolveTexture } from '@/content/entities';
 import { resolveMode, getActiveModeId, loadRemoteBalancePatch } from '@/content/runtimeConfig';
 import type { EntityKind, ModeDef, RunEventDef, SpawnRequest } from '@/content/types';
-import { drawLantern, laneX, recolorDrawnLantern } from '@/game/assets/generate';
+import { drawLantern, laneX, recolorDrawnLantern, hueForSkin } from '@/game/assets/generate';
 import { placeNightScenery, addBg } from '@/game/assets/scenery';
 import { Spawner } from '@/game/systems/Spawner';
 import { EventDirector } from '@/game/systems/EventDirector';
@@ -96,7 +96,7 @@ export class GameScene extends Phaser.Scene {
     this.alive = true;
     this.continued = false;
     this.playerLane = 1;
-    this.playerHue = 'amber';
+    this.playerHue = hueForSkin(skin);
     this.scroll = this.mode.baseScroll;
     this.distance = 0;
     this.entities = [];

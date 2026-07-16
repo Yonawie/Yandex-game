@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SKINS, type HueId } from '@/data/balance';
+import { SKINS } from '@/data/balance';
 import { getSave, patchSave, addCoins } from '@/data/save';
 import {
   applyRunToRetention,
@@ -11,7 +11,7 @@ import { getLang, tf } from '@/i18n';
 import { playTone } from '@/game/audio/sfx';
 import { yandex } from '@/sdk/yandex';
 import { placeMenuAtmosphere } from '@/game/assets/scenery';
-import { drawLantern } from '@/game/assets/generate';
+import { drawLantern, hueForSkin } from '@/game/assets/generate';
 import { makeAmberButton } from '@/visual/uiPress';
 import { Depth } from '@/visual/depths';
 
@@ -170,7 +170,7 @@ export class ResultScene extends Phaser.Scene {
   private placeExtinguishedLantern(x: number, y: number, isRecord: boolean): void {
     const save = getSave();
     const skin = SKINS.find((s) => s.id === save.skinId) ?? SKINS[0];
-    const hue = this.hueForSkin(skin.id);
+    const hue = hueForSkin(skin);
     const lantern = drawLantern(this, x, y, skin, hue, 0.95);
     lantern.setDepth(Depth.PLAYER);
     lantern.setAlpha(isRecord ? 0.55 : 0.35);
@@ -197,12 +197,6 @@ export class ResultScene extends Phaser.Scene {
         ease: 'Sine.easeInOut',
       });
     }
-  }
-
-  private hueForSkin(skinId: string): HueId {
-    if (skinId === 'sea' || skinId === 'ghost') return 'teal';
-    if (skinId === 'rose') return 'coral';
-    return 'amber';
   }
 
   private async refreshRank(rankText: Phaser.GameObjects.Text): Promise<void> {

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SKINS } from '@/data/balance';
-import { drawLantern } from '@/game/assets/generate';
+import { drawLantern, hueForSkin } from '@/game/assets/generate';
 import { placeMenuAtmosphere } from '@/game/assets/scenery';
 import { getSave, patchSave, addCoins, unlockSkin } from '@/data/save';
 import { tf, getLang } from '@/i18n';
@@ -69,7 +69,7 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(20);
 
-    this.lantern = drawLantern(this, width / 2, height * 0.32, SKINS[this.skinIndex], 'amber', 2.05);
+    this.lantern = drawLantern(this, width / 2, height * 0.32, SKINS[this.skinIndex], hueForSkin(SKINS[this.skinIndex]), 2.05);
     this.lantern.setDepth(20);
     this.tweens.add({
       targets: this.lantern,
@@ -274,7 +274,7 @@ export class MenuScene extends Phaser.Scene {
         this.scale.width / 2,
         this.scale.height * 0.32,
         skin,
-        'amber',
+        hueForSkin(skin),
         2.05,
       );
       this.lantern.setDepth(20);
