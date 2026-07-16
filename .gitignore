@@ -7,3 +7,4 @@ release
 tools/
 # regenerated letter stamps — keep authored bases in assets/source/base/
 assets/source/art/*.png
+store/_raw/

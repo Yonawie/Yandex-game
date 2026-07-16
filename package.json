@@ -11,10 +11,12 @@
     "play": "node scripts/play.mjs",
     "pack": "npm run build && node scripts/pack-yandex.mjs",
     "typecheck": "tsc --noEmit",
-    "atlas": "node scripts/atlas.mjs"
+    "atlas": "node scripts/atlas.mjs",
+    "store:shots": "node scripts/capture-store.mjs"
   },
   "devDependencies": {
     "archiver": "^7.0.1",
+    "playwright": "^1.51.1",
     "pngjs": "^7.0.0",
     "sharp": "^0.35.3",
     "typescript": "^5.7.3",

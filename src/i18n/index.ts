@@ -60,6 +60,8 @@ let locale: Locale = "ru";
 
 export function detectLocale(): Locale {
   try {
+    const q = new URLSearchParams(location.search).get("lang")?.toLowerCase();
+    if (q === "ru" || q === "en") return q;
     const lang = (navigator.language || "ru").toLowerCase();
     // Yandex Games default RU; English only when explicitly en*
     return lang.startsWith("en") ? "en" : "ru";
