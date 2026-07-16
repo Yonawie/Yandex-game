@@ -51,9 +51,10 @@ sky=Image.open(os.path.join(src,'bg-sky.png')).convert('RGB')
 if sky.size[0]>480:
     sky=sky.resize((480,int(480*sky.size[1]/sky.size[0])), Image.Resampling.LANCZOS)
 from PIL import ImageEnhance
-sky=ImageEnhance.Brightness(sky).enhance(1.22)
-sky=ImageEnhance.Contrast(sky).enhance(1.05)
-sky=ImageEnhance.Color(sky).enhance(1.06)
+# Keep painted sky readable: mild lift only, more contrast for midtones.
+sky=ImageEnhance.Brightness(sky).enhance(1.04)
+sky=ImageEnhance.Contrast(sky).enhance(1.12)
+sky=ImageEnhance.Color(sky).enhance(1.04)
 sky.save(os.path.join(bg,'bg-sky.webp'),'WEBP', quality=84, method=6)
 print('OK atlas',aw,'x',ah,'webp',os.path.getsize(os.path.join(bg,'bg-sky.webp')))
 `

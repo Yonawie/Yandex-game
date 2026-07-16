@@ -1,7 +1,10 @@
 import Phaser from 'phaser';
 import { Depth } from '@/visual/depths';
 
-/** Soft vignette + one cinematic color-grade plane. */
+/**
+ * Soft edge vignette + optional mood wash.
+ * Grade uses NORMAL (not ADD) so the painted sky stays readable.
+ */
 export class ColorGrade {
   private vignette: Phaser.GameObjects.Image | null = null;
   private grade: Phaser.GameObjects.Rectangle | null = null;
@@ -13,14 +16,16 @@ export class ColorGrade {
         .image(width / 2, height / 2, 'vignette')
         .setDisplaySize(width, height)
         .setDepth(Depth.VIGNETTE)
-        .setAlpha(opts.vignetteAlpha ?? 0.4)
+        .setAlpha(opts.vignetteAlpha ?? 0.38)
         .setScrollFactor(0);
     }
+    // Cool/warm wash at low alpha — never ADD (that blows out the sky).
     this.grade = scene.add
-      .rectangle(width / 2, height / 2, width, height, opts.gradeTint ?? 0xffe6c8, opts.gradeAlpha ?? 0.04)
+      .rectangle(width / 2, height / 2, width, height, opts.gradeTint ?? 0x1a2838, opts.gradeAlpha ?? 0.06)
       .setDepth(Depth.GRADE)
       .setScrollFactor(0)
-      .setBlendMode(Phaser.BlendModes.ADD);
+      .setBlendMode(Phaser.BlendModes.NORMAL)
+      .setAlpha(opts.gradeAlpha ?? 0.06);
   }
 
   setMood(opts: { vignetteAlpha?: number; gradeTint?: number; gradeAlpha?: number }): void {
@@ -32,9 +37,10 @@ export class ColorGrade {
   }
 
   /** Brief hurt / storm grade pulse. */
-  pulse(scene: Phaser.Scene, tint: number, alpha = 0.22, ms = 220): void {
+  pulse(scene: Phaser.Scene, tint: number, alpha = 0.16, ms = 220): void {
     if (!this.grade) return;
     const prevA = this.grade.alpha;
+    const prevTint = this.grade.fillColor;
     this.grade.setFillStyle(tint, alpha);
     this.grade.setAlpha(alpha);
     scene.tweens.add({
@@ -43,7 +49,7 @@ export class ColorGrade {
       duration: ms,
       ease: 'Sine.easeOut',
       onComplete: () => {
-        this.grade?.setFillStyle(0xffe6c8, prevA);
+        this.grade?.setFillStyle(prevTint, prevA);
         this.grade?.setAlpha(prevA);
       },
     });

@@ -347,17 +347,22 @@ function makeVignette(scene: Phaser.Scene): void {
   const g = gph(scene);
   g.fillStyle(0x000000, 0);
   g.fillRect(0, 0, 64, 64);
-  // very light frame only — keep sky readable during run
-  g.fillStyle(0x061018, 0.14);
-  g.fillRect(0, 0, 64, 4);
-  g.fillRect(0, 60, 64, 4);
-  g.fillRect(0, 0, 4, 64);
-  g.fillRect(60, 0, 4, 64);
-  g.fillStyle(0x061018, 0.07);
-  g.fillRect(0, 0, 64, 8);
-  g.fillRect(0, 56, 64, 8);
-  g.fillRect(0, 0, 8, 64);
-  g.fillRect(56, 0, 8, 64);
+  // Soft frame that holds mid-screen contrast without crushing the sky.
+  g.fillStyle(0x061018, 0.42);
+  g.fillRect(0, 0, 64, 5);
+  g.fillRect(0, 59, 64, 5);
+  g.fillRect(0, 0, 5, 64);
+  g.fillRect(59, 0, 5, 64);
+  g.fillStyle(0x061018, 0.22);
+  g.fillRect(0, 0, 64, 11);
+  g.fillRect(0, 53, 64, 11);
+  g.fillRect(0, 0, 11, 64);
+  g.fillRect(53, 0, 11, 64);
+  g.fillStyle(0x061018, 0.1);
+  g.fillRect(0, 0, 64, 18);
+  g.fillRect(0, 46, 64, 18);
+  g.fillRect(0, 0, 18, 64);
+  g.fillRect(46, 0, 18, 64);
   g.generateTexture('vignette', 64, 64);
   g.destroy();
 }
@@ -574,18 +579,18 @@ export function drawLantern(
   const key = `lantern-${hue}`;
   const hasArt = scene.textures.exists(key);
 
-  // diamond wash behind player — soft light without oval blobs
+  // diamond wash behind player — kept soft so sky midtones stay readable
   const farGlow = scene.add
     .image(0, 6, scene.textures.exists('lane-glow') ? 'lane-glow' : 'px')
     .setTint(glowColor)
-    .setAlpha(0.35)
-    .setScale(hasArt ? 2.4 : 1.6)
+    .setAlpha(0.22)
+    .setScale(hasArt ? 2.1 : 1.45)
     .setBlendMode(Phaser.BlendModes.ADD);
   const midGlow = scene.add
     .image(0, 4, scene.textures.exists('lane-glow') ? 'lane-glow' : 'px')
     .setTint(glowColor)
-    .setAlpha(0.5)
-    .setScale(hasArt ? 1.55 : 1.1)
+    .setAlpha(0.32)
+    .setScale(hasArt ? 1.35 : 1.0)
     .setBlendMode(Phaser.BlendModes.ADD);
 
   let body: Phaser.GameObjects.GameObject;

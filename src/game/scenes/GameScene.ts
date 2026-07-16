@@ -217,9 +217,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.grade.attach(this, {
-      vignetteAlpha: this.mode.id === 'storm' ? 0.2 : 0.1,
-      gradeTint: this.mode.id === 'storm' ? 0xb8d4ff : 0xffe6c8,
-      gradeAlpha: this.mode.id === 'storm' ? 0.05 : 0.045,
+      vignetteAlpha: this.mode.id === 'storm' ? 0.42 : 0.34,
+      gradeTint: this.mode.id === 'storm' ? 0x152030 : 0x182430,
+      gradeAlpha: this.mode.id === 'storm' ? 0.08 : 0.055,
     });
 
     this.trailEmitter = this.add.particles(0, 0, 'px', {
@@ -761,7 +761,7 @@ export class GameScene extends Phaser.Scene {
         playTone('hit');
         this.popFloat(e.go.x, e.go.y - 20, `−${def.wrongPenalty ?? 5}`, COLORS.danger);
         this.juice.hardHit();
-        this.grade.pulse(this, 0x4a1020, 0.2, 180);
+        this.grade.pulse(this, 0x4a1020, 0.12, 180);
         haptic(28);
       }
       return;
@@ -857,7 +857,7 @@ export class GameScene extends Phaser.Scene {
     yandex.stopGameplay();
     this.juice.hardHit();
     this.cameras.main.shake(180, 0.018);
-    this.grade.pulse(this, 0x2a0810, 0.28, 260);
+    this.grade.pulse(this, 0x2a0810, 0.16, 260);
     this.vfx.shred(this.lantern.x, this.lantern.y, COLORS.danger, 18);
     this.cameras.main.setRotation(0);
     this.camLean = 0;
@@ -1007,7 +1007,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.popFloat(this.lantern.x, this.lantern.y - 50, tf('relight'), HUE_HEX[this.playerHue]);
-    this.cameras.main.flash(280, 244, 162, 97);
+    this.cameras.main.flash(120, 55, 70, 80);
     playTone('start');
     haptic(20);
     yandex.startGameplay();
