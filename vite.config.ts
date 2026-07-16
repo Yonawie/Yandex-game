@@ -11,11 +11,16 @@ export default defineConfig({
     outDir: "dist",
     assetsDir: "assets",
     sourcemap: false,
-    chunkSizeWarningLimit: 2200,
+    target: "es2020",
+    cssCodeSplit: true,
+    modulePreload: {
+      polyfill: false,
+    },
+    chunkSizeWarningLimit: 1600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          phaser: ["phaser"],
+        manualChunks(id) {
+          if (id.includes("node_modules/phaser")) return "phaser";
         },
       },
     },

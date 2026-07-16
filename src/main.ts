@@ -1,13 +1,40 @@
-import Phaser from "phaser";
-import { BootScene } from "./game/scenes/BootScene";
-import { MainScene } from "./game/scenes/MainScene";
+import { hideBoot, setBootHint } from "./bootUi";
 
 const MAX_W = 480;
 
-function boot() {
+async function waitFonts(ms = 900) {
+  const fonts = document.fonts;
+  if (!fonts?.load) return;
+  try {
+    await Promise.race([
+      Promise.all([
+        fonts.load("600 16px Manrope"),
+        fonts.load("700 48px Unbounded"),
+        fonts.ready,
+      ]),
+      new Promise<void>((r) => setTimeout(r, ms)),
+    ]);
+  } catch {
+    /* system fallback */
+  }
+}
+
+async function boot() {
   const parent = document.getElementById("game");
   if (!parent) throw new Error("#game missing");
 
+  setBootHint("Шрифты…");
+  await waitFonts();
+
+  setBootHint("Движок…");
+  // Dynamic import → separate phaser chunk; HTML splash paints first.
+  const [{ default: Phaser }, { BootScene }, { MainScene }] = await Promise.all([
+    import("phaser"),
+    import("./game/scenes/BootScene"),
+    import("./game/scenes/MainScene"),
+  ]);
+
+  setBootHint("Старт…");
   const game = new Phaser.Game({
     type: Phaser.WEBGL,
     parent: "game",
@@ -41,4 +68,9 @@ function boot() {
   });
 }
 
-boot();
+boot().catch((err) => {
+  console.error(err);
+  setBootHint("Ошибка загрузки");
+  // Keep splash visible with error; still allow dismiss after a beat.
+  window.setTimeout(hideBoot, 2400);
+});
