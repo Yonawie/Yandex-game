@@ -1,8 +1,8 @@
 export const GAME_W = 960;
 export const GAME_H = 540;
 
-export const MAP_W = 2800;
-export const MAP_H = 3600;
+export const MAP_W = 1800;
+export const MAP_H = 2400;
 
 /** Bumped so old "all unlocked" saves reset. */
 export const STORAGE_KEY = "naydi_chto_to_progress_v2";

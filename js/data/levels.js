@@ -1,4 +1,4 @@
-import { MAP_ORDER, LEVELS_PER_MAP } from "../config.js";
+import { MAP_ORDER, LEVELS_PER_MAP, MAP_W, MAP_H } from "../config.js";
 
 /** Catalog of findable items: unique id, label, emoji, draw color */
 export const ITEM_CATALOG = {
@@ -482,8 +482,8 @@ function seededPositions(seed, count, margin = 120) {
   const pts = [];
   const cellW = 280;
   const cellH = 320;
-  const cols = Math.floor((2800 - margin * 2) / cellW);
-  const rows = Math.floor((3600 - margin * 2 - 400) / cellH);
+  const cols = Math.floor((MAP_W - margin * 2) / cellW);
+  const rows = Math.floor((MAP_H - margin * 2 - 400) / cellH);
   const cells = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) cells.push([c, r]);

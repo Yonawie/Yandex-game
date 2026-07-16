@@ -4,6 +4,7 @@ import { MAP_META } from "../maps.js";
 import { recordLevelWin } from "../utils/storage.js";
 import { showRewarded, showFullscreenAd, syncProgress } from "../utils/yandex.js";
 import { starRow } from "../ui.js";
+import { ensureMapTexture } from "../mapLoader.js";
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -19,12 +20,64 @@ export class GameScene extends Phaser.Scene {
     this.hintsUsed = 0;
     this.startTime = 0;
     this.hintTarget = null;
-    this.isPaused = false;
+    this.isPaused = true;
   }
 
   create() {
+    const { width, height } = this.scale;
+    const meta = MAP_META[this.level.mapId];
+
+    // Loading overlay while map prepares
+    this._loadBg = this.add.rectangle(width / 2, height / 2, width, height, COLORS.bgDeep).setScrollFactor(0).setDepth(5000);
+    this._loadTitle = this.add
+      .text(width / 2, height / 2 - 30, `${meta.emoji}  ${meta.title}`, {
+        fontFamily: FONT_DISPLAY,
+        fontSize: "28px",
+        color: "#f3ead7",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(5001);
+    this._loadStatus = this.add
+      .text(width / 2, height / 2 + 20, "Загрузка карты…", {
+        fontFamily: FONT_UI,
+        fontSize: "14px",
+        color: "#8b9bb4",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(5001);
+    this._loadBarBg = this.add.rectangle(width / 2, height / 2 + 56, 280, 8, COLORS.panel).setScrollFactor(0).setDepth(5001);
+    this._loadBar = this.add.rectangle(width / 2 - 138, height / 2 + 56, 4, 8, COLORS.gold).setOrigin(0, 0.5).setScrollFactor(0).setDepth(5002);
+
+    this.buildLevel().catch((err) => {
+      console.error(err);
+      this._loadStatus.setText("Ошибка загрузки. Нажми ✕ и попробуй снова.");
+      const back = this.add
+        .text(width / 2, height / 2 + 100, "← К картам", {
+          fontFamily: FONT_UI,
+          fontSize: "16px",
+          color: "#d4a84b",
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(5002)
+        .setInteractive({ useHandCursor: true });
+      back.on("pointerdown", () => this.scene.start("MapSelect"));
+    });
+  }
+
+  async buildLevel() {
     const level = this.level;
     const meta = MAP_META[level.mapId];
+
+    await ensureMapTexture(this, level.mapId, (p) => {
+      this._loadBar.width = 4 + 272 * p;
+      this._loadStatus.setText(p < 0.6 ? "Скачиваем карту…" : "Собираем поле…");
+    });
+
+    // Clear loader
+    [this._loadBg, this._loadTitle, this._loadStatus, this._loadBarBg, this._loadBar].forEach((o) => o?.destroy());
 
     this.world = this.add.container(0, 0);
     const map = this.add.image(0, 0, `map_${level.mapId}`).setOrigin(0);
@@ -33,7 +86,6 @@ export class GameScene extends Phaser.Scene {
     this.placements = getMapPlacements(level.mapId);
     this.itemSprites = new Map();
 
-    // Place ALL map items (decorative noise + findables). Only targets are clickable.
     this.placements.forEach((item) => {
       const isTarget = this.remaining.has(item.id);
       const spr = this.createItemSprite(item, isTarget);
@@ -41,42 +93,37 @@ export class GameScene extends Phaser.Scene {
       if (isTarget) this.itemSprites.set(item.id, spr);
     });
 
-    // Subtle floating particles for "living" feel
     this.spawnAmbient(level.mapId);
 
     this.cameras.main.setBounds(0, 0, MAP_W, MAP_H);
     this.cameras.main.centerOn(MAP_W / 2, MAP_H * 0.35);
-    this.cameras.main.setZoom(0.35);
+    this.cameras.main.setZoom(0.45);
 
     this.setupPanZoom();
     this.createHud(meta);
     this.createItemBar();
     this.startTime = Date.now();
+    this.isPaused = false;
 
     this.input.on("gameobjectup", (_ptr, obj) => {
       if (this.isPaused || this._moved || this._pinch) return;
       if (obj.getData?.("itemId")) this.onItemClick(obj.getData("itemId"));
-    });
-
-    // Wrong click feedback on map background
-    this.input.on("pointerdown", (pointer) => {
-      if (this.isPaused || pointer.y > this.scale.height - 100) return;
-      if (pointer.wasTouch && this._pinch) return;
     });
   }
 
   createItemSprite(item, interactive) {
     const g = this.add.container(item.x, item.y);
     const color = Phaser.Display.Color.HexStringToColor(item.color).color;
+    const scale = 0.85;
     if (interactive) {
-      const glow = this.add.circle(0, 0, 30, color, 0.28);
-      const bubble = this.add.circle(0, 0, 22, 0xffffff, 0.95).setStrokeStyle(3, color);
-      const emoji = this.add.text(0, 0, item.emoji, { fontSize: "22px" }).setOrigin(0.5);
+      const glow = this.add.circle(0, 0, 26 * scale, color, 0.28);
+      const bubble = this.add.circle(0, 0, 20 * scale, 0xffffff, 0.95).setStrokeStyle(3, color);
+      const emoji = this.add.text(0, 0, item.emoji, { fontSize: `${Math.round(20 * scale)}px` }).setOrigin(0.5);
       g.add([glow, bubble, emoji]);
-      g.setSize(48, 48);
+      g.setSize(44, 44);
       g.setData("itemId", item.id);
       g.setData("isTarget", true);
-      g.setInteractive(new Phaser.Geom.Circle(0, 0, 26), Phaser.Geom.Circle.Contains);
+      g.setInteractive(new Phaser.Geom.Circle(0, 0, 24 * scale), Phaser.Geom.Circle.Contains);
       this.tweens.add({
         targets: glow,
         alpha: 0.12,
@@ -86,18 +133,16 @@ export class GameScene extends Phaser.Scene {
         repeat: -1,
       });
     } else {
-      // Decoys: smaller, blend into the dense scene
-      const bubble = this.add.circle(0, 0, 14, color, 0.55).setStrokeStyle(2, 0xffffff, 0.35);
-      const emoji = this.add.text(0, 0, item.emoji, { fontSize: "14px" }).setOrigin(0.5);
+      const bubble = this.add.circle(0, 0, 12 * scale, color, 0.55).setStrokeStyle(2, 0xffffff, 0.35);
+      const emoji = this.add.text(0, 0, item.emoji, { fontSize: `${Math.round(13 * scale)}px` }).setOrigin(0.5);
       g.add([bubble, emoji]);
-      g.setSize(32, 32);
+      g.setSize(28, 28);
       g.setData("itemId", item.id);
       g.setData("isTarget", false);
-      g.setInteractive(new Phaser.Geom.Circle(0, 0, 16), Phaser.Geom.Circle.Contains);
+      g.setInteractive(new Phaser.Geom.Circle(0, 0, 14 * scale), Phaser.Geom.Circle.Contains);
       g.setAlpha(0.8);
     }
     return g;
-  }
 
   spawnAmbient(mapId) {
     const count = 24;
