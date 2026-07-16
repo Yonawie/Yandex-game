@@ -4,12 +4,12 @@ import { StyleId } from "../../data/styles";
 import { t } from "../../i18n";
 import { trackRetention } from "../../retention";
 import {
-  cloudPush,
   gameplayStart,
   gameplayStop,
   isGameplayOn,
   loadingReady,
   noteResultScreen,
+  scheduleCloudSave,
   showRewarded,
   submitLeaderboardScore,
 } from "../../sdk/yandex";
@@ -28,6 +28,7 @@ export class MainScene extends Phaser.Scene {
   private view!: Renderer;
   private frameCanvas!: HTMLCanvasElement;
   private readyOnce = false;
+  private resultSdkDone = false;
   private lastW = 0;
   private lastH = 0;
 
@@ -133,15 +134,16 @@ export class MainScene extends Phaser.Scene {
       if (this.core.shake > 0) this.core.shake = Math.max(0, this.core.shake - dt);
     }
 
-    if (this.core.phase === "result" && isGameplayOn()) {
-      gameplayStop();
+    if (this.core.phase === "result" && !this.resultSdkDone) {
+      this.resultSdkDone = true;
+      if (isGameplayOn()) gameplayStop();
       noteResultScreen();
+      // Leaderboard "score" + cloud snapshot after settleResult already ran.
       void submitLeaderboardScore(this.core.score);
-      void cloudPush({
-        best: this.core.save.best,
-        coins: this.core.save.coins,
-        equipped: this.core.save.equipped,
-      });
+      scheduleCloudSave(this.core.save);
+    }
+    if (this.core.phase !== "result") {
+      this.resultSdkDone = false;
     }
 
     this.view.draw(tSec);
@@ -207,9 +209,14 @@ export class MainScene extends Phaser.Scene {
         this.startDiff(this.core.difficulty);
         break;
       case "continue":
-        showRewarded(() => {
-          if (this.core.rewardedContinue()) gameplayStart();
-        });
+        showRewarded(
+          () => {
+            if (this.core.rewardedContinue()) gameplayStart();
+          },
+          () => {
+            /* ad closed — stay on result unless continue succeeded */
+          },
+        );
         break;
       case "to-menu":
         gameplayStop();

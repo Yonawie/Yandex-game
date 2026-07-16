@@ -25,6 +25,7 @@ const ru: Dict = {
   amberLine: "янтарь · коралл · удар",
   gameOver: "Стена придавила",
   score: "Счёт",
+  rewardedCut: "Реклама · срезать верх",
 };
 
 const en: Dict = {
@@ -50,6 +51,7 @@ const en: Dict = {
   amberLine: "amber · coral · strike",
   gameOver: "The wall crushed you",
   score: "Score",
+  rewardedCut: "Ad · cut the top",
 };
 
 const tables: Record<Locale, Dict> = { ru, en };

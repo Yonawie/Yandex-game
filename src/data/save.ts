@@ -1,4 +1,5 @@
 import { StyleId, STYLES } from "./styles";
+import type { CloudSaveBlob } from "../sdk/yandex";
 
 const KEY = "echo_save_v1";
 
@@ -9,12 +10,38 @@ export type EchoSave = {
   best: number;
 };
 
+type PersistHook = (save: EchoSave) => void;
+let persistHook: PersistHook | null = null;
+
+/** Optional side-effect after local write (cloud sync). */
+export function setSavePersistHook(hook: PersistHook | null) {
+  persistHook = hook;
+}
+
 function defaultSave(): EchoSave {
   return {
     coins: 0,
     owned: ["echo"],
     equipped: "echo",
     best: 0,
+  };
+}
+
+function sanitize(data: Partial<EchoSave>): EchoSave {
+  const ownedRaw = Array.isArray(data.owned) ? data.owned : ["echo"];
+  const owned = ownedRaw.filter((id): id is StyleId =>
+    STYLES.some((s) => s.id === id),
+  ) as StyleId[];
+  if (!owned.includes("echo")) owned.unshift("echo");
+  const equipped: StyleId =
+    data.equipped && owned.includes(data.equipped as StyleId)
+      ? (data.equipped as StyleId)
+      : "echo";
+  return {
+    coins: Math.max(0, Number(data.coins) || 0),
+    owned,
+    best: Math.max(0, Number(data.best) || 0),
+    equipped,
   };
 }
 
@@ -28,21 +55,11 @@ export function loadSave(): EchoSave {
       return fresh;
     }
     const data = JSON.parse(raw) as Partial<EchoSave>;
-    const ownedRaw = Array.isArray(data.owned) ? data.owned : ["echo"];
-    const owned = ownedRaw.filter((id): id is StyleId =>
-      STYLES.some((s) => s.id === id),
-    ) as StyleId[];
-    if (!owned.includes("echo")) owned.unshift("echo");
-    const equipped: StyleId =
-      data.equipped && owned.includes(data.equipped as StyleId)
-        ? (data.equipped as StyleId)
-        : "echo";
-    return {
-      coins: Math.max(0, Number(data.coins) || 0),
-      owned,
-      equipped,
-      best: Math.max(0, Number(data.best) || Number(localStorage.getItem("echo_best") || 0)),
-    };
+    const bestFallback = Number(localStorage.getItem("echo_best") || 0);
+    return sanitize({
+      ...data,
+      best: Math.max(Number(data.best) || 0, bestFallback),
+    });
   } catch {
     return defaultSave();
   }
@@ -51,6 +68,33 @@ export function loadSave(): EchoSave {
 export function writeSave(save: EchoSave) {
   localStorage.setItem(KEY, JSON.stringify(save));
   localStorage.setItem("echo_best", String(save.best));
+  try {
+    persistHook?.(save);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Merge Yandex player cloud blob into local save (monotonic progress). */
+export function applyCloudBlob(remote: CloudSaveBlob): EchoSave {
+  const local = loadSave();
+  const remoteOwned = (remote.owned ?? []).filter((id): id is StyleId =>
+    STYLES.some((s) => s.id === id),
+  );
+  const owned = Array.from(new Set<StyleId>([...local.owned, ...remoteOwned]));
+  if (!owned.includes("echo")) owned.unshift("echo");
+  const equippedCandidate = remote.equipped as StyleId | undefined;
+  const next = sanitize({
+    coins: Math.max(local.coins, Number(remote.coins) || 0),
+    best: Math.max(local.best, Number(remote.best) || 0),
+    owned,
+    equipped:
+      equippedCandidate && owned.includes(equippedCandidate)
+        ? equippedCandidate
+        : local.equipped,
+  });
+  writeSave(next);
+  return next;
 }
 
 export function coinsFromScore(score: number): number {

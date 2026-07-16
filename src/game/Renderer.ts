@@ -1436,7 +1436,7 @@ export class Renderer {
 
     this.mechBtn((w - 250) / 2, h * 0.52, 250, 48, tr("again"), "again", true);
     if (!game.continueUsed) {
-      this.mechBtn((w - 250) / 2, h * 0.52 + 56, 250, 46, "Реклама · срезать верх", "continue", false);
+      this.mechBtn((w - 250) / 2, h * 0.52 + 56, 250, 46, tr("rewardedCut"), "continue", false);
     }
     this.mechBtn((w - 250) / 2, h * 0.52 + 112, 250, 46, tr("shopTitle"), "open-shop", false);
     this.mechBtn((w - 250) / 2, h * 0.52 + 168, 250, 46, tr("toMenu"), "to-menu", false);

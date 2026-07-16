@@ -1,10 +1,17 @@
 import Phaser from "phaser";
 import { hideBoot, setBootHint } from "../../bootUi";
+import { applyCloudBlob, setSavePersistHook } from "../../data/save";
 import { initI18n } from "../../i18n";
-import { initYandex, loadingReady } from "../../sdk/yandex";
+import {
+  initYandex,
+  loadingReady,
+  logSdkStand,
+  pullAndMergeCloud,
+  scheduleCloudSave,
+} from "../../sdk/yandex";
 import { MaterialFactory } from "../visual/MaterialFactory";
 
-/** Boot: atlas → SDK → i18n → Main. */
+/** Boot: atlas → SDK → cloud → i18n → Main. */
 export class BootScene extends Phaser.Scene {
   constructor() {
     super("Boot");
@@ -21,8 +28,21 @@ export class BootScene extends Phaser.Scene {
       } else {
         console.warn("[echo] atlas missing — procedural materials");
       }
+
       setBootHint("SDK…");
       await initYandex();
+      logSdkStand();
+      setSavePersistHook((save) => scheduleCloudSave(save));
+
+      setBootHint("Облако…");
+      const merged = await pullAndMergeCloud((blob) => {
+        applyCloudBlob(blob);
+      });
+      if (merged) {
+        // eslint-disable-next-line no-console
+        console.info("[echo] cloud save merged");
+      }
+
       hideBoot();
       this.scene.start("Main");
       this.time.delayedCall(120, () => loadingReady());
