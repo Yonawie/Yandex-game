@@ -37,6 +37,7 @@ if (new URLSearchParams(location.search).has('qa')) {
     getSnapshot,
     applyRunToRetention,
     syncRetentionClock,
+    yandexStatus: () => yandex.getQaStatus(),
   };
 }
 
@@ -47,13 +48,17 @@ document.addEventListener('visibilitychange', () => {
     game.scene.getScenes(true).forEach((s) => {
       if (s.scene.key === 'Game' && s.scene.isActive()) s.scene.pause();
     });
-  } else if (!isMuted()) {
-    startMusic();
-    game.scene.getScenes(true).forEach((s) => {
-      if (s.scene.key === 'Game' && s.scene.isPaused()) {
-        s.scene.resume();
-        yandex.startGameplay();
-      }
-    });
+    return;
   }
+
+  // Always resume a paused run — mute must not leave Game stuck.
+  let resumedGame = false;
+  game.scene.getScenes(true).forEach((s) => {
+    if (s.scene.key === 'Game' && s.scene.isPaused()) {
+      s.scene.resume();
+      resumedGame = true;
+    }
+  });
+  if (resumedGame) yandex.startGameplay();
+  if (!isMuted()) startMusic();
 });

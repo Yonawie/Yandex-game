@@ -1,4 +1,5 @@
 import type { SaveData } from '@/data/save';
+import { duckAudio, restoreAudio } from '@/game/audio/sfx';
 
 export interface YandexPlayerLike {
   getData: (keys?: string[]) => Promise<Record<string, unknown>>;
@@ -46,6 +47,17 @@ declare global {
 }
 
 const CLOUD_KEY = 'staylit';
+const AD_TIMEOUT_MS = 12_000;
+
+export type AdKind = 'none' | 'fullscreen' | 'rewarded';
+
+export interface YandexQaStatus {
+  ready: boolean;
+  gameplay: boolean;
+  lastAd: AdKind;
+  lastAdOk: boolean | null;
+  sdk: boolean;
+}
 
 class YandexBridge {
   private sdk: YandexSDKLike | null = null;
@@ -53,6 +65,8 @@ class YandexBridge {
   private readySent = false;
   private gameplayActive = false;
   private initPromise: Promise<void> | null = null;
+  private lastAd: AdKind = 'none';
+  private lastAdOk: boolean | null = null;
 
   init(): Promise<void> {
     if (this.initPromise) return this.initPromise;
@@ -87,6 +101,16 @@ class YandexBridge {
 
   getLang(): string {
     return this.sdk?.environment?.i18n?.lang ?? navigator.language.slice(0, 2);
+  }
+
+  getQaStatus(): YandexQaStatus {
+    return {
+      ready: this.readySent,
+      gameplay: this.gameplayActive,
+      lastAd: this.lastAd,
+      lastAdOk: this.lastAdOk,
+      sdk: Boolean(this.sdk),
+    };
   }
 
   markReady(): void {
@@ -125,12 +149,11 @@ class YandexBridge {
   }
 
   showFullscreen(): Promise<boolean> {
-    return new Promise((resolve) => {
+    return this.runAd('fullscreen', (resolve) => {
       if (!this.sdk) {
         resolve(false);
         return;
       }
-      this.stopGameplay();
       try {
         this.sdk.adv.showFullscreenAdv({
           callbacks: {
@@ -145,12 +168,12 @@ class YandexBridge {
   }
 
   showRewarded(): Promise<boolean> {
-    return new Promise((resolve) => {
+    return this.runAd('rewarded', (resolve) => {
       if (!this.sdk) {
+        // Local / no-SDK: allow continue so desktop QA can test revive flow.
         resolve(true);
         return;
       }
-      this.stopGameplay();
       let rewarded = false;
       try {
         this.sdk.adv.showRewardedVideo({
@@ -164,6 +187,31 @@ class YandexBridge {
         });
       } catch {
         resolve(false);
+      }
+    });
+  }
+
+  private runAd(kind: AdKind, start: (resolve: (ok: boolean) => void) => void): Promise<boolean> {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        restoreAudio();
+        this.lastAd = kind;
+        this.lastAdOk = ok;
+        resolve(ok);
+      };
+
+      this.stopGameplay();
+      duckAudio();
+      const timer = window.setTimeout(() => finish(false), AD_TIMEOUT_MS);
+
+      try {
+        start(finish);
+      } catch {
+        finish(false);
       }
     });
   }

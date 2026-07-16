@@ -64,6 +64,10 @@ export class GameScene extends Phaser.Scene {
   private alive = true;
   private continued = false;
   private pointerDownHandler!: (pointer: Phaser.Input.Pointer) => void;
+  private keyLeftHandler!: () => void;
+  private keyRightHandler!: () => void;
+  private keyAHandler!: () => void;
+  private keyDHandler!: () => void;
   private trailEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private lastMilestone = 0;
   private lastComboTier = 0;
@@ -384,23 +388,28 @@ export class GameScene extends Phaser.Scene {
       if (pointer.x < width / 2) this.moveLane(-1);
       else this.moveLane(1);
     };
+    this.keyLeftHandler = () => {
+      this.clearGhostTutor();
+      this.moveLane(-1);
+    };
+    this.keyRightHandler = () => {
+      this.clearGhostTutor();
+      this.moveLane(1);
+    };
+    this.keyAHandler = () => {
+      this.clearGhostTutor();
+      this.moveLane(-1);
+    };
+    this.keyDHandler = () => {
+      this.clearGhostTutor();
+      this.moveLane(1);
+    };
     this.input.on('pointerdown', this.pointerDownHandler);
-    this.input.keyboard?.on('keydown-LEFT', () => {
-      this.clearGhostTutor();
-      this.moveLane(-1);
-    });
-    this.input.keyboard?.on('keydown-RIGHT', () => {
-      this.clearGhostTutor();
-      this.moveLane(1);
-    });
-    this.input.keyboard?.on('keydown-A', () => {
-      this.clearGhostTutor();
-      this.moveLane(-1);
-    });
-    this.input.keyboard?.on('keydown-D', () => {
-      this.clearGhostTutor();
-      this.moveLane(1);
-    });
+    this.input.keyboard?.on('keydown-LEFT', this.keyLeftHandler);
+    this.input.keyboard?.on('keydown-RIGHT', this.keyRightHandler);
+    this.input.keyboard?.on('keydown-A', this.keyAHandler);
+    this.input.keyboard?.on('keydown-D', this.keyDHandler);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.unbindInput());
 
     void patchSave({ runs: save.runs + 1 });
     yandex.startGameplay();
@@ -710,7 +719,9 @@ export class GameScene extends Phaser.Scene {
 
   private moveLane(dir: number): void {
     if (!this.alive) return;
-    this.playerLane = Phaser.Math.Clamp(this.playerLane + dir, 0, this.mode.lanes - 1);
+    const next = Phaser.Math.Clamp(this.playerLane + dir, 0, this.mode.lanes - 1);
+    if (next === this.playerLane) return;
+    this.playerLane = next;
     playTone('ui');
     this.tweens.add({
       targets: this.lantern,
@@ -742,7 +753,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (def.score != null && def.colored) {
       if (e.hue === this.playerHue) {
-        this.scores.collect(def.score, this.time.now, this.mode, Boolean(def.forceCombo));
+        const gained = this.scores.collect(def.score, this.time.now, this.mode, Boolean(def.forceCombo));
         this.matchedCollects += 1;
         this.maxCombo = Math.max(this.maxCombo, this.scores.combo);
         playTone('collect', this.scores.combo);
@@ -751,10 +762,7 @@ export class GameScene extends Phaser.Scene {
         this.juice.hitStop(42);
         this.juice.tapShake(0.004, 55);
         haptic(14);
-        const label =
-          this.scores.combo > 1
-            ? `+${def.score} ×${this.scores.combo}`
-            : `+${def.score}`;
+        const label = this.scores.combo > 1 ? `+${gained} ×${this.scores.combo}` : `+${gained}`;
         this.popFloat(e.go.x, e.go.y - 24, label, HUE_HEX[e.hue ?? 'amber']);
       } else {
         this.scores.penalize(def.wrongPenalty ?? 5);
@@ -767,12 +775,13 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (def.score != null) {
-      this.scores.collect(def.score, this.time.now, this.mode, Boolean(def.forceCombo));
+      const gained = this.scores.collect(def.score, this.time.now, this.mode, Boolean(def.forceCombo));
       playTone('combo', this.scores.combo);
       this.vfx.shred(e.go.x, e.go.y, COLORS.mint, 12);
       this.juice.hitStop(48);
       haptic(16);
-      this.popFloat(e.go.x, e.go.y - 24, `+${def.score}`, COLORS.mint);
+      const label = this.scores.combo > 1 ? `+${gained} ×${this.scores.combo}` : `+${gained}`;
+      this.popFloat(e.go.x, e.go.y - 24, label, COLORS.mint);
     }
   }
 
@@ -927,20 +936,41 @@ export class GameScene extends Phaser.Scene {
       .setDepth(62)
       .setInteractive({ useHandCursor: true });
 
+    const feedback = this.add
+      .text(width / 2, height * 0.7, '', {
+        fontFamily: 'Manrope, sans-serif',
+        fontSize: '18px',
+        color: '#FFB4A8',
+        align: 'center',
+        wordWrap: { width: width * 0.8 },
+      })
+      .setOrigin(0.5)
+      .setDepth(62)
+      .setAlpha(0);
+
     const cleanup = () => {
       overlay.destroy();
       title.destroy();
       adBtn.destroy();
       adText.destroy();
       skip.destroy();
+      feedback.destroy();
     };
 
     adBtn.on('pointerup', async () => {
+      adBtn.disableInteractive();
+      skip.disableInteractive();
+      feedback.setAlpha(0);
       const ok = await yandex.showRewarded();
       if (ok) {
         cleanup();
         this.revive();
+        return;
       }
+      feedback.setText(tf('adFailed'));
+      feedback.setAlpha(1);
+      adBtn.setInteractive({ useHandCursor: true });
+      skip.setInteractive({ useHandCursor: true });
     });
 
     skip.on('pointerup', async () => {
@@ -1013,8 +1043,16 @@ export class GameScene extends Phaser.Scene {
     yandex.startGameplay();
   }
 
-  private goResult(): void {
+  private unbindInput(): void {
     this.input.off('pointerdown', this.pointerDownHandler);
+    this.input.keyboard?.off('keydown-LEFT', this.keyLeftHandler);
+    this.input.keyboard?.off('keydown-RIGHT', this.keyRightHandler);
+    this.input.keyboard?.off('keydown-A', this.keyAHandler);
+    this.input.keyboard?.off('keydown-D', this.keyDHandler);
+  }
+
+  private goResult(): void {
+    this.unbindInput();
     this.cameras.main.setRotation(0);
     this.cameras.main.setZoom(1);
     const stats: RunStats = {

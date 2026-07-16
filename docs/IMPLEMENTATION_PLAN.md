@@ -19,9 +19,9 @@
 - `yandex.startGameplay()` при resume активного рана.
 
 **Acceptance:**
-- [ ] Mute on → свернуть → вернуться → игра продолжается.
-- [ ] Mute off → music снова играет.
-- [ ] Ad/gameplay API не ломается.
+- [x] Mute on → свернуть → вернуться → игра продолжается.
+- [x] Mute off → music снова играет.
+- [x] Ad/gameplay API не ломается.
 
 ---
 
@@ -36,9 +36,9 @@
 - Pop-float показывать фактический прирост с множителем комбо, не «сырой» score entity.
 
 **Acceptance:**
-- [ ] Тап влево на левой полосе — тишина / без punch.
-- [ ] Повторные забеги не копят keyboard handlers.
-- [ ] Текст `+N` совпадает с реальным начислением.
+- [x] Тап влево на левой полосе — тишина / без punch.
+- [x] Повторные забеги не копят keyboard handlers.
+- [x] Текст `+N` совпадает с реальным начислением.
 
 ---
 
@@ -53,9 +53,9 @@
 - Не дублировать `stopGameplay` без парного resume-пути.
 
 **Acceptance:**
-- [ ] Во время ad music/sfx молчат.
-- [ ] После ad (success/fail/close) звук возвращается по правилам mute.
-- [ ] Локально без SDK — no-op, без зависаний.
+- [x] Во время ad music/sfx молчат.
+- [x] После ad (success/fail/close) звук возвращается по правилам mute.
+- [x] Локально без SDK — no-op, без зависаний.
 
 ---
 
@@ -70,9 +70,9 @@
 - Опционально: `?qa=1` показывает статус `ready / gameplay / lastAd`.
 
 **Acceptance:**
-- [ ] Ad без callback не блокирует UI дольше timeout.
-- [ ] Fail rewarded не даёт бесплатный continue.
-- [ ] `LoadingAPI.ready` по-прежнему вызывается один раз после preload.
+- [x] Ad без callback не блокирует UI дольше timeout.
+- [x] Fail rewarded не даёт бесплатный continue.
+- [x] `LoadingAPI.ready` по-прежнему вызывается один раз после preload.
 
 ---
 

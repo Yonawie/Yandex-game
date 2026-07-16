@@ -5,11 +5,14 @@ let muted = false;
 let musicOn = true;
 let musicTimer: number | null = null;
 let step = 0;
+/** Temporary silence during ads — independent of user mute. */
+let adDucked = false;
+let adDuckDepth = 0;
 
 type ToneKind = 'collect' | 'portal' | 'hit' | 'ui' | 'combo' | 'start' | 'stamp';
 
 function ac(): AudioContext | null {
-  if (muted) return null;
+  if (muted || adDucked) return null;
   if (!ctx) {
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AC) return null;
@@ -22,7 +25,7 @@ function ac(): AudioContext | null {
 export function setMuted(value: boolean): void {
   muted = value;
   if (value) stopMusic();
-  else if (musicOn) startMusic();
+  else if (musicOn && !adDucked) startMusic();
 }
 
 export function isMuted(): boolean {
@@ -32,7 +35,27 @@ export function isMuted(): boolean {
 export function setMusicEnabled(value: boolean): void {
   musicOn = value;
   if (!value) stopMusic();
-  else if (!muted) startMusic();
+  else if (!muted && !adDucked) startMusic();
+}
+
+/** Silence music + SFX while an ad is open. Nestable. */
+export function duckAudio(): void {
+  adDuckDepth += 1;
+  if (adDucked) return;
+  adDucked = true;
+  stopMusic();
+}
+
+/** Restore after ad; respects user mute. */
+export function restoreAudio(): void {
+  adDuckDepth = Math.max(0, adDuckDepth - 1);
+  if (adDuckDepth > 0) return;
+  adDucked = false;
+  if (!muted && musicOn) startMusic();
+}
+
+export function isAdDucked(): boolean {
+  return adDucked;
 }
 
 function beep(freq: number, dur: number, type: OscillatorType, gain = 0.04, slide = 0): void {
@@ -118,12 +141,12 @@ export function playTone(kind: ToneKind, combo = 1): void {
 const THEME = [196, 220, 247, 294, 330, 392, 330, 294];
 
 export function startMusic(): void {
-  if (muted || !musicOn || musicTimer != null) return;
+  if (muted || adDucked || !musicOn || musicTimer != null) return;
   const audio = ac();
   if (!audio) return;
 
   const tick = () => {
-    if (muted || !musicOn) return;
+    if (muted || adDucked || !musicOn) return;
     const a = ac();
     if (!a) return;
     const freq = THEME[step % THEME.length];
@@ -173,5 +196,5 @@ export function stopMusic(): void {
 export function unlockAudio(): void {
   const audio = ac();
   if (!audio) return;
-  if (!muted && musicOn) startMusic();
+  if (!muted && !adDucked && musicOn) startMusic();
 }

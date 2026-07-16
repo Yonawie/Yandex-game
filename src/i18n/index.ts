@@ -61,6 +61,7 @@ export interface Dictionary {
   close: string;
   claimed: string;
   weeklyReward: string;
+  adFailed: string;
 }
 
 export const dictionaries: Record<Lang, Dictionary> = {
@@ -124,6 +125,7 @@ export const dictionaries: Record<Lang, Dictionary> = {
     close: 'Закрыть',
     claimed: 'Получено',
     weeklyReward: 'Неделя собрана!',
+    adFailed: 'Реклама не загрузилась — попробуй ещё раз',
   },
   en: {
     brand: 'Stay Lit',
@@ -185,6 +187,7 @@ export const dictionaries: Record<Lang, Dictionary> = {
     close: 'Close',
     claimed: 'Claimed',
     weeklyReward: 'Week complete!',
+    adFailed: 'Ad failed to load — try again',
   },
 };
 
