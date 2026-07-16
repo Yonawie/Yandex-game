@@ -42,5 +42,19 @@ export type CrackFX = {
   col: number;
   row: number;
   life: number;
+  /** Total lifespan for shatter sheet playback */
+  max: number;
   letter: string;
+  heavy?: boolean;
 };
+
+/** Animated cube shatter (8 atlas frames). */
+export type ShatterFX = {
+  col: number;
+  row: number;
+  life: number;
+  max: number;
+  heavy?: boolean;
+};
+
+export const SHATTER_FRAMES = 8;

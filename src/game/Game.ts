@@ -422,7 +422,14 @@ export class Game {
     const fallen: string[] = [];
     const mirrors: WallCell[] = [];
     for (const t of destroySet.values()) {
-      this.cracks.push({ col: t.col, row: t.row, life: 0.32, letter: t.cell.letter });
+      this.cracks.push({
+        col: t.col,
+        row: t.row,
+        life: doEcho ? 0.52 : 0.42,
+        max: doEcho ? 0.52 : 0.42,
+        letter: t.cell.letter,
+        heavy: doEcho,
+      });
     }
     for (let c = 0; c < this.cols; c++) {
       const kept: WallCell[] = [];

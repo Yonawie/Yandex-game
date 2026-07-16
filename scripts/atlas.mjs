@@ -326,6 +326,15 @@ async function main() {
     ["vfx-shatter-a", "vfx_shatter_a", 48],
     ["vfx-shatter-b", "vfx_shatter_b", 48],
     ["vfx-shatter-c", "vfx_shatter_c", 48],
+    // 8-frame shatter playback (cube destroy)
+    ["vfx-shatter-f0", "vfx_shatter_0", 72],
+    ["vfx-shatter-f1", "vfx_shatter_1", 72],
+    ["vfx-shatter-f2", "vfx_shatter_2", 72],
+    ["vfx-shatter-f3", "vfx_shatter_3", 72],
+    ["vfx-shatter-f4", "vfx_shatter_4", 72],
+    ["vfx-shatter-f5", "vfx_shatter_5", 72],
+    ["vfx-shatter-f6", "vfx_shatter_6", 72],
+    ["vfx-shatter-f7", "vfx_shatter_7", 72],
     ["vfx-crack-1", "vfx_crack_1", 64],
     ["vfx-crack-2", "vfx_crack_2", 64],
     ["gem-on", "ui_gem_on", 48],
@@ -467,6 +476,7 @@ async function main() {
     skins: usedSkins,
     note: "Multi-skin AI atlas (echo + cosmos). Letters carved into cube pigment (not sticker overlay).",
     letterBake: "carve-multiply-v1",
+    shatterSheet: 8,
   };
   writeFileSync(join(outDir, "world.meta.json"), JSON.stringify(meta, null, 2));
 

@@ -864,15 +864,40 @@ export class Renderer {
   }
 
   private drawCracks(_t: number) {
-    const { game, board } = this;
+    const { ctx, game, board } = this;
+    const FRAMES = 8;
     for (const c of game.cracks) {
       const gap = 6;
       const bw = board.cw - gap;
       const bh = board.ch - gap;
       const x = board.x + c.col * board.cw + gap / 2;
       const y = board.y + board.h - (c.row + 1) * board.ch + gap / 2;
-      const p = 1 - c.life / 0.32;
-      this.drawCrackLines(x, y, bw, bh, Math.min(1, p + 0.2));
+      const max = c.max || 0.42;
+      const p = Math.min(1, Math.max(0, 1 - c.life / max));
+      const frame = Math.min(FRAMES - 1, Math.floor(p * FRAMES));
+      const sheet = getNamedAtlasCanvas(`vfx_shatter_${frame}`);
+      const pad = c.heavy ? 14 : 8;
+      const size = Math.max(bw, bh) + pad * 2;
+      const cx = x + bw / 2;
+      const cy = y + bh / 2;
+      ctx.save();
+      // slight expand over time
+      const grow = 1 + p * (c.heavy ? 0.55 : 0.35);
+      ctx.globalAlpha = Math.min(1, 0.35 + (1 - p) * 0.75);
+      if (sheet) {
+        ctx.drawImage(sheet, cx - (size * grow) / 2, cy - (size * grow) / 2, size * grow, size * grow);
+      } else {
+        this.drawCrackLines(x, y, bw, bh, Math.min(1, p + 0.2));
+      }
+      // early frames also flash crack overlay for readability
+      if (p < 0.35) {
+        const crack = getNamedAtlasCanvas("vfx_crack_1");
+        if (crack) {
+          ctx.globalAlpha = (0.35 - p) * 1.6;
+          ctx.drawImage(crack, x - 2, y - 2, bw + 4, bh + 4);
+        }
+      }
+      ctx.restore();
     }
   }
 
