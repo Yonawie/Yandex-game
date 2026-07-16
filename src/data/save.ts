@@ -9,6 +9,8 @@ export interface SaveData {
   deathsSinceFullscreen: number;
   seenTip: boolean;
   version: number;
+  /** Epoch ms — last local write; used for cloud economy LWW. */
+  updatedAt: number;
 
   // —— Retention (steps 1–6) ——
   /** YYYY-MM-DD last active calendar day */
@@ -53,6 +55,7 @@ const defaultSave = (): SaveData => ({
   deathsSinceFullscreen: 0,
   seenTip: false,
   version: SAVE_VERSION,
+  updatedAt: Date.now(),
   lastLoginDay: '',
   streak: 0,
   streakGraceUsed: false,
@@ -107,34 +110,82 @@ export function loadLocalSave(): SaveData {
 export async function hydrateSave(remote: Partial<SaveData> | null): Promise<SaveData> {
   loadLocalSave();
   if (remote) {
+    const local = cache;
+    const localAt = local.updatedAt || 0;
+    const remoteAt = remote.updatedAt || 0;
+    const remoteNewer = remoteAt > localAt;
+
+    // Economy: last-write-wins by updatedAt (avoids max(coins)+union(skins) cheat).
+    const coins = remoteNewer ? (remote.coins ?? local.coins) : local.coins;
+    const skinId = remoteNewer ? (remote.skinId ?? local.skinId) : local.skinId;
+
+    const sameChallenge =
+      (remote.challengeDay || '') === (local.challengeDay || '') &&
+      (remote.challengeId || '') === (local.challengeId || '');
+
     cache = {
-      ...cache,
-      bestScore: Math.max(cache.bestScore, remote.bestScore ?? 0),
-      bestHeight: Math.max(cache.bestHeight, remote.bestHeight ?? 0),
-      coins: Math.max(cache.coins, remote.coins ?? 0),
-      skinId: remote.skinId ?? cache.skinId,
+      ...local,
+      bestScore: Math.max(local.bestScore, remote.bestScore ?? 0),
+      bestHeight: Math.max(local.bestHeight, remote.bestHeight ?? 0),
+      coins: Math.max(0, coins),
+      skinId,
       unlockedSkins: Array.from(
-        new Set([...(cache.unlockedSkins || []), ...((remote.unlockedSkins as string[]) || [])]),
+        new Set([...(local.unlockedSkins || []), ...((remote.unlockedSkins as string[]) || [])]),
       ),
-      sound: remote.sound ?? cache.sound,
-      runs: Math.max(cache.runs, remote.runs ?? 0),
-      seenTip: cache.seenTip || Boolean(remote.seenTip),
-      streak: Math.max(cache.streak, remote.streak ?? 0),
-      returnDays: Math.max(cache.returnDays, remote.returnDays ?? 0),
+      sound: remoteNewer ? (remote.sound ?? local.sound) : local.sound,
+      runs: Math.max(local.runs, remote.runs ?? 0),
+      deathsSinceFullscreen: remoteNewer
+        ? (remote.deathsSinceFullscreen ?? local.deathsSinceFullscreen)
+        : local.deathsSinceFullscreen,
+      seenTip: local.seenTip || Boolean(remote.seenTip),
+      streak: Math.max(local.streak, remote.streak ?? 0),
+      streakGraceUsed: local.streakGraceUsed || Boolean(remote.streakGraceUsed),
+      returnDays: Math.max(local.returnDays, remote.returnDays ?? 0),
       unlockedLetters: Array.from(
-        new Set([...(cache.unlockedLetters || []), ...((remote.unlockedLetters as string[]) || [])]),
+        new Set([...(local.unlockedLetters || []), ...((remote.unlockedLetters as string[]) || [])]),
       ),
       readLetters: Array.from(
-        new Set([...(cache.readLetters || []), ...((remote.readLetters as string[]) || [])]),
+        new Set([...(local.readLetters || []), ...((remote.readLetters as string[]) || [])]),
       ),
-      weekShards: Math.max(cache.weekShards, remote.weekShards ?? 0),
-      yesterdayBestScore: Math.max(cache.yesterdayBestScore, remote.yesterdayBestScore ?? 0),
-      todayBestScore: Math.max(cache.todayBestScore, remote.todayBestScore ?? 0),
-      lastLoginDay: remote.lastLoginDay || cache.lastLoginDay,
-      morningClaimedDay: remote.morningClaimedDay || cache.morningClaimedDay,
-      challengeDay: remote.challengeDay || cache.challengeDay,
-      challengeId: remote.challengeId || cache.challengeId,
-      idleSyncedAt: Math.max(cache.idleSyncedAt || 0, remote.idleSyncedAt ?? 0) || Date.now(),
+      weekShards: Math.max(local.weekShards, remote.weekShards ?? 0),
+      weekKey: remoteNewer ? remote.weekKey || local.weekKey : local.weekKey || remote.weekKey || '',
+      yesterdayBestScore: Math.max(local.yesterdayBestScore, remote.yesterdayBestScore ?? 0),
+      todayBestScore: Math.max(local.todayBestScore, remote.todayBestScore ?? 0),
+      todayBestDay: remoteNewer
+        ? remote.todayBestDay || local.todayBestDay
+        : local.todayBestDay || remote.todayBestDay || '',
+      lastLoginDay: remoteNewer
+        ? remote.lastLoginDay || local.lastLoginDay
+        : local.lastLoginDay || remote.lastLoginDay || '',
+      morningClaimedDay: remoteNewer
+        ? remote.morningClaimedDay || local.morningClaimedDay
+        : local.morningClaimedDay || remote.morningClaimedDay || '',
+      challengeDay: remoteNewer
+        ? remote.challengeDay || local.challengeDay
+        : local.challengeDay || remote.challengeDay || '',
+      challengeId: remoteNewer
+        ? remote.challengeId || local.challengeId
+        : local.challengeId || remote.challengeId || '',
+      challengeProgress: sameChallenge
+        ? Math.max(local.challengeProgress, remote.challengeProgress ?? 0)
+        : remoteNewer
+          ? (remote.challengeProgress ?? local.challengeProgress)
+          : local.challengeProgress,
+      challengeDone: sameChallenge
+        ? local.challengeDone || Boolean(remote.challengeDone)
+        : remoteNewer
+          ? Boolean(remote.challengeDone ?? local.challengeDone)
+          : local.challengeDone,
+      challengeClaimed: sameChallenge
+        ? local.challengeClaimed || Boolean(remote.challengeClaimed)
+        : remoteNewer
+          ? Boolean(remote.challengeClaimed ?? local.challengeClaimed)
+          : local.challengeClaimed,
+      boostRunsLeft: remoteNewer
+        ? (remote.boostRunsLeft ?? local.boostRunsLeft)
+        : local.boostRunsLeft,
+      idleSyncedAt: Math.max(local.idleSyncedAt || 0, remote.idleSyncedAt ?? 0) || Date.now(),
+      updatedAt: Math.max(localAt, remoteAt, Date.now()),
       version: SAVE_VERSION,
     };
   }
@@ -143,6 +194,7 @@ export async function hydrateSave(remote: Partial<SaveData> | null): Promise<Sav
 }
 
 export async function persistSave(): Promise<void> {
+  cache = { ...cache, updatedAt: Date.now(), version: SAVE_VERSION };
   localStorage.setItem(SAVE_KEY, JSON.stringify(cache));
   if (remoteWriter) {
     try {
