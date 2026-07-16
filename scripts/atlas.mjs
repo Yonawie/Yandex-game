@@ -25,12 +25,31 @@ const LETTERS = [
   "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ъ", "Ы", "Ь", "Э", "Ю", "Я",
 ];
 
-const LETTER_FILL = {
-  normal: "#1A0C04",
-  rare: "#1A0610",
-  armor: "#0E1218",
-  mirror: "#061018",
-};
+/** Skins with authored cube bases in assets/source/base/ */
+const SKINS = [
+  {
+    id: "echo",
+    cubeFile: (kind) => `cube-${kind}.png`,
+    letterFill: {
+      normal: "#1A0C04",
+      rare: "#1A0610",
+      armor: "#0E1218",
+      mirror: "#061018",
+    },
+  },
+  {
+    id: "cosmos",
+    cubeFile: (kind) => `cube-cosmos-${kind}.png`,
+    letterFill: {
+      normal: "#101628",
+      rare: "#1A0A28",
+      armor: "#0A0E14",
+      mirror: "#061018",
+    },
+  },
+];
+
+const LETTER_FILL = SKINS[0].letterFill;
 
 function nextSize(n) {
   return Math.max(n, TILE + PAD * 2);
@@ -119,8 +138,8 @@ async function removeStudioBg(rawBuf) {
   return sharp(data, { raw: { width: w, height: h, channels: 4 } }).png().toBuffer();
 }
 
-async function prepareBaseCube(kind) {
-  const path = join(srcBase, `cube-${kind}.png`);
+async function prepareBaseCube(skin, kind) {
+  const path = join(srcBase, skin.cubeFile(kind));
   if (!existsSync(path)) return null;
   const cleaned = await removeStudioBg(path);
   return sharp(cleaned)
@@ -130,8 +149,7 @@ async function prepareBaseCube(kind) {
     .toBuffer();
 }
 
-function letterOverlaySvg(letter, kind) {
-  const fill = LETTER_FILL[kind] ?? "#1A0C04";
+function letterOverlaySvg(letter, fill) {
   const fontSize = Math.round(TILE * 0.52);
   return Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${TILE}" height="${TILE}" viewBox="0 0 ${TILE} ${TILE}">
@@ -144,9 +162,9 @@ function letterOverlaySvg(letter, kind) {
 </svg>`);
 }
 
-async function stampLetter(basePng, letter, kind) {
+async function stampLetter(basePng, letter, fill) {
   return sharp(basePng)
-    .composite([{ input: await sharp(letterOverlaySvg(letter, kind)).png().toBuffer(), blend: "over" }])
+    .composite([{ input: await sharp(letterOverlaySvg(letter, fill)).png().toBuffer(), blend: "over" }])
     .png()
     .toBuffer();
 }
@@ -189,32 +207,52 @@ async function main() {
   mkdirSync(bgDir, { recursive: true });
 
   console.log("→ preparing AI/base cube materials…");
-  const bases = {};
-  for (const kind of KINDS) {
-    bases[kind] = await prepareBaseCube(kind);
-    console.log(`  cube-${kind}: ${bases[kind] ? "AI base" : "procedural fallback"}`);
+  const buffers = [];
+  const usedSkins = [];
+
+  for (const skin of SKINS) {
+    const bases = {};
+    let any = false;
+    for (const kind of KINDS) {
+      bases[kind] = await prepareBaseCube(skin, kind);
+      if (bases[kind]) any = true;
+      console.log(`  ${skin.id}/${kind}: ${bases[kind] ? "AI base" : "skip"}`);
+    }
+    if (!any) continue;
+    usedSkins.push(skin.id);
+
+    for (const kind of KINDS) {
+      if (!bases[kind]) continue;
+      const fill = skin.letterFill[kind] ?? "#1A0C04";
+      for (const letter of LETTERS) {
+        const name = `${skin.id}_${kind}_${letter}`;
+        const pngBuf = await stampLetter(bases[kind], letter, fill);
+        writeFileSync(join(srcArt, `${name}.png`), pngBuf);
+        const { data, info } = await sharp(pngBuf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+        buffers.push({ name, w: info.width, h: info.height, data });
+      }
+    }
   }
 
-  const buffers = [];
-
-  for (const kind of KINDS) {
-    for (const letter of LETTERS) {
-      const name = `echo_${kind}_${letter}`;
-      let pngBuf;
-      if (bases[kind]) {
-        pngBuf = await stampLetter(bases[kind], letter, kind);
-      } else {
-        pngBuf = await proceduralFallback(kind, letter);
+  // legacy single-skin fallback if nothing authored
+  if (buffers.length === 0) {
+    console.warn("  no skin bases — procedural echo only");
+    for (const kind of KINDS) {
+      for (const letter of LETTERS) {
+        const name = `echo_${kind}_${letter}`;
+        const pngBuf = await proceduralFallback(kind, letter);
+        writeFileSync(join(srcArt, `${name}.png`), pngBuf);
+        const { data, info } = await sharp(pngBuf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+        buffers.push({ name, w: info.width, h: info.height, data });
       }
-      writeFileSync(join(srcArt, `${name}.png`), pngBuf);
-      const { data, info } = await sharp(pngBuf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-      buffers.push({ name, w: info.width, h: info.height, data });
     }
+    usedSkins.push("echo");
   }
 
   // VFX + UI frames
   const vfxSpecs = [
     ["vfx-shock", "vfx_shock", 64],
+    ["vfx-shock-cosmos", "vfx_shock_cosmos", 64],
     ["vfx-shards", "vfx_shards", 64],
     ["vfx-shatter-a", "vfx_shatter_a", 48],
     ["vfx-shatter-b", "vfx_shatter_b", 48],
@@ -340,6 +378,15 @@ async function main() {
     await sharp(join(bgDir, "bg-sky.svg")).webp({ quality: 82 }).toFile(join(bgDir, "bg-sky.webp"));
   }
 
+  const bgCosmos = join(srcBase, "bg-cosmos.png");
+  if (existsSync(bgCosmos)) {
+    await sharp(bgCosmos)
+      .resize(480, 854, { fit: "cover" })
+      .webp({ quality: 78 })
+      .toFile(join(bgDir, "bg-cosmos.webp"));
+    copyFileSync(bgCosmos, join(bgDir, "bg-cosmos.png"));
+  }
+
   const meta = {
     name: "world",
     generatedAt: new Date().toISOString(),
@@ -347,14 +394,13 @@ async function main() {
     frames: Object.keys(frames).length,
     size: { w: width, h: height },
     bytes: compressed.length,
-    skin: "echo",
-    bases: KINDS.filter((k) => !!bases[k]),
-    note: "AI-authored cube bases + letter stamp. Replace assets/source/base/*.png and re-run npm run atlas.",
+    skins: usedSkins,
+    note: "Multi-skin AI atlas (echo + cosmos). Replace assets/source/base/*.png and re-run npm run atlas.",
   };
   writeFileSync(join(outDir, "world.meta.json"), JSON.stringify(meta, null, 2));
 
   console.log(`✓ public/atlases/world.png (${(compressed.length / 1024).toFixed(1)} KB, ${Object.keys(frames).length} frames)`);
-  console.log(`✓ bases used: ${meta.bases.join(", ") || "none"}`);
+  console.log(`✓ skins: ${usedSkins.join(", ") || "none"}`);
 }
 
 main().catch((err) => {

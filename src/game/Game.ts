@@ -25,6 +25,7 @@ import {
 import { StyleId, VisualStyle, styleById } from "../data/styles";
 import { Sfx } from "./audio/sfx";
 import type { CrackFX, FloatText, Particle, Shockwave, WallCell } from "./types";
+import { MaterialFactory } from "./visual/MaterialFactory";
 
 export type GamePhase = "menu" | "shop" | "playing" | "result";
 
@@ -163,6 +164,7 @@ export class Game {
   buyOrEquip(id: StyleId) {
     if (this.save.owned.includes(id)) {
       this.save = equipStyle(this.save, id);
+      MaterialFactory.clearAll();
       this.tip(`Стиль «${styleById(id).name}» экипирован`);
       Sfx.place();
       return;
@@ -173,6 +175,7 @@ export class Game {
       return;
     }
     this.save = buyStyle(this.save, id);
+    MaterialFactory.clearAll();
     this.tip(`Куплено · ${styleById(id).name}`);
     Sfx.valid();
   }

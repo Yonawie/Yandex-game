@@ -1,19 +1,16 @@
 {
   "name": "world",
-  "generatedAt": "2026-07-16T02:20:14.635Z",
-  "sourceCount": 147,
-  "frames": 145,
+  "generatedAt": "2026-07-16T02:36:01.683Z",
+  "sourceCount": 276,
+  "frames": 274,
   "size": {
-    "w": 1456,
-    "h": 947
+    "w": 1491,
+    "h": 1796
   },
-  "bytes": 180747,
-  "skin": "echo",
-  "bases": [
-    "normal",
-    "rare",
-    "armor",
-    "mirror"
+  "bytes": 328215,
+  "skins": [
+    "echo",
+    "cosmos"
   ],
-  "note": "AI-authored cube bases + letter stamp. Replace assets/source/base/*.png and re-run npm run atlas."
+  "note": "Multi-skin AI atlas (echo + cosmos). Replace assets/source/base/*.png and re-run npm run atlas."
 }

@@ -12,7 +12,7 @@ type AtlasJson = {
 let sheet: HTMLImageElement | HTMLCanvasElement | null = null;
 let frames: Record<string, AtlasFrame> = {};
 let ready = false;
-let playBg: HTMLImageElement | null = null;
+const playBgs = new Map<string, HTMLImageElement>();
 const sliceCache = new Map<string, HTMLCanvasElement>();
 
 function frameKey(styleId: string, kind: CubeKind, letter: string): string {
@@ -49,17 +49,24 @@ export async function loadWorldAtlas(
     frames = json.frames ?? {};
     ready = Object.keys(frames).length > 0;
     sliceCache.clear();
+    playBgs.clear();
 
-    // optional play backdrop (AI)
-    try {
-      playBg = await loadImage("./backgrounds/bg-sky.webp");
-    } catch {
-      try {
-        playBg = await loadImage("./backgrounds/bg-play.png");
-      } catch {
-        playBg = null;
-      }
-    }
+    const bgPairs: [string, string[]][] = [
+      ["echo", ["./backgrounds/bg-sky.webp", "./backgrounds/bg-play.png"]],
+      ["cosmos", ["./backgrounds/bg-cosmos.webp", "./backgrounds/bg-cosmos.png"]],
+    ];
+    await Promise.all(
+      bgPairs.map(async ([id, urls]) => {
+        for (const url of urls) {
+          try {
+            playBgs.set(id, await loadImage(url));
+            return;
+          } catch {
+            /* try next */
+          }
+        }
+      }),
+    );
     return ready;
   } catch {
     ready = false;
@@ -69,17 +76,21 @@ export async function loadWorldAtlas(
   }
 }
 
-export function getPlayBackground(): HTMLImageElement | null {
-  return playBg;
+export function getPlayBackground(styleId?: string): HTMLImageElement | null {
+  if (styleId && playBgs.has(styleId)) return playBgs.get(styleId)!;
+  return playBgs.get("echo") ?? playBgs.values().next().value ?? null;
 }
 
-/** Slice a cube frame into a canvas (cached). */
+/** Slice a cube frame into a canvas (cached). Falls back to echo if skin missing. */
 export function getAtlasCanvas(
   styleId: string,
   kind: CubeKind,
   letter: string,
 ): HTMLCanvasElement | null {
-  return getNamedAtlasCanvas(frameKey(styleId, kind, letter));
+  return (
+    getNamedAtlasCanvas(frameKey(styleId, kind, letter)) ??
+    (styleId !== "echo" ? getNamedAtlasCanvas(frameKey("echo", kind, letter)) : null)
+  );
 }
 
 /** Slice any named atlas frame (vfx_shock, prop_ceiling, …). */
@@ -105,4 +116,8 @@ export function getAtlasFrame(name: string): AtlasFrame | null {
 
 export function getAtlasSheet(): HTMLImageElement | HTMLCanvasElement | null {
   return sheet;
+}
+
+export function hasSkinAtlas(styleId: string): boolean {
+  return !!frames[`${styleId}_normal_А`];
 }

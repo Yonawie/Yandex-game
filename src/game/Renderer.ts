@@ -106,7 +106,7 @@ export class Renderer {
     ctx.save();
 
     // AI play backdrop when in-run (or always under menu wash)
-    const bg = getPlayBackground();
+    const bg = getPlayBackground(S.id);
     if (bg && (game.phase === "playing" || game.phase === "result")) {
       ctx.globalAlpha = 0.92;
       ctx.drawImage(bg, 0, 0, w, h);
@@ -845,7 +845,9 @@ export class Renderer {
       const rad = s.r * Math.min(board.w, board.h) * 0.55;
       ctx.save();
       ctx.globalAlpha = Math.max(0, s.life) * 0.95;
-      const shock = getNamedAtlasCanvas("vfx_shock");
+      const shock =
+        getNamedAtlasCanvas(S.id === "cosmos" ? "vfx_shock_cosmos" : "vfx_shock") ??
+        getNamedAtlasCanvas("vfx_shock");
       if (shock) {
         ctx.drawImage(shock, cx - rad, cy - rad, rad * 2, rad * 2);
       } else {
@@ -1007,7 +1009,9 @@ export class Renderer {
     if (life > 0.55) {
       ctx.save();
       ctx.globalAlpha = (life - 0.55) * 0.85;
-      const shock = getNamedAtlasCanvas("vfx_shock");
+      const shock =
+        getNamedAtlasCanvas(S.id === "cosmos" ? "vfx_shock_cosmos" : "vfx_shock") ??
+        getNamedAtlasCanvas("vfx_shock");
       const rad = (1.15 - life) * h * 0.7 + 60;
       if (shock) {
         ctx.drawImage(shock, w / 2 - rad, board.y + board.h * 0.42 - rad, rad * 2, rad * 2);

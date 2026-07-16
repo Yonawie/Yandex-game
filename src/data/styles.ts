@@ -75,7 +75,7 @@ export const STYLES: VisualStyle[] = [
     id: "cosmos",
     name: "Космос",
     tagline: "Хром · туманность · звёздная пыль",
-    price: 400,
+    price: 200,
     pattern: "stars",
     bg: ["#050612", "#12163A", "#1A0B2E"],
     accent: "#8AB4FF",
