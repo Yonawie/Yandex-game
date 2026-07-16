@@ -28,8 +28,16 @@ async function boot() {
     },
   };
 
-  // eslint-disable-next-line no-new
-  new Phaser.Game(config);
+  const game = new Phaser.Game(config);
+  // Useful for debugging and automated checks
+  if (typeof window !== "undefined") window.__game = game;
 }
 
-boot();
+boot().catch((err) => {
+  console.error("Boot failed:", err);
+  const el = document.getElementById("game-container");
+  if (el) {
+    el.innerHTML =
+      '<p style="color:#f3ead7;font:16px Manrope,sans-serif;padding:24px;text-align:center">Не удалось запустить игру. Обновите страницу.</p>';
+  }
+});

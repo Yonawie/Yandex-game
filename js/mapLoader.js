@@ -18,11 +18,19 @@ export async function ensureMapTexture(scene, mapId, onProgress) {
   const heroKey = `hero_${mapId}`;
   if (!scene.textures.exists(heroKey)) {
     onProgress?.(0.15);
-    await new Promise((resolve, reject) => {
+    // Never reject: on network/tunnel failures we fall back to procedural art
+    await new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        resolve();
+      };
       scene.load.image(heroKey, `assets/maps/map-${mapId}-hero.jpg`);
-      scene.load.once("complete", resolve);
-      scene.load.once("loaderror", reject);
+      scene.load.once("complete", finish);
+      scene.load.once("loaderror", finish);
       scene.load.start();
+      setTimeout(finish, 20000);
     });
   }
 
@@ -36,10 +44,15 @@ export async function ensureMapTexture(scene, mapId, onProgress) {
   canvas.height = MAP_H;
   const ctx = canvas.getContext("2d");
 
-  if (scene.textures.exists(heroKey)) {
+  const heroOk =
+    scene.textures.exists(heroKey) &&
+    scene.textures.get(heroKey).getSourceImage()?.width > 0;
+
+  if (heroOk) {
     const src = scene.textures.get(heroKey).getSourceImage();
     ctx.drawImage(src, 0, 0, MAP_W, MAP_H);
   } else {
+    if (scene.textures.exists(heroKey)) scene.textures.remove(heroKey);
     const drawn = createMapCanvas(mapId);
     ctx.drawImage(drawn, 0, 0, MAP_W, MAP_H);
   }
