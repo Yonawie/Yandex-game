@@ -163,7 +163,7 @@ export const STYLES: VisualStyle[] = [
     id: "volcano",
     name: "Вулкан",
     tagline: "Обсидиан · лава · пепел",
-    price: 550,
+    price: 360,
     pattern: "embers",
     bg: ["#120806", "#2A1008", "#1A0A06"],
     accent: "#FF7A18",

@@ -56,6 +56,7 @@ export async function loadWorldAtlas(
       ["cosmos", ["./backgrounds/bg-cosmos.webp", "./backgrounds/bg-cosmos.png"]],
       ["railway", ["./backgrounds/bg-railway.webp", "./backgrounds/bg-railway.png"]],
       ["ocean", ["./backgrounds/bg-ocean.webp", "./backgrounds/bg-ocean.png"]],
+      ["volcano", ["./backgrounds/bg-volcano.webp", "./backgrounds/bg-volcano.png"]],
     ];
     await Promise.all(
       bgPairs.map(async ([id, urls]) => {

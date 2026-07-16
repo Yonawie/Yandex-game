@@ -67,6 +67,16 @@ const SKINS = [
       mirror: "#042028",
     },
   },
+  {
+    id: "volcano",
+    cubeFile: (kind) => `cube-volcano-${kind}.png`,
+    letterFill: {
+      normal: "#FFE0B8",
+      rare: "#FFE8D0",
+      armor: "#FFE0B8",
+      mirror: "#FFE0B8",
+    },
+  },
 ];
 
 const LETTER_FILL = SKINS[0].letterFill;
@@ -344,6 +354,7 @@ async function main() {
     ["vfx-shock-cosmos", "vfx_shock_cosmos", 64],
     ["vfx-shock-railway", "vfx_shock_railway", 64],
     ["vfx-shock-ocean", "vfx_shock_ocean", 64],
+    ["vfx-shock-volcano", "vfx_shock_volcano", 64],
     ["vfx-shards", "vfx_shards", 64],
     ["vfx-shatter-a", "vfx_shatter_a", 48],
     ["vfx-shatter-b", "vfx_shatter_b", 48],
@@ -506,6 +517,15 @@ async function main() {
     copyFileSync(bgOcean, join(bgDir, "bg-ocean.png"));
   }
 
+  const bgVolcano = join(srcBase, "bg-volcano.png");
+  if (existsSync(bgVolcano)) {
+    await sharp(bgVolcano)
+      .resize(480, 854, { fit: "cover" })
+      .webp({ quality: 78 })
+      .toFile(join(bgDir, "bg-volcano.webp"));
+    copyFileSync(bgVolcano, join(bgDir, "bg-volcano.png"));
+  }
+
   const meta = {
     name: "world",
     generatedAt: new Date().toISOString(),
@@ -514,7 +534,7 @@ async function main() {
     size: { w: width, h: height },
     bytes: compressed.length,
     skins: usedSkins,
-    note: "Multi-skin AI atlas (echo + cosmos + railway + ocean). Letters carved into cube pigment.",
+    note: "Multi-skin AI atlas (echo + cosmos + railway + ocean + volcano). Letters carved into cube pigment.",
     letterBake: "carve-multiply-v1",
     shatterSheet: 8,
   };
