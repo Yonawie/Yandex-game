@@ -1,4 +1,5 @@
 import type { VisualStyle } from "../../data/styles";
+import { getAtlasCanvas, isAtlasReady, loadWorldAtlas } from "./WorldAtlas";
 
 export type CubeKind = "normal" | "rare" | "armor" | "mirror" | "preview";
 
@@ -284,10 +285,23 @@ export const MaterialFactory = {
     const k = key(S.id, kind, letter);
     let c = CACHE.get(k);
     if (!c) {
-      c = paintCube(S, kind, letter);
+      // Prefer packed atlas (echo skin) — fewer procedural draws on mid Android.
+      const sliced = getAtlasCanvas(S.id, kind, letter);
+      c = sliced ?? paintCube(S, kind, letter);
       CACHE.set(k, c);
     }
     return c;
+  },
+
+  /** Call once from Boot after fetch — enables atlas path. */
+  async preferAtlas(): Promise<boolean> {
+    const ok = await loadWorldAtlas();
+    if (ok) CACHE.clear();
+    return ok;
+  },
+
+  atlasReady(): boolean {
+    return isAtlasReady();
   },
 
   clearStyle(styleId: string) {

@@ -288,7 +288,7 @@ export class Renderer {
     ctx.font = `800 13px ${FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(tr("premiumRibbon"), w / 2, 17);
+    ctx.fillText(tr("premiumRibbon") + (MaterialFactory.atlasReady() ? " · ATLAS" : ""), w / 2, 17);
     ctx.textBaseline = "alphabetic";
 
     // huge brand wordmark

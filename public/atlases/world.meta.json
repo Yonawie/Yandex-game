@@ -1,7 +1,13 @@
 {
   "name": "world",
-  "generatedAt": "2026-07-15T23:46:58.413Z",
-  "sourceCount": 0,
-  "note": "No art yet — runtime uses MaterialFactory procedural cubes. Drop PNG into assets/source/art and re-run with TexturePacker.",
-  "files": []
+  "generatedAt": "2026-07-16T01:05:27.525Z",
+  "sourceCount": 131,
+  "frames": 131,
+  "size": {
+    "w": 1456,
+    "h": 874
+  },
+  "bytes": 91841,
+  "skin": "echo",
+  "note": "TexturePacker-compatible. Replace assets/source/art with hand-authored PNGs and re-run npm run atlas."
 }
