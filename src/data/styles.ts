@@ -97,7 +97,7 @@ export const STYLES: VisualStyle[] = [
     id: "railway",
     name: "Депо",
     tagline: "Заклёпки · сталь · сигнальные огни",
-    price: 350,
+    price: 280,
     pattern: "rails",
     bg: ["#140E0A", "#241810", "#1A120C"],
     accent: "#F0A202",
