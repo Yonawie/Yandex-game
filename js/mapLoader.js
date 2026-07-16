@@ -1,5 +1,5 @@
-import { MAP_W, MAP_H } from "../config.js";
-import { createMapCanvas } from "../maps.js";
+import { MAP_W, MAP_H } from "./config.js";
+import { createMapCanvas } from "./maps.js";
 
 const ready = new Set();
 
