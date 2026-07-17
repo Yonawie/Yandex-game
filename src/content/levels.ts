@@ -1,4 +1,5 @@
-import { MAP_ORDER, LEVELS_PER_MAP, MAP_W, MAP_H } from "../config.js";
+// @ts-nocheck
+import { MAP_ORDER, LEVELS_PER_MAP, MAP_W, MAP_H } from "../data/config";
 
 /** Catalog of findable items: unique id, label, emoji, draw color */
 export const ITEM_CATALOG = {

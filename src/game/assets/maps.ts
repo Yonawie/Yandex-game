@@ -1,4 +1,5 @@
-import { MAP_W, MAP_H } from "./config.js";
+// @ts-nocheck
+import { MAP_W, MAP_H } from "../../data/config";
 
 function mulberry32(seed) {
   return function () {

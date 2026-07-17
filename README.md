@@ -1,27 +1,34 @@
 # Найди что-то
 
-HTML5-игра для [Яндекс Игр](https://yandex.ru/games): поиск предметов на больших ярких картах с панорамированием и зумом.
+HTML5-игра для [Яндекс Игр](https://yandex.ru/games): поиск предметов на больших ярких картах.
+
+**Стек:** TypeScript · Vite · Phaser 3 · Yandex Games SDK · WebAudio  
+Канон: [`docs/YANDEX_STACK.md`](docs/YANDEX_STACK.md)
 
 ## Особенности
 
 - **10 карт** · **4 уровня на карту** · **40 уровней**
-- Карты открываются **по мере прохождения** предыдущей
-- ~45 предметов на карте, ~11–12 на уровень
-- Pan / zoom / pinch, подсказки через rewarded-рекламу
-- Прогресс в `localStorage` + YaGames SDK
+- Прогрессивный анлок карт
+- Pan / zoom / pinch, подсказки (rewarded)
+- Juice: hit-stop, shake, shockwave, shred, stamp, haptic, SFX
+- i18n: **ru + en**
+- Cloud save + leaderboard `score` + Loading/Gameplay API
 
-## Карты
-
-Зимний фестиваль → Париж → Цирк → Подводный город → Джунгли → Неон → Венеция → Токио → Пустынный оазис → Сказочный замок
-
-## Запуск
+## Команды
 
 ```bash
-npm start
+npm install
+npm start          # http://localhost:4173
+npm run build
+npm run pack       # store/naydi-chto-to.zip
+npm run ok
 ```
 
-Открой http://localhost:4173
+## Структура
 
-## Яндекс Игры
-
-Точка входа — `index.html`. SDK: `https://yandex.ru/games/sdk/v2`.
+```
+src/           runtime (scenes, sdk, i18n, juice…)
+public/        static assets (maps, favicon)
+docs/          YANDEX_STACK · VISUAL_BIBLE · PUBLISH
+store/         zip + витрина
+```

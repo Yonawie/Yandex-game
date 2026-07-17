@@ -1,29 +1,49 @@
-import { MAP_META } from "../maps.js";
-import { getLevelsForMap } from "../data/levels.js";
-import { loadProgress, starsForMap, maxStarsForMap } from "../utils/storage.js";
-import { MAP_ORDER, COLORS, FONT_UI, FONT_DISPLAY, LEVELS_PER_MAP } from "../config.js";
-import { paintPremiumBg, starRow, titleStyle, uiStyle } from "../ui.js";
+import Phaser from "phaser";
+import { MAP_META } from "../assets/maps";
+import { getLevelsForMap } from "../../content/levels";
+import { loadProgress, starsForMap, maxStarsForMap } from "../../data/save";
+import { MAP_ORDER, COLORS, FONT_UI, FONT_DISPLAY } from "../../data/config";
+import { paintPremiumBg, starRow, titleStyle, uiStyle } from "../ui/premium";
+import { t, tDifficulty } from "../../i18n";
+import { sfx } from "../audio/sfx";
+import { buttonPress } from "../../visual/juice";
+import { gameplayStop } from "../../sdk/yandex";
+import type { MapMeta } from "../../data/types";
+
+const META = MAP_META as Record<string, MapMeta>;
 
 export class MapSelectScene extends Phaser.Scene {
+  list!: Phaser.GameObjects.Container;
+  scrollY = 0;
+  maxScroll = 0;
+  _draggingList = false;
+  _dragStart = 0;
+  _scrollAtStart = 0;
+  _listDragged = false;
+
   constructor() {
     super("MapSelect");
   }
 
   create() {
+    gameplayStop();
     const { width, height } = this.scale;
     paintPremiumBg(this, width, height);
 
-    this.add.text(width / 2, 28, "Выбор карты", titleStyle("32px")).setOrigin(0.5);
+    this.add.text(width / 2, 28, t("mapSelect"), titleStyle("32px")).setOrigin(0.5);
 
     const back = this.add
-      .text(28, 28, "← Меню", {
+      .text(28, 28, t("backMenu"), {
         fontFamily: FONT_UI,
         fontSize: "15px",
         color: "#d4a84b",
       })
       .setOrigin(0, 0.5)
       .setInteractive({ useHandCursor: true });
-    back.on("pointerdown", () => this.scene.start("Menu"));
+    back.on("pointerdown", () => {
+      sfx.click();
+      this.scene.start("Menu");
+    });
 
     const progress = loadProgress();
     const cols = 2;
@@ -39,7 +59,7 @@ export class MapSelectScene extends Phaser.Scene {
     this.maxScroll = Math.max(0, contentH - (height - 100));
 
     MAP_ORDER.forEach((id, i) => {
-      const meta = MAP_META[id];
+      const meta = META[id];
       const col = i % cols;
       const row = Math.floor(i / cols);
       const x = startX + col * (cardW + gapX);
@@ -66,7 +86,7 @@ export class MapSelectScene extends Phaser.Scene {
         .setOrigin(0, 0.5);
 
       const sub = this.add
-        .text(-cardW / 2 + 28, 8, unlocked ? meta.subtitle : "Пройди предыдущую карту целиком", {
+        .text(-cardW / 2 + 28, 8, unlocked ? meta.subtitle : t("lockPrev"), {
           fontFamily: FONT_UI,
           fontSize: "12px",
           color: unlocked ? "#8b9bb4" : "#4a5568",
@@ -102,27 +122,26 @@ export class MapSelectScene extends Phaser.Scene {
         });
         hit.on("pointerup", () => {
           if (this._listDragged) return;
+          buttonPress(card);
+          sfx.tap();
           this.openMap(id);
         });
       }
     });
 
-    // scroll mask
     const maskShape = this.make.graphics({ x: 0, y: 0 });
     maskShape.fillStyle(0xffffff);
     maskShape.fillRect(0, 56, width, height - 70);
     this.list.setMask(maskShape.createGeometryMask());
 
-    this._dragStart = 0;
-    this._listDragged = false;
-    this.input.on("pointerdown", (p) => {
+    this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
       if (p.y < 56) return;
       this._draggingList = true;
       this._dragStart = p.y;
       this._scrollAtStart = this.scrollY;
       this._listDragged = false;
     });
-    this.input.on("pointermove", (p) => {
+    this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       if (!this._draggingList || !p.isDown) return;
       const dy = p.y - this._dragStart;
       if (Math.abs(dy) > 6) this._listDragged = true;
@@ -132,25 +151,26 @@ export class MapSelectScene extends Phaser.Scene {
     this.input.on("pointerup", () => {
       this._draggingList = false;
     });
-    this.input.on("wheel", (_p, _o, _dx, dy) => {
+    this.input.on("wheel", (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       this.scrollY = Phaser.Math.Clamp(this.scrollY + dy * 0.4, 0, this.maxScroll);
       this.list.y = -this.scrollY;
     });
 
     if (this.maxScroll > 0) {
-      this.add
-        .text(width / 2, height - 14, "Листай вниз ↓", uiStyle("11px", "#5c6b82"))
-        .setOrigin(0.5);
+      this.add.text(width / 2, height - 14, t("scrollDown"), uiStyle("11px", "#5c6b82")).setOrigin(0.5);
     }
   }
 
-  openMap(mapId) {
+  openMap(mapId: string) {
     const { width, height } = this.scale;
     const levels = getLevelsForMap(mapId);
-    const meta = MAP_META[mapId];
+    const meta = META[mapId];
     const progress = loadProgress();
 
-    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.78).setInteractive().setDepth(50);
+    const overlay = this.add
+      .rectangle(width / 2, height / 2, width, height, 0x000000, 0.78)
+      .setInteractive()
+      .setDepth(50);
     const panelH = 90 + levels.length * 72;
     const panel = this.add
       .rectangle(width / 2, height / 2, 500, panelH, COLORS.panel)
@@ -176,7 +196,7 @@ export class MapSelectScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .setDepth(52);
 
-    const bits = [overlay, panel, title, close];
+    const bits: Phaser.GameObjects.GameObject[] = [overlay, panel, title, close];
 
     levels.forEach((lv, i) => {
       const y = height / 2 - panelH / 2 + 90 + i * 72;
@@ -196,8 +216,8 @@ export class MapSelectScene extends Phaser.Scene {
           width / 2,
           y,
           locked
-            ? `🔒  ${lv.title}  ·  ${lv.targetCount} предметов`
-            : `${done ? "✓" : "›"}  ${lv.title}  ·  ${lv.targetCount} предметов  ·  ${lv.difficulty}  ${starRow(stars)}`,
+            ? `🔒  ${lv.title}  ·  ${t("itemsCount", { n: lv.targetCount })}`
+            : `${done ? "✓" : "›"}  ${lv.title}  ·  ${t("itemsCount", { n: lv.targetCount })}  ·  ${tDifficulty(lv.difficulty)}  ${starRow(stars)}`,
           {
             fontFamily: FONT_UI,
             fontSize: "15px",
@@ -210,7 +230,10 @@ export class MapSelectScene extends Phaser.Scene {
 
       bits.push(btn, label);
       if (!locked) {
-        btn.on("pointerdown", () => this.scene.start("Game", { levelId: lv.id }));
+        btn.on("pointerdown", () => {
+          sfx.tap();
+          this.scene.start("Game", { levelId: lv.id });
+        });
       }
     });
 
