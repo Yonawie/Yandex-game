@@ -53,6 +53,8 @@ export class GameScene extends Phaser.Scene {
   _pinch = false;
   _pinchDist = 0;
   _moved = false;
+  _minZoom = 1;
+  _maxZoom = 2.2;
 
   constructor() {
     super("Game");
@@ -155,8 +157,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.cameras.main.setBounds(0, 0, MAP_W, MAP_H);
-    this.cameras.main.centerOn(MAP_W / 2, MAP_H * 0.42);
-    this.cameras.main.setZoom(0.55);
+    this.cameras.main.centerOn(MAP_W / 2, MAP_H * 0.35);
+    // Map is same width as view — never zoom out past fill (avoids empty navy sides)
+    const minZoom = this.scale.width / MAP_W;
+    this.cameras.main.setZoom(Math.max(minZoom, 1.05));
+    this._minZoom = minZoom;
+    this._maxZoom = 2.2;
 
     this.setupPanZoom();
     this.createHud(meta);
@@ -226,7 +232,7 @@ export class GameScene extends Phaser.Scene {
         if (pointers.length >= 2) {
           const [a, b] = pointers;
           const dist = Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
-          cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dist / this._pinchDist), 0.35, 1.6));
+          cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dist / this._pinchDist), this._minZoom, this._maxZoom));
           this._pinchDist = dist;
         }
         return;
@@ -248,7 +254,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.input.on("wheel", (_p: unknown, _o: unknown, _dx: number, dy: number) => {
-      cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), 0.35, 1.6));
+      cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), this._minZoom, this._maxZoom));
     });
   }
 
@@ -285,10 +291,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     const zoomIn = this.makeHudBtn(width - 50, 88, "+", () => {
-      this.cameras.main.setZoom(Phaser.Math.Clamp(this.cameras.main.zoom * 1.2, 0.35, 1.6));
+      this.cameras.main.setZoom(Phaser.Math.Clamp(this.cameras.main.zoom * 1.2, this._minZoom, this._maxZoom));
     });
     const zoomOut = this.makeHudBtn(width - 50, 138, "−", () => {
-      this.cameras.main.setZoom(Phaser.Math.Clamp(this.cameras.main.zoom / 1.2, 0.35, 1.6));
+      this.cameras.main.setZoom(Phaser.Math.Clamp(this.cameras.main.zoom / 1.2, this._minZoom, this._maxZoom));
     });
     const hintBtn = this.makeHudBtn(width - 50, 198, "✦", () => void this.useHint());
 
