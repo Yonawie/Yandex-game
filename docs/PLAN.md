@@ -1,47 +1,33 @@
-# Letter Snake (Яндекс Игры) — план реализации
+# Letter Snake — план
 
 ## Концепция
 
-- Поле спавнит **случайные буквы** в случайных клетках.
-- Змейка ест буквы и собирает **цепочку** без подсказок слов.
-- Как только цепочка совпала со словом словаря → слово **улетает в копилку** (достижение), змейка **очищается** от буквенных сегментов.
-- Если цепочка перестала быть префиксом любого слова → мягкий сброс цепочки.
-- Стили змейки (classic / train / …) подключаются через ScriptableObject, логика общая.
+- Поле спавнит случайные буквы.
+- Змейка собирает цепочку **без подсказок слов**.
+- Слово из словаря → копилка-достижение + очистка буквенных сегментов.
+- Стили: змейка / паровозик (ScriptableObject / runtime).
 
 ## Стек
 
-- Unity 2022.3 LTS / Unity 6 LTS → WebGL
-- URP, TextMesh Pro
-- C# Trie + JSON-словарь
-- Yandex Games SDK (`.jslib` bridge)
+Unity 2022.3 LTS → WebGL + Yandex Games SDK.
 
-## Системы
+## Автосборка
 
-| Модуль | Ответственность |
-|--------|-----------------|
-| `Trie` / `DictionaryService` | Словарь, проверка префикса/слова |
-| `FieldSpawner` | Random cell + weighted letter, лимиты |
-| `SnakeController` | Движение, сегменты, clear |
-| `WordChainService` | Цепочка, commit / fail |
-| `PiggyBankService` | Копилка-достижения + save |
-| `ScoreService` | Очки забега |
-| `StyleService` | Скины сегментов |
-| `YandexBridge` | SDK, leaderboard, cloud save |
+`RuntimeGameBuilder` на сцене `Game.unity` создаёт всё в Play Mode:
+камеру, поле, префабы, HUD, копилку, сервисы, bridge.
 
 ## Этапы
 
-1. **Каркас** — скрипты, словарь, план (этот PR)
-2. **Прототип в Editor** — сцена Grid, движение, спавн букв
-3. **Цепочка + копилка** — commit/fail, UI словаря
-4. **Стили** — classic + train prefab hooks
-5. **WebGL + Яндекс** — build, ads, leaderboard
-6. **Баланс** — частоты букв, скорость, размер словаря
+1. ✅ Каркас систем + словарь
+2. ✅ Runtime auto-build + сцена
+3. ✅ Копилка, стили, VFX улёта букв
+4. ✅ Yandex bridge + WebGL template
+5. ⬜ Баланс словаря / полиш арта в Editor (опционально)
+6. ⬜ Публикация билда в кабинет Яндекс Игр
 
 ## Правила MVP
 
-- Старт длины змейки: 3 нейтральных сегмента
-- `minLength` после clear: 3
-- Авто-commit при первом `IsWord(prefix)`
-- Fail chain: сброс prefix + снятие letter-сегментов, без game over
+- Старт длины: 3, minLength: 3
+- Авто-commit при `IsWord(prefix)`
+- Fail chain: soft reset
 - Смерть: стена / самоукус
-- Копилка: уникальные слова, прогресс `unlocked / total`

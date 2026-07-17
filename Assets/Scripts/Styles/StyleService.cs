@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using LetterSnake.Core;
 using LetterSnake.Snake;
 using LetterSnake.Words;
 using UnityEngine;
@@ -24,9 +25,35 @@ namespace LetterSnake.Styles
                 return;
             }
             Instance = this;
-
             selectedStyleId = PlayerPrefs.GetString(PrefsKey, selectedStyleId);
-            Current = FindStyle(selectedStyleId) ?? (styles != null && styles.Length > 0 ? styles[0] : null);
+        }
+
+        public void EnsureRuntimeStyles()
+        {
+            if (styles != null && styles.Length > 0 && styles[0] != null)
+            {
+                Current = FindStyle(selectedStyleId) ?? styles[0];
+                return;
+            }
+
+            var classic = ScriptableObject.CreateInstance<SnakeStyle>();
+            classic.id = "classic";
+            classic.displayName = "Змейка";
+            classic.unlockAtWords = 0;
+            classic.headColor = new Color(0.15f, 0.55f, 0.28f);
+            classic.bodyColor = new Color(0.2f, 0.72f, 0.38f);
+            classic.letterColor = new Color(0.95f, 0.82f, 0.25f);
+
+            var train = ScriptableObject.CreateInstance<SnakeStyle>();
+            train.id = "train";
+            train.displayName = "Паровозик";
+            train.unlockAtWords = 10;
+            train.headColor = new Color(0.55f, 0.18f, 0.12f);
+            train.bodyColor = new Color(0.78f, 0.38f, 0.18f);
+            train.letterColor = new Color(0.95f, 0.86f, 0.4f);
+
+            styles = new[] { classic, train };
+            Current = FindStyle(selectedStyleId) ?? classic;
         }
 
         public IEnumerable<SnakeStyle> AllStyles => styles;
@@ -41,18 +68,23 @@ namespace LetterSnake.Styles
 
         public bool SelectStyle(string id)
         {
+            EnsureRuntimeStyles();
             var style = FindStyle(id);
             if (style == null || !IsUnlocked(style)) return false;
             Current = style;
             selectedStyleId = id;
             PlayerPrefs.SetString(PrefsKey, id);
             PlayerPrefs.Save();
+            if (SnakeController.Instance != null)
+                ApplyStyle(SnakeController.Instance.Segments);
             return true;
         }
 
         public void ApplyStyle(IReadOnlyList<SnakeSegment> segments)
         {
+            if (Current == null) EnsureRuntimeStyles();
             if (Current == null || segments == null) return;
+
             for (var i = 0; i < segments.Count; i++)
             {
                 var seg = segments[i];
@@ -63,24 +95,7 @@ namespace LetterSnake.Styles
                         ? Current.letterColor
                         : Current.bodyColor;
 
-                var rend = seg.GetComponentInChildren<Renderer>();
-                if (rend != null && rend.material != null)
-                {
-                    if (rend.material.HasProperty("_Color"))
-                        rend.material.color = color;
-                    else if (rend.material.HasProperty("_BaseColor"))
-                        rend.material.SetColor("_BaseColor", color);
-                }
-
-                var sr = seg.GetComponentInChildren<SpriteRenderer>();
-                if (sr != null)
-                {
-                    sr.color = color;
-                    if (i == 0 && Current.headSprite != null) sr.sprite = Current.headSprite;
-                    else if (seg.Kind == SegmentKind.Letter && Current.letterSprite != null)
-                        sr.sprite = Current.letterSprite;
-                    else if (Current.bodySprite != null) sr.sprite = Current.bodySprite;
-                }
+                WorldFactory.ApplyColor(seg.BodyRenderer, color);
             }
         }
 

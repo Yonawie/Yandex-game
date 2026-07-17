@@ -3,9 +3,6 @@ using UnityEngine;
 
 namespace LetterSnake.Core
 {
-    /// <summary>
-    /// Integer grid occupancy for snake segments and letter cubes.
-    /// </summary>
     public sealed class GridService : MonoBehaviour
     {
         public static GridService Instance { get; private set; }
@@ -27,6 +24,13 @@ namespace LetterSnake.Core
                 return;
             }
             Instance = this;
+        }
+
+        public void Configure(Vector2Int gridSize, float cellSize, Vector3 gridOrigin)
+        {
+            size = gridSize;
+            cellWorldSize = cellSize;
+            origin = gridOrigin;
         }
 
         public bool InBounds(Vector2Int cell)
@@ -63,7 +67,6 @@ namespace LetterSnake.Core
                 if (IsFree(cell)) return true;
             }
 
-            // Fallback scan
             for (var y = 0; y < size.y; y++)
             for (var x = 0; x < size.x; x++)
             {

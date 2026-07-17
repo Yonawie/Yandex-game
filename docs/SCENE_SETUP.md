@@ -1,50 +1,36 @@
-# Сборка сцены в Unity Editor
+# Запуск в Unity
 
-Unity Editor в CI нет — сцену нужно собрать локально один раз.
+Проект **самособирается в Play Mode**. Ручная сборка префабов не нужна.
 
-## 1. Открыть проект
+## Шаги
 
-1. Unity Hub → Add → корень репозитория (`Yandex-game`).
-2. Версия: **2022.3 LTS** (или Unity 6 LTS).
-3. Modules: **WebGL Build Support**.
-4. Импортировать **TextMesh Pro Essential Resources** (Window → TextMeshPro → Import).
+1. Unity Hub → Open → корень репозитория.
+2. Версия: **2022.3 LTS** (или Unity 6). Модуль **WebGL Build Support**.
+3. Открыть сцену `Assets/Scenes/Game.unity`.
+4. Нажать **Play**.
 
-## 2. Меню
+`Boot` с `RuntimeGameBuilder` создаёт камеру, поле, змейку, буквы, HUD, копилку, стили и Yandex bridge.
 
-`Letter Snake → Create Default Style Assets` — создаст `classic` и `train`.
+## Управление
 
-## 3. Префабы
+| Ввод | Действие |
+|------|----------|
+| WASD / стрелки / свайп | движение |
+| Tab / кнопка «Копилка» | словарь достижений |
+| R / «Заново» | новый забег |
+| 1 / 2 | стиль змейка / паровозик (2 — после 10 слов) |
 
-### LetterCube
-- Cube / Quad + TMP Text (буква).
-- Компонент `LetterCube`, ссылка на TMP.
+## WebGL → Яндекс Игры
 
-### SnakeSegment
-- Cube / Sprite + optional TMP.
-- Компонент `SnakeSegment`.
+1. File → Build Settings → WebGL → Switch Platform → Build.
+2. Шаблон: `YandexGames` (`Assets/WebGLTemplates/YandexGames`).
+3. Загрузить билд в кабинет разработчика.
 
-## 4. Сцена `Assets/Scenes/Game.unity`
+Если шаблон не виден: Player Settings → Resolution and Presentation → WebGL Template → YandexGames.
 
-Объекты:
+## Регенерация meta/сцены (CI)
 
-| Object | Components |
-|--------|------------|
-| Boot | `GameBootstrap` |
-| Systems | `DictionaryService`, `PiggyBankService`, `ScoreService`, `WordChainService`, `GridService`, `FieldSpawner`, `SnakeController`, `StyleService`, `GameController`, `YandexBridge` |
-| HUD Canvas | `GameHud` + TMP texts (score, prefix, status, piggy, toast) |
-| Camera | Orthographic, fit grid 16×12 |
-
-Проставить ссылки на префабы в `FieldSpawner.letterPrefab` и `SnakeController.segmentPrefab`.  
-В `StyleService.styles` — оба SO стиля.
-
-## 5. Play
-
-Управление: WASD / стрелки / свайп.  
-Соберите слово из словаря → toast «в копилку», змейка очистится от букв.
-
-## 6. WebGL + Яндекс
-
-1. Build Settings → WebGL → Build.
-2. В `index.html` подключить скрипт SDK Яндекс Игр до загрузки Unity.
-3. Объект на сцене должен называться **`YandexBridge`** (для `SendMessage`).
-4. Загрузить билд в кабинет разработчика Яндекс Игр.
+```bash
+python3 tools/generate_unity_metas.py
+python3 tools/validate_dictionary.py
+```

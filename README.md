@@ -1,51 +1,49 @@
 # Letter Snake — Яндекс Игра
 
-Змейка ест **случайные буквы** на поле и собирает из них слова **без подсказок**.  
-Слово попало в словарь → улетает в **копилку-достижений**, змейка **очищается** от буквенных сегментов.
+Змейка ест **случайные буквы** и собирает слова **без подсказок**.  
+Слово найдено → улетает в **копилку**, змейка **очищается**.
+
+## Быстрый старт
+
+1. Открыть проект в **Unity 2022.3 LTS**
+2. Сцена `Assets/Scenes/Game.unity` → **Play**
+3. Всё создаётся автоматически (`RuntimeGameBuilder`)
 
 ## Стек
 
-- Unity 2022.3 LTS / Unity 6 → **WebGL**
-- TextMesh Pro, URP (настроить в Editor)
-- C# Trie + JSON-словарь (`Assets/Resources/Words/ru_words.json`)
-- Yandex Games SDK bridge (`Assets/Plugins/Yandex/YandexGames.jslib`)
+- Unity → WebGL
+- uGUI + TextMesh (без обязательного TMP)
+- Trie + JSON-словарь
+- Yandex Games SDK (`.jslib` + шаблон `YandexGames`)
 
-## Документация
+## Геймплей
 
-- [План](docs/PLAN.md)
-- [Сборка сцены в Editor](docs/SCENE_SETUP.md)
-
-## Геймплей (MVP)
-
-1. Поле само спавнит буквы (weighted random по частоте русского).
-2. Змейка ест любую букву → растёт цепочка.
-3. Цепочка = слово из словаря → очки + копилка + clear букв на теле.
-4. Цепочка больше не префикс ни одного слова → мягкий сброс.
-5. Смерть: стена или самоукус.
-6. Стили: `classic` (змейка), `train` (паровозик) — ScriptableObject.
+- Поле само спавнит буквы (частоты русского языка)
+- Цепочка букв → слово из словаря → очки + копилка + clear
+- Невалидная цепочка → мягкий сброс
+- Стили: змейка / паровозик
+- Смерть: стена или самоукус
 
 ## Структура
 
 ```
-Assets/Scripts/
-  Core/       GameController, Grid, Score, Bootstrap
-  Words/      Trie, Dictionary, WordChain, PiggyBank
-  Field/      FieldSpawner, LetterCube
-  Snake/      SnakeController, SnakeSegment
-  Styles/     SnakeStyle, StyleService
-  UI/         GameHud, PiggyBankScreen
-  Yandex/     YandexBridge
+Assets/Scenes/Game.unity          # Boot + RuntimeGameBuilder
+Assets/Scripts/Core/              # Runtime build, grid, score, VFX
+Assets/Scripts/Words/             # Trie, dictionary, chain, piggy bank
+Assets/Scripts/Field|Snake|UI|Styles|Yandex/
+Assets/Resources/Words/ru_words.json
+Assets/WebGLTemplates/YandexGames/
+docs/PLAN.md
 ```
 
-## Локальная проверка словаря
+## Проверки без Unity
 
 ```bash
 python3 tools/validate_dictionary.py
+python3 tools/generate_unity_metas.py
 ```
 
-## Следующие шаги
+## Документация
 
-1. Открыть проект в Unity и собрать сцену по `docs/SCENE_SETUP.md`.
-2. Настроить WebGL build + SDK на странице.
-3. Расширить словарь и баланс спавна.
-4. Добавить VFX «слово → копилка» и экран словаря.
+- [План](docs/PLAN.md)
+- [Запуск и WebGL](docs/SCENE_SETUP.md)

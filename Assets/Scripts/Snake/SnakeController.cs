@@ -38,6 +38,20 @@ namespace LetterSnake.Snake
             }
             Instance = this;
             if (segmentsRoot == null) segmentsRoot = transform;
+            if (segmentPrefab == null)
+                segmentPrefab = WorldFactory.GetSegmentPrefab();
+        }
+
+        public void Configure(
+            SnakeSegment prefab,
+            Transform root,
+            StyleService styles,
+            Vector2Int startCell)
+        {
+            segmentPrefab = prefab != null ? prefab : WorldFactory.GetSegmentPrefab();
+            segmentsRoot = root != null ? root : transform;
+            styleService = styles;
+            this.startCell = startCell;
         }
 
         void Update()
@@ -65,12 +79,17 @@ namespace LetterSnake.Snake
             _timer = 0f;
             _hasGrowCell = false;
 
+            if (segmentPrefab == null)
+                segmentPrefab = WorldFactory.GetSegmentPrefab();
+
             var grid = GridService.Instance;
             if (grid == null || segmentPrefab == null) return;
 
             for (var i = 0; i < startLength; i++)
             {
                 var cell = startCell - new Vector2Int(i, 0);
+                if (!grid.InBounds(cell))
+                    cell = new Vector2Int(Mathf.Max(0, startCell.x - i), startCell.y);
                 SpawnSegment(cell, asLetter: false, letter: default);
             }
 
@@ -80,6 +99,8 @@ namespace LetterSnake.Snake
 
         public void GrowLetter(char letter)
         {
+            if (segmentPrefab == null)
+                segmentPrefab = WorldFactory.GetSegmentPrefab();
             if (segmentPrefab == null) return;
 
             var grid = GridService.Instance;
@@ -97,6 +118,7 @@ namespace LetterSnake.Snake
 
             var world = grid != null ? grid.CellToWorld(cell) : Vector3.zero;
             var segment = Instantiate(segmentPrefab, world, Quaternion.identity, segmentsRoot);
+            segment.gameObject.SetActive(true);
             segment.ConfigureLetter(letter);
             segment.SetCell(cell, world);
             grid?.TryOccupy(cell);
@@ -110,12 +132,15 @@ namespace LetterSnake.Snake
             {
                 if (_segments.Count <= minLength) break;
                 if (_segments[i].Kind != SegmentKind.Letter) continue;
+                WordFlyEffect.Spawn(_segments[i].transform.position, _segments[i].Letter ?? '·');
                 RemoveSegmentAt(i);
             }
 
             while (_segments.Count > minLength &&
                    _segments[_segments.Count - 1].Kind == SegmentKind.Letter)
             {
+                WordFlyEffect.Spawn(_segments[_segments.Count - 1].transform.position,
+                    _segments[_segments.Count - 1].Letter ?? '·');
                 RemoveSegmentAt(_segments.Count - 1);
             }
 
@@ -169,7 +194,6 @@ namespace LetterSnake.Snake
                 return;
             }
 
-            // Classic growth: keep old tail cell free for a new segment if we ate.
             grid.Free(oldTail);
 
             for (var i = _segments.Count - 1; i > 0; i--)
@@ -181,7 +205,6 @@ namespace LetterSnake.Snake
             grid.TryOccupy(next);
             _segments[0].SetCell(next, grid.CellToWorld(next));
 
-            // Re-mark body occupancy
             foreach (var seg in _segments)
                 grid.TryOccupy(seg.Cell);
 
@@ -190,7 +213,6 @@ namespace LetterSnake.Snake
                 _growCell = oldTail;
                 _hasGrowCell = true;
                 GameController.Instance?.HandleLetterEaten(letter);
-                // If chain broke, growth was skipped — drop reserved cell.
                 if (_hasGrowCell)
                     _hasGrowCell = false;
             }
@@ -240,6 +262,7 @@ namespace LetterSnake.Snake
             var grid = GridService.Instance;
             var world = grid != null ? grid.CellToWorld(cell) : Vector3.zero;
             var segment = Instantiate(segmentPrefab, world, Quaternion.identity, segmentsRoot);
+            segment.gameObject.SetActive(true);
             if (asLetter) segment.ConfigureLetter(letter);
             else segment.ConfigureBody();
             segment.SetCell(cell, world);

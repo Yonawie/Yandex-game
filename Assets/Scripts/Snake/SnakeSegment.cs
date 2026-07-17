@@ -1,4 +1,3 @@
-using TMPro;
 using UnityEngine;
 
 namespace LetterSnake.Snake
@@ -11,12 +10,18 @@ namespace LetterSnake.Snake
 
     public sealed class SnakeSegment : MonoBehaviour
     {
-        [SerializeField] TMP_Text letterLabel;
+        [SerializeField] TextMesh letterLabel;
         [SerializeField] Renderer bodyRenderer;
 
         public Vector2Int Cell { get; private set; }
         public SegmentKind Kind { get; private set; } = SegmentKind.Body;
         public char? Letter { get; private set; }
+
+        public void Bind(TextMesh label, Renderer renderer)
+        {
+            letterLabel = label;
+            bodyRenderer = renderer;
+        }
 
         public void SetCell(Vector2Int cell, Vector3 worldPos)
         {
@@ -40,12 +45,14 @@ namespace LetterSnake.Snake
             Kind = SegmentKind.Letter;
             Letter = char.ToUpperInvariant(letter);
             if (letterLabel == null)
-                letterLabel = GetComponentInChildren<TMP_Text>(true);
+                letterLabel = GetComponentInChildren<TextMesh>(true);
             if (letterLabel != null)
             {
                 letterLabel.gameObject.SetActive(true);
                 letterLabel.text = Letter.ToString();
             }
         }
+
+        public Renderer BodyRenderer => bodyRenderer != null ? bodyRenderer : GetComponent<Renderer>();
     }
 }

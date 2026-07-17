@@ -2,13 +2,11 @@ using LetterSnake.Field;
 using LetterSnake.Snake;
 using LetterSnake.UI;
 using LetterSnake.Words;
+using LetterSnake.Yandex;
 using UnityEngine;
 
 namespace LetterSnake.Core
 {
-    /// <summary>
-    /// Wires snake eats → word chain → piggy bank / score / clear.
-    /// </summary>
     public sealed class GameController : MonoBehaviour
     {
         public static GameController Instance { get; private set; }
@@ -21,6 +19,7 @@ namespace LetterSnake.Core
         [SerializeField] GameHud hud;
         [SerializeField] bool autoStart = true;
 
+        bool _started;
         public bool IsRunning { get; private set; }
 
         void Awake()
@@ -39,7 +38,7 @@ namespace LetterSnake.Core
             if (wordChain != null)
                 wordChain.PrefixChanged += OnPrefixChanged;
 
-            if (autoStart) StartRun();
+            if (autoStart && !_started) StartRun();
         }
 
         void OnDestroy()
@@ -48,8 +47,27 @@ namespace LetterSnake.Core
                 wordChain.PrefixChanged -= OnPrefixChanged;
         }
 
+        public void Configure(
+            SnakeController snakeController,
+            WordChainService chain,
+            FieldSpawner field,
+            PiggyBankService bank,
+            ScoreService scoreService,
+            GameHud gameHud,
+            bool autoStart)
+        {
+            snake = snakeController;
+            wordChain = chain;
+            fieldSpawner = field;
+            piggyBank = bank;
+            score = scoreService;
+            hud = gameHud;
+            this.autoStart = autoStart;
+        }
+
         public void StartRun()
         {
+            _started = true;
             ResolveRefs();
             score?.ResetRun();
             wordChain?.ResetChain();
@@ -60,6 +78,8 @@ namespace LetterSnake.Core
             IsRunning = true;
             snake?.SetMoving(true);
             hud?.SetStatus("Собирай слова из букв");
+            hud?.SetPrefix(string.Empty);
+            hud?.RefreshPiggy();
         }
 
         public void StopRun()
@@ -78,9 +98,6 @@ namespace LetterSnake.Core
             if (hud == null) hud = FindObjectOfType<GameHud>();
         }
 
-        /// <summary>
-        /// Called by SnakeController after a letter cube is consumed from the field.
-        /// </summary>
         public void HandleLetterEaten(char letter)
         {
             if (!IsRunning || wordChain == null || snake == null) return;
@@ -96,7 +113,6 @@ namespace LetterSnake.Core
                     CommitWord(completedWord);
                     break;
                 case ChainEatResult.ChainBroken:
-                    // Do not grow on a broken letter; reserved grow cell is discarded by snake.
                     snake.ClearLetterSegments();
                     score?.BreakStreak();
                     hud?.SetStatus("Цепочка сброшена");
@@ -114,18 +130,18 @@ namespace LetterSnake.Core
             wordChain?.NotifyWordCompleted(word);
             hud?.ShowWordToast(word, gained, isNew);
             hud?.SetStatus(isNew ? $"В копилку: {word}" : $"Слово: {word}");
+            YandexBridge.Instance?.SaveCloud();
         }
 
-        void OnPrefixChanged(string prefix)
-        {
-            hud?.SetPrefix(prefix);
-        }
+        void OnPrefixChanged(string prefix) => hud?.SetPrefix(prefix);
 
         public void OnSnakeDied()
         {
             IsRunning = false;
             snake?.SetMoving(false);
-            hud?.SetStatus($"Конец · очки {score?.Score ?? 0}");
+            hud?.SetStatus($"Конец · очки {score?.Score ?? 0} · R — заново");
+            YandexBridge.Instance?.SubmitScore();
+            YandexBridge.Instance?.ShowFullscreenAd();
         }
     }
 }

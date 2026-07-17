@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace LetterSnake.Field
 {
-    /// <summary>
-    /// Spawns random letters on free cells using Russian letter frequencies.
-    /// No word hints are shown to the player.
-    /// </summary>
     public sealed class FieldSpawner : MonoBehaviour
     {
         public static FieldSpawner Instance { get; private set; }
@@ -52,6 +48,14 @@ namespace LetterSnake.Field
 
             if (lettersRoot == null)
                 lettersRoot = transform;
+            if (letterPrefab == null)
+                letterPrefab = WorldFactory.GetLetterPrefab();
+        }
+
+        public void Configure(LetterCube prefab, Transform root)
+        {
+            letterPrefab = prefab != null ? prefab : WorldFactory.GetLetterPrefab();
+            lettersRoot = root != null ? root : transform;
         }
 
         void Update()
@@ -81,6 +85,9 @@ namespace LetterSnake.Field
 
         public void FillToMinimum()
         {
+            if (letterPrefab == null)
+                letterPrefab = WorldFactory.GetLetterPrefab();
+
             var guard = 0;
             while (_letters.Count < minLetters && guard++ < 64)
             {
@@ -91,6 +98,8 @@ namespace LetterSnake.Field
         public bool TrySpawnOne()
         {
             var grid = GridService.Instance;
+            if (letterPrefab == null)
+                letterPrefab = WorldFactory.GetLetterPrefab();
             if (grid == null || letterPrefab == null) return false;
             if (_letters.Count >= maxLetters) return false;
             if (!grid.TryRandomFreeCell(out var cell)) return false;
@@ -98,6 +107,7 @@ namespace LetterSnake.Field
 
             var letter = PickWeightedLetter();
             var cube = Instantiate(letterPrefab, grid.CellToWorld(cell), Quaternion.identity, lettersRoot);
+            cube.gameObject.SetActive(true);
             cube.Setup(letter, cell);
             _letters[cell] = cube;
             return true;
