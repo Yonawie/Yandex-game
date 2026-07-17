@@ -479,8 +479,11 @@
 
   async function boot() {
     try {
-      const res = await fetch("./words.json");
-      buildDictionary(await res.json());
+      if (window.__WORDS__) buildDictionary(window.__WORDS__);
+      else {
+        const res = await fetch("./words.json");
+        buildDictionary(await res.json());
+      }
     } catch {
       buildDictionary(["ДОМ", "КОТ", "МОРЕ", "ЛЕС", "РЕКА", "СОН", "ИГРА", "СЛОВО", "ПОЛЕ", "НОС"]);
     }
