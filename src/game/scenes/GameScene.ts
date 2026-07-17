@@ -47,6 +47,7 @@ export class GameScene extends Phaser.Scene {
   _loadTitle!: Phaser.GameObjects.Text;
   _loadStatus!: Phaser.GameObjects.Text;
   _loadBar!: Phaser.GameObjects.Rectangle;
+  _loadBarBg!: Phaser.GameObjects.Rectangle;
   _dragging = false;
   _dragX = 0;
   _dragY = 0;
