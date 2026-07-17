@@ -6,7 +6,6 @@ import {
   FONT_UI,
   FONT_DISPLAY,
   DEPTH,
-  ATLAS_KEY,
 } from "../../data/config";
 import { getLevelById, getMapPlacements, getLevelsForMap } from "../../content/levels";
 import { MAP_META } from "../assets/maps";
@@ -24,7 +23,7 @@ const CATALOG = ITEM_CATALOG as Record<string, ItemInfo>;
 
 type Slot = {
   slot: Phaser.GameObjects.Container;
-  icon: Phaser.GameObjects.Image;
+  icon: Phaser.GameObjects.GameObject & { setAlpha: (a: number) => unknown };
 };
 
 export class GameScene extends Phaser.Scene {
@@ -38,11 +37,12 @@ export class GameScene extends Phaser.Scene {
   isPaused = true;
   world!: Phaser.GameObjects.Container;
   placements!: Placement[];
-  itemSprites = new Map<string, Phaser.GameObjects.Image>();
+  /** Invisible hit anchors for targets still in play. */
+  itemAnchors = new Map<string, { x: number; y: number }>();
   slotMap = new Map<string, Slot>();
   counterText!: Phaser.GameObjects.Text;
   hintLabel!: Phaser.GameObjects.Text;
-  hintRing: Phaser.GameObjects.Image | null = null;
+  hintRing: Phaser.GameObjects.Arc | null = null;
   _loadBg!: Phaser.GameObjects.Rectangle;
   _loadTitle!: Phaser.GameObjects.Text;
   _loadStatus!: Phaser.GameObjects.Text;
@@ -66,7 +66,7 @@ export class GameScene extends Phaser.Scene {
     this.mistakes = 0;
     this.hintsUsed = 0;
     this.isPaused = true;
-    this.itemSprites = new Map();
+    this.itemAnchors = new Map();
     this.slotMap = new Map();
     this.hintRing = null;
   }
@@ -132,7 +132,9 @@ export class GameScene extends Phaser.Scene {
     const level = this.level;
     const meta = META[level.mapId];
 
-    await ensureMapTexture(this, level.mapId, (p) => {
+    this.placements = getMapPlacements(level.mapId) as Placement[];
+
+    await ensureMapTexture(this, level.mapId, this.placements, (p) => {
       this._loadBar.width = 4 + 272 * p;
       this._loadStatus.setText(p < 0.6 ? t("downloadingMap") : t("assembling"));
     });
@@ -141,28 +143,20 @@ export class GameScene extends Phaser.Scene {
 
     this.world = this.add.container(0, 0).setDepth(DEPTH.world);
     const map = this.add.image(0, 0, `map_${level.mapId}`).setOrigin(0);
-    // Ensure display size matches playfield
     map.setDisplaySize(MAP_W, MAP_H);
     this.world.add(map);
 
-    this.placements = getMapPlacements(level.mapId) as Placement[];
-    this.itemSprites = new Map();
-
-    this.placements.forEach((item) => {
-      const isTarget = this.remaining.has(item.id);
-      const spr = this.createItemSprite(item, isTarget);
-      this.world.add(spr);
-      if (isTarget) this.itemSprites.set(item.id, spr);
-    });
-
-    this.spawnAmbient(level.mapId);
+    // Only invisible anchors — glyphs are already baked into the picture
+    this.itemAnchors = new Map();
+    for (const item of this.placements) {
+      if (this.remaining.has(item.id)) {
+        this.itemAnchors.set(item.id, { x: item.x, y: item.y });
+      }
+    }
 
     this.cameras.main.setBounds(0, 0, MAP_W, MAP_H);
-    // Center on first target so the player sees something clickable
-    const first = this.itemSprites.values().next().value as Phaser.GameObjects.Image | undefined;
-    if (first) this.cameras.main.centerOn(first.x, first.y);
-    else this.cameras.main.centerOn(MAP_W / 2, MAP_H * 0.4);
-    this.cameras.main.setZoom(0.7);
+    this.cameras.main.centerOn(MAP_W / 2, MAP_H * 0.42);
+    this.cameras.main.setZoom(0.55);
 
     this.setupPanZoom();
     this.createHud(meta);
@@ -173,44 +167,19 @@ export class GameScene extends Phaser.Scene {
     gameplayStart();
   }
 
-  createItemSprite(item: Placement, interactive: boolean) {
-    const has = this.textures.exists(ATLAS_KEY) && this.textures.get(ATLAS_KEY).has(item.id);
-    const frame = has ? item.id : "slot";
-    const img = this.add.image(item.x, item.y, ATLAS_KEY, frame);
-    if (interactive) {
-      img.setScale(0.85);
-      img.setAlpha(0.95);
-      img.setData("itemId", item.id);
-      img.setData("isTarget", true);
-      this.tweens.add({
-        targets: img,
-        scale: 0.95,
-        duration: 700 + Math.random() * 400,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-    } else {
-      img.setScale(0.45);
-      img.setAlpha(0.55);
-      img.setData("itemId", item.id);
-      img.setData("isTarget", false);
-    }
-    return img;
-  }
-
-  /** Reliable hit-test in world space (avoids Container input bugs). */
+  /** Reliable hit-test against baked-in item positions. */
   setupItemInput() {
     this.input.on("pointerup", (p: Phaser.Input.Pointer) => {
       if (this.isPaused || this._moved || this._pinch) return;
-      if (p.y > this.scale.height - 96) return; // HUD bar
-      if (p.y < 56) return; // top HUD
+      if (p.y > this.scale.height - 96) return;
+      if (p.y < 56) return;
       const world = this.cameras.main.getWorldPoint(p.x, p.y);
+      const hitR = 28; // tight — must aim at the glyph in the art
       let bestId: string | null = null;
-      let bestDist = 42; // hit radius in world px at zoom ~0.7
-      for (const [id, spr] of this.itemSprites) {
+      let bestDist = hitR;
+      for (const [id, pos] of this.itemAnchors) {
         if (!this.remaining.has(id)) continue;
-        const d = Phaser.Math.Distance.Between(world.x, world.y, spr.x, spr.y);
+        const d = Phaser.Math.Distance.Between(world.x, world.y, pos.x, pos.y);
         if (d < bestDist) {
           bestDist = d;
           bestId = id;
@@ -220,37 +189,16 @@ export class GameScene extends Phaser.Scene {
         this.onItemClick(bestId);
         return;
       }
-      // miss only if tapped near a decoy
+      // Miss if tapping a baked decoy
       for (const item of this.placements) {
         if (this.remaining.has(item.id) || this.found.has(item.id)) continue;
         const d = Phaser.Math.Distance.Between(world.x, world.y, item.x, item.y);
-        if (d < 36) {
+        if (d < hitR) {
           this.onMiss();
           return;
         }
       }
     });
-  }
-
-  spawnAmbient(mapId: string) {
-    for (let i = 0; i < 16; i++) {
-      const c = this.add.circle(
-        Math.random() * MAP_W,
-        Math.random() * MAP_H,
-        2 + Math.random() * 4,
-        mapId === "neon" ? 0xff006e : mapId === "winter" ? 0xffffff : 0xffd166,
-        0.3
-      );
-      this.world.add(c);
-      this.tweens.add({
-        targets: c,
-        y: c.y - 30 - Math.random() * 50,
-        alpha: 0.08,
-        duration: 2200 + Math.random() * 1600,
-        yoyo: true,
-        repeat: -1,
-      });
-    }
   }
 
   setupPanZoom() {
@@ -375,15 +323,20 @@ export class GameScene extends Phaser.Scene {
     const startX = (width - totalW) / 2 + slotW / 2;
 
     targets.forEach((id, i) => {
+      const info = CATALOG[id];
       const x = startX + i * slotW;
       const y = height - 46;
       const slot = this.add.container(x, y);
-      const has = this.textures.exists(ATLAS_KEY) && this.textures.get(ATLAS_KEY).has(id);
-      const frame = has ? id : "slot";
-      const icon = this.add.image(0, 0, ATLAS_KEY, frame).setScale(Math.min(0.7, (slotW - 8) / 64));
-      slot.add(icon);
+      const circle = this.add
+        .circle(0, 0, Math.min(22, slotW / 2 - 2), 0x1a2438, 0.98)
+        .setStrokeStyle(2, Phaser.Display.Color.HexStringToColor(info.color).color);
+      const emoji = this.add
+        .text(0, 0, info.emoji, { fontSize: `${Math.min(22, slotW - 12)}px` })
+        .setOrigin(0.5);
+      slot.add([circle, emoji]);
       bar.add(slot);
-      this.slotMap.set(id, { slot, icon });
+      // reuse Slot type loosely — icon field holds the emoji text as Image-compatible via cast
+      this.slotMap.set(id, { slot, icon: emoji });
     });
 
     this.hintLabel = this.add
@@ -415,27 +368,22 @@ export class GameScene extends Phaser.Scene {
     }
     this.remaining.delete(id);
     this.found.add(id);
-    const spr = this.itemSprites.get(id);
-    if (spr) {
+    const pos = this.itemAnchors.get(id);
+    if (pos) {
       hitStop(this, 48);
       haptic(26);
       sfx.find();
-      shockwave(this, spr.x, spr.y, 0xffd166, this.world);
-      shred(this, spr.x, spr.y, [0xffd166, 0x06d6a0, 0xff006e, 0x4cc9f0], this.world);
-      this.tweens.add({
-        targets: spr,
-        scale: 1.4,
-        alpha: 0,
-        duration: 280,
-        onComplete: () => spr.destroy(),
-      });
+      shockwave(this, pos.x, pos.y, 0xffd166, this.world);
+      shred(this, pos.x, pos.y, [0xffd166, 0x06d6a0, 0xff006e, 0x4cc9f0], this.world);
+      // Soft “found” blot so the baked glyph is marked without a bubble UI
+      const blot = this.add.circle(pos.x, pos.y, 14, COLORS.mint, 0.35).setStrokeStyle(2, COLORS.mint, 0.7);
+      this.world.add(blot);
+      this.tweens.add({ targets: blot, alpha: 0.15, scale: 1.3, duration: 400 });
+      this.itemAnchors.delete(id);
     }
     const slot = this.slotMap.get(id);
     if (slot) {
-      if (this.textures.exists(ATLAS_KEY) && this.textures.get(ATLAS_KEY).has("slot_done")) {
-        slot.icon.setFrame("slot_done");
-      }
-      slot.icon.setAlpha(0.45);
+      slot.icon.setAlpha(0.35);
       this.tweens.add({ targets: slot.slot, scale: 0.75, duration: 180 });
     }
     this.counterText.setText(t("found", { n: this.found.size, total: this.level.targetCount }));
@@ -458,18 +406,18 @@ export class GameScene extends Phaser.Scene {
     sfx.hint();
     const id = [...this.remaining][0];
     const info = CATALOG[id];
-    const spr = this.itemSprites.get(id);
+    const pos = this.itemAnchors.get(id);
     this.hintLabel.setText(t("hintSeek", { emoji: info.emoji, label: info.label }));
-    if (spr) {
-      this.cameras.main.pan(spr.x, spr.y, 500, "Sine.easeInOut");
-      this.cameras.main.zoomTo(Math.max(this.cameras.main.zoom, 0.9), 500);
+    if (pos) {
+      this.cameras.main.pan(pos.x, pos.y, 500, "Sine.easeInOut");
+      this.cameras.main.zoomTo(Math.max(this.cameras.main.zoom, 1.0), 500);
       if (this.hintRing) this.hintRing.destroy();
-      this.hintRing = this.add.image(spr.x, spr.y, ATLAS_KEY, "hint_ring").setScale(1.2);
+      this.hintRing = this.add.circle(pos.x, pos.y, 22, 0xffd166, 0.12).setStrokeStyle(3, 0xffd166, 0.85);
       this.world.add(this.hintRing);
       this.tweens.add({
         targets: this.hintRing,
-        scale: 1.8,
-        alpha: 0.2,
+        scale: 1.6,
+        alpha: 0.05,
         duration: 600,
         yoyo: true,
         repeat: 4,
