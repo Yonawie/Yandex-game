@@ -1,11 +1,17 @@
+import { GEN_MAP_W, GEN_MAP_H } from "./mapSize.generated";
+
 export const GAME_W = 960;
 export const GAME_H = 540;
 
-export const MAP_W = 1800;
-export const MAP_H = 2400;
+/** Playfield size — matches generated WebP backgrounds. */
+export const MAP_W = GEN_MAP_W;
+export const MAP_H = GEN_MAP_H;
 
-/** Bumped when save shape changes. */
-export const STORAGE_KEY = "naydi_chto_to_progress_v3";
+/** Safe margins so targets aren't under HUD / off-screen. */
+export const MAP_SAFE = { top: 0.08, bottom: 0.14, left: 0.06, right: 0.06 };
+
+/** Bumped when save / map size changes. */
+export const STORAGE_KEY = "naydi_chto_to_progress_v4";
 
 export const LEVELS_PER_MAP = 4;
 
@@ -45,8 +51,9 @@ export const COLORS = {
 export const FONT_DISPLAY = "Fraunces, Georgia, serif";
 export const FONT_UI = "Manrope, Nunito, sans-serif";
 
-/** Yandex Games leaderboard name — keep stable. */
 export const LEADERBOARD_NAME = "score";
+
+export const ATLAS_KEY = "world";
 
 export const DEPTH = {
   background: 0,

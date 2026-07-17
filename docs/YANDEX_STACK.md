@@ -32,6 +32,15 @@ npm run ok         # валидация контента
 | Adv fullscreen | выход с победы к картам |
 | Cloud save | merge с local в Boot |
 
-## Структура
+## Art / budget (этот проект)
 
-См. `src/` — scenes / systems / assets / audio / ui / visual / content / sdk / data / i18n / retention.
+| Пачка | Путь | Объём |
+|---|---|---|
+| Фоны карт | `public/backgrounds/*.webp` | ~300–380 KB × 10 |
+| Atlas мира/UI | `public/atlases/world.png` | ~1 MB |
+| Сборка атласа | `npm run atlas` | вход: `assets/source/maps` |
+| Zip черновика | `npm run pack` | ~4.6 MB |
+
+Сцены: Boot → Preload → Menu → MapSelect → Game → Result.  
+Карты грузятся по требованию; предыдущая текстура выгружается.
+

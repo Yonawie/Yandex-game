@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { FONT_DISPLAY, FONT_UI, GAME_TITLE } from "../../data/config";
+import { FONT_DISPLAY, FONT_UI } from "../../data/config";
 import { t } from "../../i18n";
 import { loadProgressCloud } from "../../sdk/yandex";
 import { mergeCloudProgress } from "../../data/save";
@@ -16,7 +16,7 @@ export class BootScene extends Phaser.Scene {
     g.fillRect(0, 0, width, height);
 
     this.add
-      .text(width / 2, height / 2 - 24, GAME_TITLE, {
+      .text(width / 2, height / 2 - 24, t("title"), {
         fontFamily: FONT_DISPLAY,
         fontSize: "40px",
         color: "#f3ead7",
@@ -38,7 +38,7 @@ export class BootScene extends Phaser.Scene {
       } catch {
         /* ignore */
       }
-      this.scene.start("Menu");
+      this.scene.start("Preload");
     })();
   }
 }

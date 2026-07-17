@@ -9,6 +9,7 @@
     "start": "vite --host 0.0.0.0 --port 4173",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "atlas": "node scripts/atlas.mjs",
     "ok": "node scripts/validate.mjs",
     "pack": "npm run build && node scripts/pack.mjs",
     "tunnel": "bash scripts/preview-tunnel.sh"
@@ -18,6 +19,8 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "canvas": "^3.2.3",
+    "sharp": "^0.35.3",
     "typescript": "^5.8.0",
     "vite": "^6.3.0"
   }

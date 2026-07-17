@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { MAP_ORDER, LEVELS_PER_MAP, MAP_W, MAP_H } from "../data/config";
+import { MAP_ORDER, LEVELS_PER_MAP, MAP_W, MAP_H, MAP_SAFE } from "../data/config";
 
 /** Catalog of findable items: unique id, label, emoji, draw color */
 export const ITEM_CATALOG = {
@@ -474,30 +474,35 @@ export const ITEM_CATALOG = {
   unicorn: { id: "unicorn", label: "Единорог", emoji: "🦄", color: "#ff8fab" },
 };
 
-function seededPositions(seed, count, margin = 120) {
+function seededPositions(seed, count) {
   let s = seed;
   const rnd = () => {
     s = (s * 1664525 + 1013904223) >>> 0;
     return s / 4294967296;
   };
+  const left = MAP_W * MAP_SAFE.left;
+  const right = MAP_W * (1 - MAP_SAFE.right);
+  const top = MAP_H * MAP_SAFE.top;
+  const bottom = MAP_H * (1 - MAP_SAFE.bottom);
+  const usableW = right - left;
+  const usableH = bottom - top;
   const pts = [];
-  const cellW = 280;
-  const cellH = 320;
-  const cols = Math.floor((MAP_W - margin * 2) / cellW);
-  const rows = Math.floor((MAP_H - margin * 2 - 400) / cellH);
+  const cellW = Math.max(140, usableW / Math.ceil(Math.sqrt(count * 1.2)));
+  const cellH = Math.max(160, usableH / Math.ceil(Math.sqrt(count * 1.2)));
+  const cols = Math.max(1, Math.floor(usableW / cellW));
+  const rows = Math.max(1, Math.floor(usableH / cellH));
   const cells = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) cells.push([c, r]);
   }
-  // shuffle
   for (let i = cells.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
     [cells[i], cells[j]] = [cells[j], cells[i]];
   }
   for (let i = 0; i < count; i++) {
     const [c, r] = cells[i % cells.length];
-    const x = margin + c * cellW + 40 + rnd() * (cellW - 80);
-    const y = 500 + margin + r * cellH + 40 + rnd() * (cellH - 80);
+    const x = left + c * cellW + 20 + rnd() * Math.max(20, cellW - 40);
+    const y = top + r * cellH + 20 + rnd() * Math.max(20, cellH - 40);
     pts.push({ x, y });
   }
   return pts;

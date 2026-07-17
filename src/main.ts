@@ -1,9 +1,11 @@
 import Phaser from "phaser";
 import { GAME_W, GAME_H } from "./data/config";
 import { BootScene } from "./game/scenes/BootScene";
+import { PreloadScene } from "./game/scenes/PreloadScene";
 import { MenuScene } from "./game/scenes/MenuScene";
 import { MapSelectScene } from "./game/scenes/MapSelectScene";
 import { GameScene } from "./game/scenes/GameScene";
+import { ResultScene } from "./game/scenes/ResultScene";
 import { initYandex, getSdkLang } from "./sdk/yandex";
 import { detectLocale, setLocale, t } from "./i18n";
 
@@ -11,7 +13,6 @@ async function boot() {
   const ysdk = await initYandex();
   setLocale(detectLocale(getSdkLang() || ysdk?.environment?.i18n?.lang));
 
-  // Self-hosted look: inject Google fonts once (fallback to system stacks in CSS)
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.href =
@@ -28,18 +29,13 @@ async function boot() {
       width: GAME_W,
       height: GAME_H,
     },
-    scene: [BootScene, MenuScene, MapSelectScene, GameScene],
-    input: {
-      activePointers: 3,
-    },
+    scene: [BootScene, PreloadScene, MenuScene, MapSelectScene, GameScene, ResultScene],
+    input: { activePointers: 3 },
     render: {
       antialias: true,
       powerPreference: "high-performance",
-      roundPixels: false,
     },
-    audio: {
-      disableWebAudio: false,
-    },
+    audio: { disableWebAudio: false },
   };
 
   const game = new Phaser.Game(config);

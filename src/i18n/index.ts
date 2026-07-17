@@ -82,8 +82,13 @@ export type Dict = (typeof dict)["ru"];
 let locale: Locale = "ru";
 
 export function detectLocale(lang?: string | null): Locale {
-  const l = (lang || navigator.language || "ru").toLowerCase();
-  return l.startsWith("en") ? "en" : "ru";
+  // Yandex Games = RU-first. Prefer explicit SDK lang; otherwise default ru.
+  if (lang) {
+    const l = lang.toLowerCase();
+    if (l.startsWith("en")) return "en";
+    return "ru";
+  }
+  return "ru";
 }
 
 export function setLocale(next: Locale) {
