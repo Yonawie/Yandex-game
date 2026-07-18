@@ -2,8 +2,7 @@
   // F2: large logical world + camera follow
   const WORLD_COLS = 36;
   const WORLD_ROWS = 48;
-  const VIEW_COLS = 16;
-  const VIEW_ROWS = 22;
+  const TARGET_CELL = 32; // px preference; view expands to fill screen
   const MIN_LEN = 3;
   const START_LEN = 3;
   const BASE_MOVE_MS = 190;
@@ -417,26 +416,34 @@
 
   function resize() {
     const wrap = canvas.parentElement;
-    const w = wrap.clientWidth;
-    const h = Math.max(180, wrap.clientHeight);
+    const w = Math.max(320, wrap.clientWidth || window.innerWidth);
+    const h = Math.max(480, wrap.clientHeight || window.innerHeight);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    // Fit view window into available stage
-    const cellByW = w / VIEW_COLS;
-    const cellByH = h / VIEW_ROWS;
-    cell = Math.max(14, Math.floor(Math.min(cellByW, cellByH)));
-    viewW = VIEW_COLS;
-    viewH = VIEW_ROWS;
+    // Fullscreen: grow viewport (in cells) to cover the entire screen.
+    cell = Math.max(18, Math.min(44, Math.round(TARGET_CELL * (w < 480 ? 0.85 : 1))));
+    viewW = Math.max(12, Math.ceil(w / cell));
+    viewH = Math.max(16, Math.ceil(h / cell));
+    // Keep view smaller than world so camera still matters
+    viewW = Math.min(viewW, WORLD_COLS);
+    viewH = Math.min(viewH, WORLD_ROWS);
+    cell = Math.floor(Math.min(w / viewW, h / viewH));
 
-    const cw = cell * viewW;
-    const ch = cell * viewH;
-    canvas.width = cw * dpr;
-    canvas.height = ch * dpr;
-    canvas.style.width = cw + "px";
-    canvas.style.height = ch + "px";
-    canvas.style.margin = "0 auto";
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    canvas.style.margin = "0";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Center the cell grid in the physical canvas if rounding leaves slack
+    const gridW = cell * viewW;
+    const gridH = cell * viewH;
+    ctx.setTransform(dpr, 0, 0, dpr, ((w - gridW) / 2) * dpr, ((h - gridH) / 2) * dpr);
+
     updateCameraTarget();
+    camX = camTargetX;
+    camY = camTargetY;
   }
 
   function worldToScreen(wx, wy) {
@@ -539,38 +546,12 @@
       ctx.globalAlpha = 1;
     }
 
-    // edge vignette (fog of viewport)
-    const vig = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.72);
+    // Soft edge vignette only — no minimap (Pixel Flow: field owns the screen)
+    const vig = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.42, w / 2, h / 2, Math.max(w, h) * 0.78);
     vig.addColorStop(0, "rgba(0,0,0,0)");
-    vig.addColorStop(1, "rgba(0,0,0,0.45)");
+    vig.addColorStop(1, "rgba(0,0,0,0.28)");
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, w, h);
-
-    // minimap
-    drawMinimap(w, h);
-  }
-
-  function drawMinimap(w, h) {
-    const mw = 72;
-    const mh = Math.round(mw * (WORLD_ROWS / WORLD_COLS));
-    const ox = w - mw - 8;
-    const oy = 8;
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
-    ctx.fillRect(ox - 2, oy - 2, mw + 4, mh + 4);
-    ctx.fillStyle = "rgba(30,60,45,0.9)";
-    ctx.fillRect(ox, oy, mw, mh);
-    const sx = mw / WORLD_COLS;
-    const sy = mh / WORLD_ROWS;
-    ctx.fillStyle = "#e7c356";
-    for (const [k] of letters) {
-      const [x, y] = k.split(",").map(Number);
-      ctx.fillRect(ox + x * sx, oy + y * sy, Math.max(1, sx), Math.max(1, sy));
-    }
-    ctx.fillStyle = "#3ecf7a";
-    for (const s of snake) ctx.fillRect(ox + s.x * sx, oy + s.y * sy, Math.max(1.5, sx), Math.max(1.5, sy));
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(ox + camX * sx, oy + camY * sy, viewW * sx, viewH * sy);
   }
 
   function roundRect(x, y, w, h, r, fill, stroke) {
