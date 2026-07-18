@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Letter Snake</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Unbounded:wght@600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg0: #0b1612;
+      --bg1: #143024;
+      --leaf: #3ecf7a;
+      --leaf-dim: #1f6b45;
+      --gold: #f0c14b;
+      --ink: #e8f5ec;
+      --muted: #8fb29a;
+      --danger: #ff6b5a;
+      --panel: rgba(10, 28, 20, 0.72);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; height: 100%; overflow: hidden;
+      font-family: Manrope, system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 700px at 20% -10%, #1c4a33 0%, transparent 55%),
+        radial-gradient(900px 600px at 100% 100%, #244018 0%, transparent 50%),
+        linear-gradient(160deg, var(--bg0), var(--bg1));
+    }
+    #app {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 12px 12px 10px;
+      gap: 8px;
+    }
+    header {
+      display: grid;
+      gap: 4px;
+      text-align: center;
+    }
+    .brand {
+      font-family: Unbounded, Manrope, sans-serif;
+      font-weight: 800;
+      font-size: clamp(1.5rem, 5vw, 2.1rem);
+      letter-spacing: 0.02em;
+      background: linear-gradient(90deg, #b8ffd0, var(--gold));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: brandPulse 3.2s ease-in-out infinite;
+    }
+    @keyframes brandPulse {
+      0%, 100% { filter: brightness(1); transform: translateY(0); }
+      50% { filter: brightness(1.15); transform: translateY(-1px); }
+    }
+    .row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 8px; font-size: 0.95rem; color: var(--muted);
+    }
+    .score { color: var(--ink); font-weight: 800; font-size: 1.25rem; }
+    .prefix {
+      font-family: Unbounded, Manrope, sans-serif;
+      font-size: clamp(1.3rem, 4.5vw, 1.8rem);
+      color: var(--gold);
+      min-height: 1.4em;
+      letter-spacing: 0.12em;
+    }
+    .stage-wrap {
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,.35);
+      border: 1px solid rgba(120, 200, 150, 0.18);
+      background: rgba(8, 20, 14, 0.55);
+      min-height: 0;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    .toast {
+      position: absolute; left: 50%; top: 42%;
+      transform: translate(-50%, -50%);
+      background: var(--panel);
+      border: 1px solid rgba(240, 193, 75, .35);
+      padding: 12px 18px;
+      border-radius: 14px;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .25s;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, -60%); }
+    footer {
+      display: grid;
+      gap: 8px;
+    }
+    .status { text-align: center; color: var(--muted); font-size: 0.92rem; min-height: 1.2em; }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    button {
+      font-family: inherit;
+      font-weight: 700;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 10px;
+      color: var(--ink);
+      background: linear-gradient(180deg, #245c3d, #163a27);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+      cursor: pointer;
+    }
+    button:active { transform: translateY(1px); }
+    button.secondary { background: linear-gradient(180deg, #3a4d2f, #24331d); }
+    .pad {
+      display: grid;
+      grid-template-columns: 56px 56px 56px;
+      grid-template-rows: 48px 48px 48px;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 2px;
+    }
+    .pad button { padding: 0; font-size: 1.1rem; }
+    .pad .u { grid-column: 2; grid-row: 1; }
+    .pad .l { grid-column: 1; grid-row: 2; }
+    .pad .d { grid-column: 2; grid-row: 2; }
+    .pad .r { grid-column: 3; grid-row: 2; }
+    .modal {
+      position: fixed; inset: 0; display: none;
+      align-items: center; justify-content: center;
+      background: rgba(0,0,0,.55);
+      padding: 16px; z-index: 20;
+    }
+    .modal.open { display: flex; }
+    .modal .card {
+      width: min(520px, 100%);
+      max-height: 80vh;
+      overflow: auto;
+      background: #10261c;
+      border: 1px solid rgba(120,200,150,.25);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .modal h2 {
+      font-family: Unbounded, Manrope, sans-serif;
+      margin: 0 0 8px;
+      font-size: 1.2rem;
+    }
+    .words {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-top: 10px;
+    }
+    .words span {
+      background: rgba(255,255,255,.06);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.85rem;
+    }
+    .words span.locked { color: var(--muted); opacity: .7; }
+    .words span.open { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="brand">LETTER SNAKE</div>
+      <div class="row">
+        <div class="score" id="score">0</div>
+        <div id="piggy">Копилка 0/0</div>
+      </div>
+      <div class="prefix" id="prefix">· · ·</div>
+    </header>
+    <div class="stage-wrap">
+      <canvas id="game"></canvas>
+      <div class="toast" id="toast"></div>
+    </div>
+    <footer>
+      <div class="status" id="status">Собирай слова из букв</div>
+      <div class="controls">
+        <button id="btnRestart">Заново</button>
+        <button id="btnPiggy" class="secondary">Копилка</button>
+        <button id="btnStyle" class="secondary">Стиль</button>
+      </div>
+      <div class="pad">
+        <button class="u" data-dir="0,-1">▲</button>
+        <button class="l" data-dir="-1,0">◀</button>
+        <button class="d" data-dir="0,1">▼</button>
+        <button class="r" data-dir="1,0">▶</button>
+      </div>
+    </footer>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="card">
+      <h2>Копилка-словарь</h2>
+      <div id="modalProgress" class="status"></div>
+      <div class="words" id="modalWords"></div>
+      <div style="margin-top:14px;text-align:right">
+        <button id="btnClose">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  
+
+<script src="./game.js"></script>
+</body>
+</html>
