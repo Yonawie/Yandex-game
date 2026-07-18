@@ -150,16 +150,8 @@
       const candidates = [];
       for (const w of reserveWords) {
         if (prefix && !w.startsWith(prefix)) continue;
-        const miss = missingForWord(w.slice(prefix.length), new Map());
-        // count relative to field only for remaining part
         const fieldBag = letterBagOnField();
-        const still = [];
-        for (const ch of w.slice(prefix.length)) {
-          const n = fieldBag.get(ch) || 0;
-          if (n > 0) fieldBag.set(ch, n - 1);
-          else still.push(ch);
-        }
-        candidates.push(...still);
+        candidates.push(...missingForWord(w.slice(prefix.length), fieldBag));
       }
       if (candidates.length) return candidates[(Math.random() * candidates.length) | 0];
     }
