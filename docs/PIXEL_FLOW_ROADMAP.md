@@ -44,16 +44,17 @@
 - Фон-атмосфера: глубина параллакса 1 слой, без «пустого градиента»
 
 ### 3. Juice & feedback (самое большое ощущение качества)
-- Eat: squash/stretch + 6–12 particles цвета буквы
-- Word commit: hit-stop 80–120ms, screen punch, ripple по сетке, fly-to-piggy spline
-- Combo ladder: 3/4/5+ → нарастающий chroma + pitch SFX
-- Death: читаемая анимация (не мгновенный freeze), затем result card
-- Haptics (mobile): light / medium / success
+- [x] Eat: squash/stretch + particles
+- [x] Word commit: hit-stop, screen punch, ripple, fly-to-piggy
+- [x] Combo ladder UI + chroma pulse
+- [x] Death: анимация + затемнение, затем статус
+- [ ] Haptics (mobile): light / medium / success
+- [ ] Result card вместо plain status
 
 ### 4. Audio identity
-- SFX: move tick (тихий), eat, bad-chain, word fanfare по длине
-- Короткий music loop + ducking при commit
-- Toggle mute в HUD
+- [x] SFX: move tick, eat, bad-chain, word fanfare, death (Web Audio)
+- [x] Toggle mute в HUD (`M` / кнопка)
+- [ ] Короткий music loop + ducking при commit
 
 ### 5. Movement & camera (качество контроля)
 - Уже есть: F2 camera, turn queue, lerp

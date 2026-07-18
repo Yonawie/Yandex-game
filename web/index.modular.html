@@ -117,6 +117,22 @@
       box-shadow: 0 16px 40px rgba(0,0,0,.35);
     }
     .toast.show { opacity: 1; transform: translate(-50%, -60%) scale(1); }
+    .combo {
+      position: absolute;
+      left: 50%;
+      top: calc(118px + var(--safe-top));
+      transform: translateX(-50%) scale(0.9);
+      font-family: Unbounded, Manrope, sans-serif;
+      font-weight: 800;
+      font-size: clamp(0.95rem, 3.2vw, 1.25rem);
+      letter-spacing: 0.08em;
+      color: #b8ffd0;
+      text-shadow: 0 2px 14px rgba(0,0,0,.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s, transform .2s;
+    }
+    .combo.show { opacity: 1; transform: translateX(-50%) scale(1); }
     .hud-bottom {
       position: absolute;
       left: 12px;
@@ -222,12 +238,16 @@
         </div>
       </div>
       <div class="prefix-wrap"><div class="prefix" id="prefix">· · ·</div></div>
+      <div class="combo" id="combo">COMBO</div>
       <div class="hud-bottom">
         <div class="status" id="status">Собирай слова из букв</div>
         <div class="controls">
           <button id="btnRestart">Заново</button>
           <button id="btnPiggy" class="secondary">Копилка</button>
           <button id="btnStyle" class="secondary">Стиль</button>
+        </div>
+        <div class="controls" style="grid-template-columns:1fr; max-width:160px;">
+          <button id="btnMute" class="secondary" type="button">🔊</button>
         </div>
         <div class="pad">
           <button class="u" data-dir="0,-1">▲</button>
